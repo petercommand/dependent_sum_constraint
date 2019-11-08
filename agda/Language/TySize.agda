@@ -33,7 +33,7 @@ module Enum where
     rs ← enum (x r)
     return (r , rs)
 
-open Enum
+open Enum public
 
 maxTySizeOver : ∀ {u} → List ⟦ u ⟧ → (⟦ u ⟧ → U) → ℕ
 tySize : U → ℕ

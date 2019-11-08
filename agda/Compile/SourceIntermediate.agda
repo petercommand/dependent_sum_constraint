@@ -21,44 +21,13 @@ open import Language.Universe f
 
 module SI-Monad where
   
-  StateWriterMonad : ∀ {a} {b} {c} → Set a → Set b → Set c → Set (a ⊔ b ⊔ c)
-  StateWriterMonad s w a = s → (s × w × a)
 
 
+    
+  open import Control.StateWriter Var (List Intermediate) [] _++_ public
 
   SI-Monad : ∀ {a} → Set a → Set a
   SI-Monad = StateWriterMonad Var (List Intermediate)
-
-  module StateWriterMonad {a} {b} (S : Set a) (W : Set b) (mempty : W) (mappend : W → W → W) where
-    _>>=_ : ∀ {c} {d} {A : Set c} {B : Set d}
-                → StateWriterMonad S W A
-                → (A → StateWriterMonad S W B)
-                → StateWriterMonad S W B
-    m >>= f = λ s → let s' , w , a = m s
-                        s'' , w' , b = f a s'
-                    in s'' , mappend w w' , b
-  
-    _>>_ : ∀ {c} {d} {A : Set c} {B : Set d}
-                → StateWriterMonad S W A
-                → StateWriterMonad S W B
-                → StateWriterMonad S W B
-    a >> b = a >>= λ _ → b
-  
-    return : ∀ {a} {A : Set a}
-                → A → StateWriterMonad S W A
-    return a = λ s → s , mempty , a
-
-    get : StateWriterMonad S W S
-    get = λ s → s , mempty , s
-
-    put : S → StateWriterMonad S W ⊤
-    put s = λ _ → s , mempty , tt
-
-    tell : W → StateWriterMonad S W ⊤
-    tell w = λ s → s , w , tt
-
-    
-  open StateWriterMonad Var (List Intermediate) [] _++_ public
 
   add : Intermediate → SI-Monad ⊤
   add w' = tell [ w' ]

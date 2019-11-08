@@ -11,7 +11,7 @@ open import Language.Universe f
 
 
 data Source : U → Set where
-  Var : ∀ {u} {m} → m ≡ tySize u → Vec ℕ m → Source u
+  Ind : ∀ {u} {m} → m ≡ tySize u → Vec ℕ m → Source u
   Lit : ∀ {u} → ⟦ u ⟧ → Source u
   Add : Source `Base → Source `Base → Source `Base
 

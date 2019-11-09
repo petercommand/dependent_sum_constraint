@@ -1,8 +1,10 @@
+{-# OPTIONS --allow-unsolved-metas #-}
 open import Data.Bool
 open import Data.Finite
 open import Data.List
 open import Data.Nat
 open import Data.Nat.Max
+open import Data.Nat.Properties
 open import Data.Product
 open import Data.Unit
 open import Data.Vec hiding ([_]; _>>=_)
@@ -48,3 +50,12 @@ tySize (`Σ u x) = tySize u + maxTySizeOver (enum u) x
 
 maxTySizeOver [] fam = 0
 maxTySizeOver (x ∷ l) fam = max (tySize (fam x)) (maxTySizeOver l fam)
+
+maxTySizeLem : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → maxTySizeOver (enum u) x ≥ tySize (x val)
+maxTySizeLem `One tt x rewrite max-a-0≡a (tySize (x tt)) = ≤-refl
+maxTySizeLem `Two false x = max-left (tySize (x false)) (max (tySize (x true)) zero)
+maxTySizeLem `Two true x = max-monotoneᵣ (tySize (x false)) (max (tySize (x true)) zero) (tySize (x true))
+                                           (max-left (tySize (x true)) zero)
+maxTySizeLem `Base val x = {!!}
+maxTySizeLem (`Vec u x₁) val x = {!!}
+maxTySizeLem (`Σ u x₁) val x = {!!}

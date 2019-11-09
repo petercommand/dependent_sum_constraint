@@ -5,33 +5,33 @@ open import Level
 
 module Control.StateWriter {a} {b} (S : Set a) (W : Set b) (mempty : W) (mappend : W → W → W) where
 
-StateWriterMonad : ∀ {a} {b} {c} → Set a → Set b → Set c → Set (a ⊔ b ⊔ c)
-StateWriterMonad s w a = s → (s × w × a)
+StateWriterMonad : ∀ {c} → Set c → Set (a ⊔ b ⊔ c)
+StateWriterMonad A = S → (S × W × A)
 
 _>>=_ : ∀ {c} {d} {A : Set c} {B : Set d}
-            → StateWriterMonad S W A
-            → (A → StateWriterMonad S W B)
-            → StateWriterMonad S W B
+            → StateWriterMonad A
+            → (A → StateWriterMonad B)
+            → StateWriterMonad B
 m >>= f = λ s → let s' , w , a = m s
                     s'' , w' , b = f a s'
                 in s'' , mappend w w' , b
 
 _>>_ : ∀ {c} {d} {A : Set c} {B : Set d}
-            → StateWriterMonad S W A
-            → StateWriterMonad S W B
-            → StateWriterMonad S W B
+            → StateWriterMonad A
+            → StateWriterMonad B
+            → StateWriterMonad B
 a >> b = a >>= λ _ → b
 
 return : ∀ {a} {A : Set a}
-            → A → StateWriterMonad S W A
+            → A → StateWriterMonad A
 return a = λ s → s , mempty , a
 
-get : StateWriterMonad S W S
+get : StateWriterMonad S
 get = λ s → s , mempty , s
 
-put : S → StateWriterMonad S W ⊤
+put : S → StateWriterMonad ⊤
 put s = λ _ → s , mempty , tt
 
-tell : W → StateWriterMonad S W ⊤
+tell : W → StateWriterMonad ⊤
 tell w = λ s → s , w , tt
 

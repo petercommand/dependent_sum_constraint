@@ -28,12 +28,9 @@ module SI-Monad where
 
 
   import Control.StateWriter
-  open Control.StateWriter Var (List Intermediate) [] _++_ hiding (_>>=_; _>>_; return)
-  open Control.StateWriter Var (List Intermediate) [] _++_ using (_>>=_; _>>_; return) public
+  open Control.StateWriter Var (List Intermediate) [] _++_ hiding (_>>=_; _>>_; return; StateWriterMonad)
+  open Control.StateWriter Var (List Intermediate) [] _++_ using (_>>=_; _>>_; return) renaming (StateWriterMonad to SI-Monad) public
   
-  SI-Monad : ∀ {a} → Set a → Set a
-  SI-Monad = StateWriterMonad Var (List Intermediate)
-
   add : Intermediate → SI-Monad ⊤
   add w' = tell [ w' ]
 

@@ -46,7 +46,8 @@ module SI-Monad where
     v ← new
     vs ← newVarVec n
     return (v ∷ vs)
-open SI-Monad
+open SI-Monad hiding (SI-Monad)
+open SI-Monad using (SI-Monad) public
 open Field field' hiding (_+_)
 
 isTrue : Var → SI-Monad ⊤
@@ -126,6 +127,8 @@ module Private where
                                           | +-comm m (n - m) = cong suc (a-b+b≡a n m a≥b)
 
 open Private
+
+
 
 varEqLit : ∀ u → Vec Var (tySize u) → ⟦ u ⟧ → SI-Monad Var
 varEqLit `One vec lit = allEqz vec
@@ -210,6 +213,13 @@ litToInd u l = do
   isTrue r
   return vec
 
+
+assertVarEqVar : ∀ n → Vec Var n → Vec Var n → SI-Monad ⊤
+assertVarEqVar .0 [] [] = return tt
+assertVarEqVar .(suc _) (x ∷ v₁) (x₁ ∷ v₂) = do
+  add (IAdd zero ((one , x) ∷ (- one , x₁) ∷ []))
+  assertVarEqVar _ v₁ v₂
+
 sourceToIntermediate : ∀ u → Source u → SI-Monad (Vec Var (tySize u))
 sourceToIntermediate u (Ind refl x) = indToIR u x
 sourceToIntermediate u (Lit x) = litToInd u x
@@ -219,3 +229,24 @@ sourceToIntermediate `Base (Add source source₁) = do
   v ← new
   add (IAdd zero ((one , head r₁) ∷ (one , head r₂) ∷ (- one , v) ∷ []))
   return (v ∷ [])
+
+module Comp where
+  open import Language.Source.Utils f finite using (S-Monad)
+
+
+  compileSource : ∀ u → (S-Monad (Source u)) → SI-Monad (Vec Var (tySize u) × List ℕ)
+  compileSource u source = do
+    let v , (asserts , input) , output = source 0
+    compAssert asserts
+    r ← sourceToIntermediate _ output
+    return (r , input)
+    where
+      compAssert : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
+      compAssert [] = return tt
+      compAssert ((u' , s₁ , s₂) ∷ l) = do
+        r₁ ← sourceToIntermediate u' s₁
+        r₂ ← sourceToIntermediate u' s₂
+        assertVarEqVar _ r₁ r₂
+
+
+open Comp public

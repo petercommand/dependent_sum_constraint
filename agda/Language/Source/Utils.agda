@@ -1,9 +1,11 @@
+open import Data.Fin hiding (_+_)
 open import Data.Finite
-open import Data.List hiding ([_])
+open import Data.List hiding ([_]; splitAt)
 open import Data.Nat
 open import Data.Product
 open import Data.Unit
-open import Data.Vec hiding (_++_; _>>=_)
+open import Data.Vec hiding (_++_; _>>=_; splitAt)
+open import Data.Vec.Split
 
 open import Language.Common
 
@@ -53,3 +55,10 @@ newI u = do
   vec ← newVars (tySize u)
   tell ([] , toList vec)
   return (Ind refl vec)
+
+getV : ∀ {u} {x} → Source (`Vec u x) → Fin x → Source u
+getV {u} {suc x} (Ind refl x₁) f with splitAt (tySize u) x₁
+getV {u} {suc x} (Ind refl x₁) 0F | fst , snd = Ind refl fst
+getV {u} {suc x} (Ind refl x₁) (suc f) | fst , snd = getV (Ind refl snd) f
+getV (Lit (x ∷ x₁)) 0F = Lit x
+getV (Lit (x ∷ x₁)) (suc f) = getV (Lit x₁) f

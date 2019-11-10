@@ -60,14 +60,6 @@ maxTySizeOver (x ∷ l) fam = max (tySize (fam x)) (maxTySizeOver l fam)
 ∈→≥ (_ ∷ xs) x val (here refl) = max-left (tySize (x val)) (maxTySizeOver xs x)
 ∈→≥ (x₁ ∷ xs) x val (there mem) = max-monotoneᵣ (tySize (x x₁)) _ _ (∈→≥ xs x val mem)
 
-ann : ∀ {a} (A : Set a) → A → A
-ann _ a = a
-
-tail' : ∀ {a} {A : Set a} → List A → List A
-tail' [] = []
-tail' (x ∷ l) = l
-
-
 ∈->>= : ∀ {a} {A : Set a} {b} {B : Set b} (l : List A) (f : A → List B) → ∀ x → x ∈ l → ∀ y → y ∈ f x → y ∈ l >>= f
 ∈->>= .(x ∷ _) f x (here refl) y mem' = ++⁺ˡ mem'
 ∈->>= .(_ ∷ _) f x (there mem) y mem' = ++⁺ʳ (f _) (∈->>= _ f x mem y mem')

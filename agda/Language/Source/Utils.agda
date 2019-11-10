@@ -2,6 +2,7 @@ open import Data.Finite
 open import Data.List hiding ([_])
 open import Data.Nat
 open import Data.Product
+open import Data.Unit
 open import Data.Vec hiding (_++_; _>>=_)
 
 open import Language.Common
@@ -38,6 +39,9 @@ module S-Monad where
 
 open S-Monad hiding (newVar; newVars) public
 open S-Monad using (newVar; newVars)
+
+assertEq : ∀ {u} → Source u → Source u → S-Monad ⊤
+assertEq {u} s₁ s₂ = tell ((u , s₁ , s₂) ∷ [] , [])
 
 new : ∀ u → S-Monad (Source u)
 new u = do

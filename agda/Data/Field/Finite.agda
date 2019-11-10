@@ -52,6 +52,6 @@ private
                            (enumComplete (suc n) elem (recompute (suc elem ≤? suc n) elem<n))
 
 
-isFinite : ∀ n → n > 0 → Finite (FiniteField n)
-isFinite (suc n) (s≤s p) = record { elems = enumFieldElem (suc n) n ≤-refl
-                                  ; a∈elems = λ a → enumPrf n a ≤-refl }
+isFinite : ∀ n {≢ : False (n ≟ 0)} → Finite (FiniteField n)
+isFinite (suc n) = record { elems = enumFieldElem (suc n) n ≤-refl
+                          ; a∈elems = λ a → enumPrf n a ≤-refl }

@@ -1,14 +1,16 @@
 open import Agda.Builtin.Nat hiding (_<_)
 
+open import Data.Empty
 open import Data.Field
 open import Data.Finite
 open import Data.List
 open import Data.List.Membership.Propositional
 open import Data.List.Relation.Unary.Any
-open import Data.Nat
+open import Data.Nat renaming (_≟_ to _≟ℕ_)
 open import Data.Nat.Mod
-open import Data.Nat.Properties
+open import Data.Nat.Properties renaming (_≟_ to _≟ℕ_)
 
+open import Relation.Binary
 open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
 open import Relation.Nullary.Decidable using (False)
@@ -22,7 +24,10 @@ record FiniteField (n : ℕ) : Set where
 
 open FiniteField
 
-isField : ∀ n {≢0 : False (n ≟ 0)} → Field (FiniteField n)
+fieldElem : ∀ {n} {≢ : False (n ≟ℕ 0) } → ℕ → FiniteField n
+fieldElem {suc n} m = record { elem = mod m (suc n) ; elem<n = mod< m (suc n) (s≤s z≤n) }
+
+isField : ∀ n {≢0 : False (n ≟ℕ 0)} → Field (FiniteField n)
 isField (suc n) = record { _+_ = λ x x₁ → record { elem = mod (elem x + elem x₁) (suc n) ; elem<n = mod< (elem x + elem x₁) (suc n) (s≤s z≤n) }
                          ; _*_ = λ x x₁ → record { elem = mod (elem x * elem x₁) (suc n) ; elem<n = mod< (elem x * elem x₁) (suc n) (s≤s z≤n) } 
                          ; -_ = λ x → record { elem = mod ((suc n) - (elem x)) (suc n) ; elem<n = mod< ((suc n) - (elem x)) (suc n) (s≤s z≤n) }
@@ -52,6 +57,12 @@ private
                            (enumComplete (suc n) elem (recompute (suc elem ≤? suc n) elem<n))
 
 
-isFinite : ∀ n {≢ : False (n ≟ 0)} → Finite (FiniteField n)
+isFinite : ∀ n {≢ : False (n ≟ℕ 0)} → Finite (FiniteField n)
 isFinite (suc n) = record { elems = enumFieldElem (suc n) n ≤-refl
                           ; a∈elems = λ a → enumPrf n a ≤-refl }
+
+_≟_ : ∀ {n} {≢ : False (n ≟ℕ 0)} → Decidable {A = FiniteField n} _≡_
+record { elem = elem₁ ; elem<n = elem<n₁ } ≟ record { elem = elem ; elem<n = elem<n } with elem ≟ℕ elem₁
+(record { elem = elem₁ ; elem<n = elem<n₁ } ≟ record { elem = .elem₁ ; elem<n = elem<n }) | yes refl = yes refl
+(record { elem = elem₁ ; elem<n = elem<n₁ } ≟ record { elem = elem ; elem<n = elem<n }) | no ¬p = no (λ x → ⊥-elim (¬p (cong FiniteField.elem (sym x))))
+

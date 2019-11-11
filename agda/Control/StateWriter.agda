@@ -16,22 +16,36 @@ m >>= f = λ s → let s' , w , a = m s
                     s'' , w' , b = f a s'
                 in s'' , mappend w w' , b
 
+{-# INLINE _>>=_ #-}
+
 _>>_ : ∀ {c} {d} {A : Set c} {B : Set d}
             → StateWriterMonad A
             → StateWriterMonad B
             → StateWriterMonad B
 a >> b = a >>= λ _ → b
 
+{-# INLINE _>>_ #-}
+
+
 return : ∀ {a} {A : Set a}
             → A → StateWriterMonad A
 return a = λ s → s , mempty , a
 
+{-# INLINE return #-}
+
+
 get : StateWriterMonad S
 get = λ s → s , mempty , s
+
+{-# INLINE get #-}
+
 
 put : S → StateWriterMonad ⊤
 put s = λ _ → s , mempty , tt
 
+{-# INLINE put #-}
+
 tell : W → StateWriterMonad ⊤
 tell w = λ s → s , w , tt
 
+{-# INLINE tell #-}

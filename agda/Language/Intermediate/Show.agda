@@ -3,6 +3,8 @@ open import Data.Nat.Show renaming (show to showℕ)
 open import Data.Product
 open import Data.String
 
+open import Function
+
 open import Language.Common
 
 module Language.Intermediate.Show (f : Set) (showf : f → String) where
@@ -19,7 +21,3 @@ showIntermediate (IAdd x x₁) = "IAdd " ++ showf x ++ aux x₁
     aux ((f , n) ∷ l) = "(" ++ showf f ++ ", " ++ showℕ n ++ ")" ++ " ∷ " ++ aux l
     
 showIntermediate (IMul a b c d e) = "IMul " ++ showf a ++ " " ++ showℕ b ++ " " ++ showℕ c ++ " " ++ showf d ++ " " ++ showℕ e
-
-showIntermediates : List Intermediate → String
-showIntermediates [] = "[]"
-showIntermediates (x ∷ l) = showIntermediate x ++ " ∷ " ++ showIntermediates l

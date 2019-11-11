@@ -53,4 +53,14 @@ open import Language.Intermediate FF
 
 IR : _
 IR = compileSource _ test
-   
+
+open import Data.Nat.Show
+open import Language.Intermediate.Show FF (λ x → show (FiniteField.elem x))
+open import IO
+
+main' : IO ⊤
+main' = do
+  putStrLn (showIntermediates (proj₁ (proj₂ IR)))
+
+
+main = run main'

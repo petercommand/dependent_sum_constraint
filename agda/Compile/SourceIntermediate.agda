@@ -234,12 +234,13 @@ module Comp where
   open import Language.Source.Utils f finite using (S-Monad)
 
 
-  compileSource : ∀ u → (S-Monad (Source u)) → SI-Monad (Vec Var (tySize u) × List ℕ)
-  compileSource u source = do
+  compileSource : ∀ u → (S-Monad (Source u)) → Var × List Intermediate × (Vec Var (tySize u) × List ℕ)
+  compileSource u source = 
     let v , (asserts , input) , output = source 0
-    compAssert asserts
-    r ← sourceToIntermediate _ output
-    return (r , input)
+    in  (do
+      compAssert asserts
+      r ← sourceToIntermediate _ output
+      return (r , input)) v
     where
       compAssert : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
       compAssert [] = return tt

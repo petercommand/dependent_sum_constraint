@@ -7,6 +7,8 @@ open import Data.Unit
 open import Data.Vec hiding (_++_; _>>=_; splitAt)
 open import Data.Vec.Split
 
+open import Function
+
 open import Language.Common
 
 open import Relation.Binary.PropositionalEquality hiding ([_])
@@ -20,7 +22,12 @@ open import Language.Universe f
 module S-Monad where
   import Control.StateWriter
 
-  open Control.StateWriter Var (List (∃ (λ u → Source u × Source u)) × List ℕ) ([] , []) (λ a b → proj₁ a ++ proj₁ b , proj₂ a ++ proj₂ b) renaming (StateWriterMonad to S-Monad) public
+  import Function.Endomorphism.Propositional using (Endo)
+
+  module Assert = Function.Endomorphism.Propositional (List (∃ (λ u → Source u × Source u)))
+  --
+  module Input = Function.Endomorphism.Propositional (List ℕ)
+  open Control.StateWriter Var (Assert.Endo × Input.Endo) (id , id) (λ a b → proj₁ a ∘′ proj₁ b , proj₂ a ∘′ proj₂ b) renaming (StateWriterMonad to S-Monad) public
 
 
 
@@ -43,7 +50,7 @@ open S-Monad hiding (newVar; newVars) public
 open S-Monad using (newVar; newVars)
 
 assertEq : ∀ {u} → Source u → Source u → S-Monad ⊤
-assertEq {u} s₁ s₂ = tell ((u , s₁ , s₂) ∷ [] , [])
+assertEq {u} s₁ s₂ = tell ((λ x → ((u , s₁ , s₂) ∷ [])  ++ x) , id)
 
 new : ∀ u → S-Monad (Source u)
 new u = do
@@ -53,7 +60,7 @@ new u = do
 newI : ∀ u → S-Monad (Source u)
 newI u = do
   vec ← newVars (tySize u)
-  tell ([] , toList vec)
+  tell (id , (λ x → toList vec ++ x))
   return (Ind refl vec)
 
 getV : ∀ {u} {x} → Source (`Vec u x) → Fin x → Source u

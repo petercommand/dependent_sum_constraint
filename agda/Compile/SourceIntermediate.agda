@@ -11,6 +11,9 @@ open import Data.Unit
 open import Data.Vec hiding (_>>=_; _++_; [_]; splitAt)
 open import Data.Vec.Split
 
+open import Function
+import Function.Endomorphism.Propositional
+
 open import Language.Common
 
 open import Level renaming (zero to lzero; suc to lsuc)
@@ -25,14 +28,14 @@ open import Language.Universe f
 
 module SI-Monad where
   
-
+  open Function.Endomorphism.Propositional (List Intermediate) renaming (Endo to Builder) public
 
   import Control.StateWriter
-  open Control.StateWriter Var (List Intermediate) [] _++_ hiding (_>>=_; _>>_; return; StateWriterMonad)
-  open Control.StateWriter Var (List Intermediate) [] _++_ using (_>>=_; _>>_; return) renaming (StateWriterMonad to SI-Monad) public
+  open Control.StateWriter Var Builder id _∘′_ hiding (_>>=_; _>>_; return; StateWriterMonad)
+  open Control.StateWriter Var Builder id _∘′_ using (_>>=_; _>>_; return) renaming (StateWriterMonad to SI-Monad) public
   
   add : Intermediate → SI-Monad ⊤
-  add w' = tell [ w' ]
+  add w' = tell (λ x → [ w' ] ++ x)
 
   new : SI-Monad Var
   new = do
@@ -234,13 +237,13 @@ module Comp where
   open import Language.Source.Utils f finite using (S-Monad)
 
 
-  compileSource : ∀ u → (S-Monad (Source u)) → Var × List Intermediate × (Vec Var (tySize u) × List ℕ)
+  compileSource : ∀ u → (S-Monad (Source u)) → Var × Builder × (Vec Var (tySize u) × List ℕ)
   compileSource u source = 
     let v , (asserts , input) , output = source 0
     in  (do
-      compAssert asserts
+      compAssert (asserts [])
       r ← sourceToIntermediate _ output
-      return (r , input)) v
+      return (r , input [])) v
     where
       compAssert : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
       compAssert [] = return tt

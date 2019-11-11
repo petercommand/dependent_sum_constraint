@@ -236,6 +236,14 @@ sourceToIntermediate `Base (Add source source₁) = do
 module Comp where
   open import Language.Source.Utils f finite using (S-Monad)
 
+  compAssert : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
+  compAssert [] = return tt
+  compAssert ((u' , s₁ , s₂) ∷ l) = do
+    r₁ ← sourceToIntermediate u' s₁
+    r₂ ← sourceToIntermediate u' s₂
+    assertVarEqVar _ r₁ r₂
+    compAssert l
+
 
   compileSource : ∀ u → (S-Monad (Source u)) → Var × Builder × (Vec Var (tySize u) × List ℕ)
   compileSource u source = 
@@ -244,14 +252,6 @@ module Comp where
       compAssert (asserts [])
       r ← sourceToIntermediate _ output
       return (r , input [])) v
-    where
-      compAssert : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
-      compAssert [] = return tt
-      compAssert ((u' , s₁ , s₂) ∷ l) = do
-        r₁ ← sourceToIntermediate u' s₁
-        r₂ ← sourceToIntermediate u' s₂
-        assertVarEqVar _ r₁ r₂
-        compAssert l
 
 
 open Comp public

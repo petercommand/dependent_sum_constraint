@@ -65,11 +65,10 @@ open import Data.Nat.Show
 open import Language.Intermediate.Show FF (λ x → show (FiniteField.elem x))
 open import IO
 
-main' : IO ⊤
-main' = do
+main' : IO _
+main' = 
   let result = proj₁ (proj₂ IR) []
-  ♯ sequence (Codata.Musical.Colist.fromList (map (putStrLn ∘′ showIntermediate) result))
-  ♯ putStrLn (showIntermediates (proj₁ (proj₂ IR) []))
+  in sequence′ (Codata.Musical.Colist.fromList (map (putStrLn ∘′ showIntermediate) result))
 
 
 main = run main'

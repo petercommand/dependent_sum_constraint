@@ -247,6 +247,7 @@ module Comp where
         r₁ ← sourceToIntermediate u' s₁
         r₂ ← sourceToIntermediate u' s₂
         assertVarEqVar _ r₁ r₂
+        compAssert l
 
 
 open Comp public

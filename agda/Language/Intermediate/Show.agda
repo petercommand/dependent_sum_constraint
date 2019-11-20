@@ -14,7 +14,7 @@ open import Language.Intermediate f
 
 
 showIntermediate : Intermediate → String
-showIntermediate (IAdd x x₁) = "IAdd " ++ showf x ++ aux x₁
+showIntermediate (IAdd x x₁) = "IAdd " ++ showf x ++ " " ++ aux x₁
   where
     aux : List (f × Var) → String
     aux [] = "[]"

@@ -60,9 +60,7 @@ isTrue v = add (IAdd one ((- one , v) ∷ []))
 
 trivial : SI-Monad Var
 trivial = do
-  v ← new
-  isTrue v
-  return v
+  return 0
 
 neqz : Var → SI-Monad Var
 neqz n = do
@@ -170,6 +168,7 @@ enumSigmaCond {u} (elem₁ ∷ enum₁) x v₁ v₂ = do
    vecₜ : Vec Var (tySize (x elem₁) + (maxTySizeOver (enum u) x - tySize (x elem₁)))
    vecₜ rewrite +-comm (tySize (x elem₁)) (maxTySizeOver (enum u) x - tySize (x elem₁))
               | a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x elem₁)) (maxTySizeLem u elem₁ x) = v₂
+
 tyCond `Zero vec = trivial
 tyCond `One vec = allEqz vec
 tyCond `Two vec = do
@@ -247,7 +246,7 @@ module Comp where
 
   compileSource : ∀ u → (S-Monad (Source u)) → Var × Builder × (Vec Var (tySize u) × List ℕ)
   compileSource u source = 
-    let v , (asserts , input) , output = source 0
+    let v , (asserts , input) , output = source 1
     in  (do
       compAssert (asserts [])
       r ← sourceToIntermediate _ output

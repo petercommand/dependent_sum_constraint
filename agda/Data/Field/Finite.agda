@@ -39,6 +39,12 @@ private
   enumFieldElem n zero p = [ record { elem = zero ; elem<n = p } ]
   enumFieldElem n (suc m) p = record { elem = suc m ; elem<n = p } ∷ enumFieldElem n m (≤⇒pred≤ p)
 
+
+  enumFieldElemSizePrf : ∀ n m p → suc m ≡ length (enumFieldElem n m p)
+  enumFieldElemSizePrf n zero p = refl
+  enumFieldElemSizePrf n (suc m) p = cong suc (enumFieldElemSizePrf n m
+                                                 (≤-trans (s≤s (≤-step (≤-reflexive refl))) p))
+
   
   enumComplete : ∀ n m → (p : m < n) → record { elem = m ; elem<n = p } ∈ enumFieldElem n m p
   enumComplete n zero p = here refl
@@ -59,7 +65,9 @@ private
 
 isFinite : ∀ n {≢ : False (n ≟ℕ 0)} → Finite (FiniteField n)
 isFinite (suc n) = record { elems = enumFieldElem (suc n) n ≤-refl
-                          ; a∈elems = λ a → enumPrf n a ≤-refl }
+                          ; size = suc n
+                          ; a∈elems = λ a → enumPrf n a ≤-refl
+                          ; size≡len-elems = enumFieldElemSizePrf (suc n) n ≤-refl }
 
 _≟_ : ∀ {n} {≢ : False (n ≟ℕ 0)} → Decidable {A = FiniteField n} _≡_
 record { elem = elem₁ ; elem<n = elem<n₁ } ≟ record { elem = elem ; elem<n = elem<n } with elem ≟ℕ elem₁

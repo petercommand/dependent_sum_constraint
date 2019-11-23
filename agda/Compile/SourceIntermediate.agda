@@ -4,9 +4,10 @@ open import Data.Bool
 open import Data.Field
 open import Data.Finite
 open import Data.List hiding (splitAt; head; take; drop)
-open import Data.Nat hiding (_⊔_) renaming (zero to nzero)
+open import Data.Nat hiding (_⊔_; _+_) renaming (zero to nzero)
 open import Data.Nat.Properties
 open import Data.Product
+open import Data.String renaming (_++_ to _S++_) hiding (show)
 open import Data.Unit
 open import Data.Vec hiding (_>>=_; _++_; [_]; splitAt)
 open import Data.Vec.Split
@@ -19,7 +20,7 @@ open import Language.Common
 open import Level renaming (zero to lzero; suc to lsuc)
 
 open import Relation.Binary.PropositionalEquality hiding ([_])
-module Compile.SourceIntermediate (f : Set) (field' : Field f) (finite : Finite f) where
+module Compile.SourceIntermediate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) where
 
 open import Language.Intermediate f
 open import Language.Source f finite
@@ -251,6 +252,37 @@ module Comp where
       compAssert (asserts [])
       r ← sourceToIntermediate _ output
       return (r , input [])) v
+  open import Data.Nat.Show
 
+  open import Z3.Cmd renaming (_+_ to _Z3+_; _*_ to _Z3*_)
+
+  varToString : ℕ → String
+  varToString n = "v" S++ show n 
+
+  genVarDecl : ℕ → List Z3Cmd
+  genVarDecl nzero = [ DeclConst (varToString nzero) Int ]
+  genVarDecl (suc n) = DeclConst (varToString (suc n)) Int ∷ genVarDecl n
+
+  genInputAssert : List (Var × ℕ) → List Z3Cmd
+  genInputAssert [] = []
+  genInputAssert ((v , val) ∷ input) = Assert (eq (lit (varToString v)) (lit (show val))) ∷ genInputAssert input
+
+  linearCombAdd : List (f × Var) → Z3Expr
+  linearCombAdd [] = lit (show 0)
+  linearCombAdd ((coeff , var) ∷ l) = ((lit (showf coeff)) Z3* (lit (varToString var))) Z3+ linearCombAdd l
+
+  genConsSMT : List Intermediate → List Z3Cmd
+  genConsSMT [] = []
+  genConsSMT (IAdd x x₁ ∷ l) =
+    let linComb = (lit (showf x) Z3+ linearCombAdd x₁)
+                        mod lit (show (Finite.size finite))
+    in Assert (eq linComb (lit (show 0))) ∷ genConsSMT l 
+  genConsSMT (IMul a b c d e ∷ l) =
+    let lhs = (lit (showf a) Z3* lit (varToString b) Z3* lit (varToString c)) mod lit (show (Finite.size finite))
+        rhs = (lit (showf d) Z3* lit (varToString e)) mod lit (show (Finite.size finite))
+    in Assert (eq lhs rhs) ∷ genConsSMT l
+  
+  genWitnessSMT : ℕ → List (Var × ℕ) → List Intermediate → List Z3Cmd
+  genWitnessSMT n input ir = genVarDecl n ++ [ Assert (eq (lit (varToString 0)) (lit (show 1))) ] ++ genInputAssert input ++ genConsSMT ir
 
 open Comp public

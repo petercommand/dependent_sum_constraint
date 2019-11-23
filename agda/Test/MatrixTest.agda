@@ -43,7 +43,7 @@ module Test where
     m₁ ← newI (`Matrix (`Σ `Two f) 20 10)
     m₂ ← newI (`Matrix (`Σ `Two f) 10 20)
     m₃ ← new (`Matrix (`Σ `Two f) 20 20)
-    let elem₁ = getMatrix m₁ (# 9) (# 5)
+    let elem₁ = getMatrix m₁ (# 9) (# 9)
     let elem₂ = getMatrix m₂ (# 4) (# 2)
     assertEq elem₁ (Lit (false , true))
     assertEq elem₂ (Lit (true , tt))
@@ -53,7 +53,9 @@ open Test
 open import Codata.Musical.Colist using (Colist; fromList)
 open import Codata.Musical.Notation
 
-open import Compile.SourceIntermediate FF FField FFinite
+open import Data.Nat.Show
+
+open import Compile.SourceIntermediate FF FField FFinite (λ x → show (FiniteField.elem x))
 open import Language.Intermediate FF
 
 open import Function
@@ -61,7 +63,6 @@ open import Function
 IR : _
 IR = compileSource _ test
 
-open import Data.Nat.Show
 open import Language.Intermediate.Show FF (λ x → show (FiniteField.elem x))
 open import IO
 

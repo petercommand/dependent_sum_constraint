@@ -2,7 +2,9 @@ open import Data.Fin hiding (_+_)
 open import Data.Finite
 open import Data.List hiding ([_]; splitAt)
 open import Data.Nat
+open import Data.Nat.Properties
 open import Data.Product
+open import Data.String hiding (_++_; toList)
 open import Data.Unit
 open import Data.Vec hiding (_++_; _>>=_; splitAt)
 open import Data.Vec.Split
@@ -12,10 +14,12 @@ open import Function
 open import Language.Common
 
 open import Relation.Binary.PropositionalEquality hiding ([_])
+open import Relation.Nullary.Decidable
 
-module Language.Source.Utils (f : Set) (finite : Finite f) where
 
-open import Language.Source f finite
+module Language.Source.Utils (f : Set) (finite : Finite f) (showf : f → String) where
+
+open import Language.Source f finite showf
 open import Language.TySize f finite
 open import Language.Universe f
 
@@ -69,3 +73,13 @@ getV {u} {suc x} (Ind refl x₁) 0F | fst , snd = Ind refl fst
 getV {u} {suc x} (Ind refl x₁) (suc f) | fst , snd = getV (Ind refl snd) f
 getV (Lit (x ∷ x₁)) 0F = Lit x
 getV (Lit (x ∷ x₁)) (suc f) = getV (Lit x₁) f
+
+iterM : ∀ {ℓ} {A : Set ℓ} (n : ℕ) → (Fin n → S-Monad A) → S-Monad (Vec A n)
+iterM 0F act = return []
+iterM (suc n) act = do
+  r ← act (#_ n {suc n} {fromWitness ≤-refl})
+  rs ← iterM n λ m → act (castF (inject+ 1 m))
+  return (r ∷ rs)
+ where
+  castF : Fin (n + 1) → Fin (1 + n)
+  castF f rewrite +-comm 1 n = f

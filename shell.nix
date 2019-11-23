@@ -24,6 +24,7 @@ stdenvNoCC.mkDerivation rec {
     pkgconfig
     cabal-install
     pythonPackages.markdown
+    z3
   ];
 }
 

@@ -263,6 +263,10 @@ module Comp where
   genVarDecl nzero = [ DeclConst (varToString nzero) Int ]
   genVarDecl (suc n) = DeclConst (varToString (suc n)) Int ∷ genVarDecl n
 
+  genVarRange : ℕ → List Z3Cmd
+  genVarRange nzero = Assert (Ge (lit (varToString nzero)) (lit (show 0))) ∷ Assert (Lt (lit (varToString nzero)) (lit (show (Finite.size finite)))) ∷ []
+  genVarRange (suc n) = Assert (Ge (lit (varToString (suc n))) (lit (show 0))) ∷ Assert (Lt (lit (varToString (suc n))) (lit (show (Finite.size finite)))) ∷ [] ++ genVarRange n
+
   genInputAssert : List (Var × ℕ) → List Z3Cmd
   genInputAssert [] = []
   genInputAssert ((v , val) ∷ input) = Assert (eq (lit (varToString v)) (lit (show val))) ∷ genInputAssert input
@@ -283,6 +287,6 @@ module Comp where
     in Assert (eq lhs rhs) ∷ genConsSMT l
   
   genWitnessSMT : ℕ → List (Var × ℕ) → List Intermediate → List Z3Cmd
-  genWitnessSMT n input ir = genVarDecl n ++ [ Assert (eq (lit (varToString 0)) (lit (show 1))) ] ++ genInputAssert input ++ genConsSMT ir
+  genWitnessSMT n input ir = genVarDecl n ++ [ Assert (eq (lit (varToString 0)) (lit (show 1))) ] ++ genVarRange n ++ genInputAssert input ++ genConsSMT ir
 
 open Comp public

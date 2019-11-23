@@ -23,7 +23,7 @@ open import Relation.Binary.PropositionalEquality hiding ([_])
 module Compile.SourceIntermediate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) where
 
 open import Language.Intermediate f
-open import Language.Source f finite
+open import Language.Source f finite showf
 open import Language.TySize f finite
 open import Language.Universe f
 
@@ -232,13 +232,19 @@ sourceToIntermediate `Base (Add source source₁) = do
   v ← new
   add (IAdd zero ((one , head r₁) ∷ (one , head r₂) ∷ (- one , v) ∷ []))
   return (v ∷ [])
-
+sourceToIntermediate `Base (Mul source source₁) = do
+  r₁ ← sourceToIntermediate `Base source
+  r₂ ← sourceToIntermediate `Base source₁
+  v ← new
+  add (IMul one (head r₁) (head r₂) one v)
+  return (v ∷ [])
 module Comp where
-  open import Language.Source.Utils f finite using (S-Monad)
+  open import Language.Source.Utils f finite showf using (S-Monad)
 
   compAssert : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
   compAssert [] = return tt
   compAssert ((u' , s₁ , s₂) ∷ l) = do
+    add (Log ("s1: " S++ showSource s₁ S++ " s2: " S++ showSource s₂))
     r₁ ← sourceToIntermediate u' s₁
     r₂ ← sourceToIntermediate u' s₂
     assertVarEqVar _ r₁ r₂
@@ -285,6 +291,7 @@ module Comp where
     let lhs = (lit (showf a) Z3* lit (varToString b) Z3* lit (varToString c)) mod lit (show (Finite.size finite))
         rhs = (lit (showf d) Z3* lit (varToString e)) mod lit (show (Finite.size finite))
     in Assert (eq lhs rhs) ∷ genConsSMT l
+  genConsSMT (Log _ ∷ l) = genConsSMT l
   
   genWitnessSMT : ℕ → List (Var × ℕ) → List Intermediate → List Z3Cmd
   genWitnessSMT n input ir = genVarDecl n ++ [ Assert (eq (lit (varToString 0)) (lit (show 1))) ] ++ genVarRange n ++ genInputAssert input ++ genConsSMT ir

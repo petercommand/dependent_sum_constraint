@@ -1,4 +1,4 @@
-module Test.Simple where
+module Test.SimpleMult where
 
 open import Data.Bool renaming (_≟_ to _≟B_)
 open import Data.Field.Finite
@@ -44,7 +44,7 @@ module Test where
   test = do
     m₁ ← newI `Base
     m₂ ← newI `Base
-    return (Add m₁ m₂)
+    return (Mul m₁ m₂)
 open Test
 
 open import Codata.Musical.Colist using (Colist) renaming (fromList to coFromList)

@@ -3,7 +3,7 @@ all:
 	echo ${PWD} > agda_dir
 	ghc RemoveChanged.hs && ./RemoveChanged
 	./gen_main.sh ${ARGS}
-	stack build 2>&1 | tee stack-build-tmp
+	stack build &> stack-build-tmp
 #	stack build --executable-profiling --library-profiling --ghc-options="-fprof-auto -rtsopts" 2>&1 | tee stack-build-tmp
 exec:
 	stack exec dependent-sum

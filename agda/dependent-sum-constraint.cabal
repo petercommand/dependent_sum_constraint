@@ -17,7 +17,7 @@ build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
 executable dependent-sum
-  -- other-modules:
+  other-modules:       MAlonzo.RTE
   -- other-extensions:
   main-is:             Main.hs
   build-depends:       base >=4.12 && <4.13,

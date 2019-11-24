@@ -4,6 +4,7 @@ open import Data.Field.Finite
 open import Data.Fin hiding (_≟_)
 open import Data.List
 open import Data.Nat hiding (_≟_)
+open import Data.Nat.Show renaming (show to showℕ)
 open import Data.Product hiding (map)
 open import Data.Unit hiding (_≟_)
 open import Data.Vec hiding (_>>=_; map)
@@ -21,8 +22,8 @@ open import Language.Common
 
 
 module Test where
-  open import Language.Source FF FFinite
-  open import Language.Source.Utils FF FFinite
+  open import Language.Source FF FFinite (λ x → showℕ (FiniteField.elem x) )
+  open import Language.Source.Utils FF FFinite (λ x → showℕ (FiniteField.elem x) )
   open import Language.TySize FF FFinite
   open import Language.Universe FF
   

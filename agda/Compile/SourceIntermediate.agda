@@ -5,6 +5,7 @@ open import Data.Field
 open import Data.Finite
 open import Data.List hiding (splitAt; head; take; drop)
 open import Data.Nat hiding (_⊔_; _+_) renaming (zero to nzero)
+open import Data.Nat.Show renaming (show to showℕ)
 open import Data.Nat.Properties
 open import Data.Product
 open import Data.String renaming (_++_ to _S++_) hiding (show)
@@ -79,7 +80,7 @@ lor n₁ n₂ = do
   v' ← new
   add (IMul one n₁ n₂ one v)
   add (IAdd zero ((one , n₁) ∷ (one , n₂) ∷ (- one , v) ∷ (- one , v') ∷ []))
-  return v
+  return v'
 
 land : Var → Var → SI-Monad Var
 land n₁ n₂ = do
@@ -107,7 +108,10 @@ varEqBaseLit n l = do
   return r
 
 anyNeqz : ∀ {n} → Vec Var n → SI-Monad Var
-anyNeqz [] = trivial
+anyNeqz [] = do
+  v ← new
+  add (IAdd zero ((one , v) ∷ []))
+  return v
 anyNeqz (x ∷ vec) = do
  r ← neqz x
  rs ← anyNeqz vec
@@ -115,8 +119,13 @@ anyNeqz (x ∷ vec) = do
 
 allEqz : ∀ {n} → Vec Var n → SI-Monad Var
 allEqz vec = do
+  add (Log "1")
   ¬r ← anyNeqz vec
-  lnot ¬r
+  add (Log "2")
+  r ← lnot ¬r
+  add (Log ("allEqz ¬r: " S++ showℕ ¬r))
+  add (Log ("allEqz result:" S++ showℕ r))
+  return r
 
 module Private where
   a-zero : ∀ a → a - nzero ≡ a
@@ -230,12 +239,14 @@ sourceToIntermediate : ∀ u → Source u → SI-Monad (Vec Var (tySize u))
 sourceToIntermediate u (Ind refl x) = indToIR u x
 sourceToIntermediate u (Lit x) = litToInd u x
 sourceToIntermediate `Base (Add source source₁) = do
-  add (Log (showSource (Add source source₁)))
+  add (Log ("+ STI: " S++ showSource (Add source source₁)))
+  add (Log ("+1 STI: " S++ showSource source))
   r₁ ← sourceToIntermediate `Base source
+  add (Log ("+2 STI: " S++ showSource source₁))
   r₂ ← sourceToIntermediate `Base source₁
   v ← new
   add (IAdd zero ((one , head r₁) ∷ (one , head r₂) ∷ (- one , v) ∷ []))
-  add (Log "---")
+  add (Log ("- STI: " S++ showSource (Add source source₁)))
   return (v ∷ [])
 sourceToIntermediate `Base (Mul source source₁) = do
   r₁ ← sourceToIntermediate `Base source
@@ -249,10 +260,11 @@ module Comp where
   compAssert : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
   compAssert [] = return tt
   compAssert ((u' , s₁ , s₂) ∷ l) = do
-    add (Log ("s1: " S++ showSource s₁ S++ " s2: " S++ showSource s₂))
+    add (Log ("+ s1: " S++ showSource s₁ S++ " s2: " S++ showSource s₂))
     r₁ ← sourceToIntermediate u' s₁
     r₂ ← sourceToIntermediate u' s₂
     assertVarEqVar _ r₁ r₂
+    add (Log ("- s1: " S++ showSource s₁ S++ " s2: " S++ showSource s₂))    
     compAssert l
 
 

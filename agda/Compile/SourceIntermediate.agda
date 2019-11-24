@@ -136,7 +136,10 @@ varEqLit : ∀ u → Vec Var (tySize u) → ⟦ u ⟧ → SI-Monad Var
 varEqLit `One vec lit = allEqz vec
 varEqLit `Two vec false = allEqz vec
 varEqLit `Two vec true = anyNeqz vec
-varEqLit `Base vec lit = trivial
+varEqLit `Base (x ∷ []) lit = do
+  v ← new
+  add (IAdd lit ((- one , x) ∷ (- one , v) ∷ []))
+  allEqz (v ∷ [])
 varEqLit (`Vec u nzero) vec lit = trivial
 varEqLit (`Vec u (suc x)) vec (l ∷ lit) with splitAt (tySize u) vec
 ... | fst , snd = do
@@ -227,10 +230,12 @@ sourceToIntermediate : ∀ u → Source u → SI-Monad (Vec Var (tySize u))
 sourceToIntermediate u (Ind refl x) = indToIR u x
 sourceToIntermediate u (Lit x) = litToInd u x
 sourceToIntermediate `Base (Add source source₁) = do
+  add (Log (showSource (Add source source₁)))
   r₁ ← sourceToIntermediate `Base source
   r₂ ← sourceToIntermediate `Base source₁
   v ← new
   add (IAdd zero ((one , head r₁) ∷ (one , head r₂) ∷ (- one , v) ∷ []))
+  add (Log "---")
   return (v ∷ [])
 sourceToIntermediate `Base (Mul source source₁) = do
   r₁ ← sourceToIntermediate `Base source

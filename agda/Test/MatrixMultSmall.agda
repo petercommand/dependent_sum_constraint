@@ -59,38 +59,11 @@ module Test where
     return m₃
 open Test
 
-open import Codata.Musical.Colist using (Colist) renaming (fromList to coFromList)
-open import Codata.Musical.Notation
+open import Compile.Generate FF FField FFinite (λ x → showℕ (FiniteField.elem x)) FiniteField.elem
 
-open import Data.Nat.Show renaming (show to showℕ)
-
-open import Compile.SourceIntermediate FF FField FFinite (λ x → showℕ (FiniteField.elem x))
-open import Language.Intermediate FF
-
-open import Function
-
-IR : _
-IR = compileSource _ test
-
-open import Language.Intermediate.Show FF (λ x → showℕ (FiniteField.elem x))
 open import IO
-open import Z3.Cmd
-open import Level
 
-open import Data.String renaming (_++_ to _S++_)
-
-main' : IO (Lift Level.zero ⊤)
-main' = 
-  let n , result , (out , input) = IR
+main = 
+  let
       inputAss = (1 , 3) ∷ (2 , 5) ∷ (3 , 7) ∷ (4 , 9) ∷ (5 , 11) ∷ (6 , 13) ∷ (7 , 15) ∷ (8 , 17) ∷ (9 , 3) ∷ (10 , 5) ∷ (11 , 7) ∷ (12 , 9) ∷ (13 , 11) ∷ (14 , 13) ∷ (15 , 15) ∷ (16 , 17) ∷ (17 , 19) ∷ (18 , 21) ∷ (19 , 23) ∷ (20 , 25) ∷ []
-      z3Cmd = genWitnessSMT n inputAss (result [])
-  in ♯ writeFile "inputvars" "" >>
-     ♯ (♯ sequence′ (coFromList (map (appendFile "inputvars" ∘′ (λ x → x S++ "\n") ∘′ showℕ) input)) >>
-     ♯ (♯ writeFile "outvars" "" >>
-     ♯ (♯ sequence′ (coFromList (map (appendFile "outvars" ∘′ (λ x → x S++ "\n") ∘′ showℕ) (Data.Vec.toList out))) >>
-     ♯ (♯ writeFile "constraints" "" >>
-     ♯ (♯ sequence′ (coFromList (map (appendFile "constraints" ∘′ (λ x → x S++ "\n") ∘′ showIntermediate) (result []))) >>
-     ♯ (♯ writeFile "test.smt" "" >>
-     ♯ sequence′ (coFromList (map (appendFile "test.smt" ∘′ (λ x → x S++ "\n") ∘′ showZ3) (z3Cmd ++ (CheckSat ∷ GetModel ∷ []))))))))))
-
-main = run main'
+  in run (genMain test inputAss)

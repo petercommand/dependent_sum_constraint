@@ -3,14 +3,16 @@ open import Agda.Builtin.Nat renaming (zero to nzero)
 open import Data.Bool
 open import Data.Field
 open import Data.Finite
-open import Data.List hiding (splitAt; head; take; drop)
+open import Data.List hiding (splitAt; head; take; drop; intercalate; concat)
 open import Data.Nat hiding (_⊔_; _+_) renaming (zero to nzero)
 open import Data.Nat.Show renaming (show to showℕ)
 open import Data.Nat.Properties
-open import Data.Product
+open import Data.Product hiding (map)
 open import Data.String renaming (_++_ to _S++_) hiding (show)
+open import Data.String.Intercalate
+
 open import Data.Unit
-open import Data.Vec hiding (_>>=_; _++_; [_]; splitAt)
+open import Data.Vec hiding (_>>=_; _++_; [_]; splitAt; map; concat)
 open import Data.Vec.Split
 
 open import Function
@@ -21,7 +23,7 @@ open import Language.Common
 open import Level renaming (zero to lzero; suc to lsuc)
 
 open import Relation.Binary.PropositionalEquality hiding ([_])
-module Compile.SourceIntermediate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) where
+module Compile.SourceIntermediate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) where
 
 open import Language.Intermediate f
 open import Language.Source f finite showf
@@ -278,39 +280,63 @@ module Comp where
   open import Data.Nat.Show
 
   open import Z3.Cmd renaming (_+_ to _Z3+_; _*_ to _Z3*_)
+  open import Magma.Poly renaming (_+_ to _M+_; _*_ to _M*_; _-_ to _M-_; lit to Mlit; var to Mvar)
 
   varToString : ℕ → String
   varToString n = "v" S++ show n 
 
   genVarDecl : ℕ → List Z3Cmd
-  genVarDecl nzero = [ DeclConst (varToString nzero) Int ]
-  genVarDecl (suc n) = DeclConst (varToString (suc n)) Int ∷ genVarDecl n
+  genVarDecl nzero = [ DeclConst (varToString nzero) ]
+  genVarDecl (suc n) = DeclConst (varToString (suc n)) ∷ genVarDecl n
 
   genVarRange : ℕ → List Z3Cmd
-  genVarRange nzero = Assert (Ge (lit (varToString nzero)) (lit (show 0))) ∷ Assert (Lt (lit (varToString nzero)) (lit (show (Finite.size finite)))) ∷ []
-  genVarRange (suc n) = Assert (Ge (lit (varToString (suc n))) (lit (show 0))) ∷ Assert (Lt (lit (varToString (suc n))) (lit (show (Finite.size finite)))) ∷ [] ++ genVarRange n
+  genVarRange nzero = Assert (Ge (var (varToString nzero)) (lit 0)) ∷ Assert (Lt (var (varToString nzero)) (lit (Finite.size finite))) ∷ []
+  genVarRange (suc n) = Assert (Ge (var (varToString (suc n))) (lit 0)) ∷ Assert (Lt (var (varToString (suc n))) (lit (Finite.size finite))) ∷ [] ++ genVarRange n
 
   genInputAssert : List (Var × ℕ) → List Z3Cmd
   genInputAssert [] = []
-  genInputAssert ((v , val) ∷ input) = Assert (eq (lit (varToString v)) (lit (show val))) ∷ genInputAssert input
+  genInputAssert ((v , val) ∷ input) = Assert (eq (var (varToString v)) (lit val)) ∷ genInputAssert input
+
+  genMagmaInputAssert : List (Var × ℕ) → List MagmaPoly
+  genMagmaInputAssert [] = []
+  genMagmaInputAssert ((v , val) ∷ l) = (Mvar v M- Mlit val) ∷ genMagmaInputAssert l 
 
   linearCombAdd : List (f × Var) → Z3Expr
-  linearCombAdd [] = lit (show 0)
-  linearCombAdd ((coeff , var) ∷ l) = ((lit (showf coeff)) Z3* (lit (varToString var))) Z3+ linearCombAdd l
+  linearCombAdd [] = lit 0
+  linearCombAdd ((coeff , v) ∷ l) = ((lit (fToℕ coeff)) Z3* (var (varToString v))) Z3+ linearCombAdd l
 
   genConsSMT : List Intermediate → List Z3Cmd
   genConsSMT [] = []
   genConsSMT (IAdd x x₁ ∷ l) =
-    let linComb = (lit (showf x) Z3+ linearCombAdd x₁)
-                        mod lit (show (Finite.size finite))
-    in Assert (eq linComb (lit (show 0))) ∷ genConsSMT l 
+    let linComb = (lit (fToℕ x) Z3+ linearCombAdd x₁)
+                        mod lit (Finite.size finite)
+    in Assert (eq linComb (lit 0)) ∷ genConsSMT l 
   genConsSMT (IMul a b c d e ∷ l) =
-    let lhs = (lit (showf a) Z3* lit (varToString b) Z3* lit (varToString c)) mod lit (show (Finite.size finite))
-        rhs = (lit (showf d) Z3* lit (varToString e)) mod lit (show (Finite.size finite))
+    let lhs = (lit (fToℕ a) Z3* var (varToString b) Z3* var (varToString c)) mod lit (Finite.size finite)
+        rhs = (lit (fToℕ d) Z3* var (varToString e)) mod lit (Finite.size finite)
     in Assert (eq lhs rhs) ∷ genConsSMT l
   genConsSMT (Log _ ∷ l) = genConsSMT l
-  
+
+  linearCombAddMagma : List (f × Var) → MagmaPoly
+  linearCombAddMagma [] = Mlit 0
+  linearCombAddMagma ((coeff , v) ∷ l) = (Mlit (fToℕ coeff) M* Mvar v) M+ linearCombAddMagma l
+
+  genMagmaCons : List Intermediate → List MagmaPoly
+  genMagmaCons [] = []
+  genMagmaCons (IAdd x x₁ ∷ ir) = Mlit (fToℕ x) M+ linearCombAddMagma x₁ ∷ genMagmaCons ir
+  genMagmaCons (IMul a b c d e ∷ ir) =  ((Mlit (fToℕ a) M* Mvar b) M* Mvar c) M- (Mlit (fToℕ d) M* Mvar e) ∷ genMagmaCons ir
+  genMagmaCons (Log x ∷ ir) = genMagmaCons ir
+
+
   genWitnessSMT : ℕ → List (Var × ℕ) → List Intermediate → List Z3Cmd
-  genWitnessSMT n input ir = genVarDecl n ++ [ Assert (eq (lit (varToString 0)) (lit (show 1))) ] ++ genVarRange n ++ genInputAssert input ++ genConsSMT ir
+  genWitnessSMT n input ir = genVarDecl n ++ [ Assert (eq (var (varToString 0)) (lit 1)) ] ++ genVarRange n ++ genInputAssert input ++ genConsSMT ir
+
+  genMagmaPoly : ℕ → List (Var × ℕ) → List Intermediate → List MagmaPoly
+  genMagmaPoly n l ir = (Mvar 0 M- Mlit 1) ∷ genMagmaInputAssert l ++ genMagmaCons ir
+  
+  genMagmaSolve : ℕ → List (Var × ℕ) → List Intermediate → List String
+  genMagmaSolve n l ir = ("R := PolynomialRing(FiniteField(" S++ show (Finite.size finite) S++ "), " S++ (show n) S++ ");") ∷
+                         ("P := [ " S++ intercalate ",\n" (map magmaPolyToString (genMagmaPoly n l ir)) S++ " ];") ∷
+                         "GroebnerBasis(Ideal(P));" ∷ []
 
 open Comp public

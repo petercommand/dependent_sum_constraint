@@ -47,34 +47,9 @@ module Test where
     return (Mul m₁ m₂)
 open Test
 
-open import Codata.Musical.Colist using (Colist) renaming (fromList to coFromList)
-open import Codata.Musical.Notation
 
-open import Data.Nat.Show
+open import Compile.Generate FF FField FFinite (λ x → showℕ (FiniteField.elem x)) FiniteField.elem
 
-open import Compile.SourceIntermediate FF FField FFinite (λ x → show (FiniteField.elem x))
-open import Language.Intermediate FF
-
-open import Function
-
-IR : _
-IR = compileSource _ test
-
-open import Language.Intermediate.Show FF (λ x → show (FiniteField.elem x))
 open import IO
-open import Z3.Cmd
-open import Level
 
-open import Data.String renaming (_++_ to _S++_)
-
-main' : IO (Lift Level.zero ⊤)
-main' = 
-  let n , result , (out , input) = IR
-      z3Cmd = genWitnessSMT n ((1 , 10) ∷ (2 , 20) ∷ []) (result [])
-  in
-     ♯ writeFile "constraints" "" >>
-     ♯ (♯ sequence′ (coFromList (map (appendFile "constraints" ∘′ (λ x → x S++ "\n") ∘′ showIntermediate) (result []))) >>
-     ♯ (♯ writeFile "test.smt" "" >>
-     ♯ sequence′ (coFromList (map (appendFile "test.smt" ∘′ (λ x → x S++ "\n") ∘′ showZ3) (z3Cmd ++ (CheckSat ∷ GetModel ∷ []))))))
-
-main = run main'
+main = run (genMain test ((1 , 10) ∷ (2 , 20) ∷ []))

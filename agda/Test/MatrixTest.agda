@@ -51,26 +51,8 @@ module Test where
     return m₁
 open Test
 
-open import Codata.Musical.Colist using (Colist; fromList)
-open import Codata.Musical.Notation
+open import Compile.Generate FF FField FFinite (λ x → showℕ (FiniteField.elem x)) FiniteField.elem
 
-open import Data.Nat.Show
-
-open import Compile.SourceIntermediate FF FField FFinite (λ x → show (FiniteField.elem x))
-open import Language.Intermediate FF
-
-open import Function
-
-IR : _
-IR = compileSource _ test
-
-open import Language.Intermediate.Show FF (λ x → show (FiniteField.elem x))
 open import IO
 
-main' : IO _
-main' = 
-  let result = proj₁ (proj₂ IR) []
-  in sequence′ (Codata.Musical.Colist.fromList (map (putStrLn ∘′ showIntermediate) result))
-
-
-main = run main'
+main = run (genMain test [])

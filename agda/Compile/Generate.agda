@@ -34,8 +34,8 @@ genMain : ∀ {u} → S-Monad (Source u) → List (Var × ℕ) → IO (Lift Leve
 genMain m i =
   let IR = compileSource _ m
       n , result , (out , input) = IR
-      z3Cmd = genWitnessSMT n [] (result [])
-      magma = genMagmaSolve n [] (result [])
+      z3Cmd = genWitnessSMT n i (result [])
+      magma = genMagmaSolve n i (result [])
   in
 
      ♯ writeFile "inputvars" "" >>
@@ -47,5 +47,5 @@ genMain m i =
      ♯ (♯ writeFile "test.smt" "" >>
      ♯ (♯ writeFile "magma.input" "" >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "magma.input" ∘′ (λ x → x S++ "\n")) magma)) >>
-     ♯ sequence′ (coFromList (map (appendFile "test.smt" ∘′ (λ x → x S++ "\n") ∘′ showBitZ3) (z3Cmd ++ (CheckSat ∷ GetModel ∷ []))))))))))))
+     ♯ sequence′ (coFromList (map (appendFile "test.smt" ∘′ (λ x → x S++ "\n") ∘′ showZ3) (z3Cmd ++ (CheckSat ∷ GetModel ∷ []))))))))))))
 

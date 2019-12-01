@@ -39,6 +39,13 @@ get = λ s → s , mempty , s
 
 {-# INLINE get #-}
 
+gets : ∀ {ℓ} {A : Set ℓ} → (S → A) → StateWriterMonad A
+gets f = do
+  r ← get
+  return (f r)
+
+{-# INLINE gets #-}
+
 
 put : S → StateWriterMonad ⊤
 put s = λ _ → s , mempty , tt

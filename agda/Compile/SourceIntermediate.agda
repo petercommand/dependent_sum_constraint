@@ -1,18 +1,23 @@
-open import Agda.Builtin.Nat renaming (zero to nzero)
+open import Agda.Builtin.Nat renaming (zero to nzero) hiding (_+_; _*_)
 
 open import Data.Bool
 open import Data.Field
 open import Data.Finite
 open import Data.List hiding (splitAt; head; take; drop; intercalate; concat)
-open import Data.Nat hiding (_⊔_; _+_) renaming (zero to nzero)
+import Data.Map
+module M = Data.Map
+open import Data.MaybeC
+open import Data.Nat hiding (_⊔_) renaming (zero to nzero; _≟_ to _≟ℕ_; _+_ to _+ℕ_; _*_ to _*ℕ_)
 open import Data.Nat.Show renaming (show to showℕ)
 open import Data.Nat.Properties
 open import Data.Product hiding (map)
-open import Data.String renaming (_++_ to _S++_) hiding (show)
+import Data.Sets
+module S = Data.Sets
+open import Data.String renaming (_++_ to _S++_) hiding (show; fromList)
 open import Data.String.Intercalate
-
+open import Data.Sum hiding (map)
 open import Data.Unit
-open import Data.Vec hiding (_>>=_; _++_; [_]; splitAt; map; concat)
+open import Data.Vec hiding (_>>=_; _++_; [_]; splitAt; map; concat; fromList)
 open import Data.Vec.Split
 
 open import Function
@@ -23,9 +28,13 @@ open import Language.Common
 open import Level renaming (zero to lzero; suc to lsuc)
 
 open import Relation.Binary.PropositionalEquality hiding ([_])
-module Compile.SourceIntermediate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) where
+open import Relation.Nullary
+open import TypeClass.Ord
+
+module Compile.SourceIntermediate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
 
 open import Language.Intermediate f
+open import Language.Intermediate.Show f showf
 open import Language.Source f finite showf
 open import Language.TySize f finite
 open import Language.Universe f
@@ -35,17 +44,46 @@ module SI-Monad where
   open Function.Endomorphism.Propositional (List Intermediate) renaming (Endo to Builder) public
 
   import Control.StateWriter
-  open Control.StateWriter Var Builder id _∘′_ hiding (_>>=_; _>>_; return; StateWriterMonad)
-  open Control.StateWriter Var Builder id _∘′_ using (_>>=_; _>>_; return) renaming (StateWriterMonad to SI-Monad) public
-  
+
+  data WriterMode : Set where
+    NormalMode : WriterMode
+    PostponedMode : WriterMode
+  {-
+    The state component records the "mode" that determines how the writer writes, and records the first unused var that's incremented every time a var is allocated
+    The writer component forces delayed evaluation of some of the constraints during proof gen.
+  -}
+  open Control.StateWriter (WriterMode × Var) (Builder × Builder) (id , id) (λ { (f₁ , f₂) (s₁ , s₂) → (f₁ ∘′ s₁ , f₂ ∘′ s₂) }) hiding (_>>=_; _>>_; return; StateWriterMonad)
+  open Control.StateWriter (WriterMode × Var) (Builder × Builder) (id , id) (λ { (f₁ , f₂) (s₁ , s₂) → (f₁ ∘′ s₁ , f₂ ∘′ s₂) }) using (_>>=_; _>>_; return) renaming (StateWriterMonad to SI-Monad) public
+
+  addWithMode : Intermediate → WriterMode → SI-Monad ⊤
+  addWithMode w NormalMode = tell ((λ x → [ w ] ++ x) , id)
+  addWithMode w PostponedMode = tell (id , λ x → [ w ] ++ x)
+
+  writerSwitch : WriterMode → SI-Monad ⊤
+  writerSwitch  m = do
+    v ← gets proj₂
+    put (m , v)
+
+  withMode : ∀ {ℓ} {A : Set ℓ} → WriterMode → SI-Monad A → SI-Monad A
+  withMode m act = do
+    oriMode ← gets proj₁
+    writerSwitch m
+    r ← act
+    writerSwitch oriMode
+    return r
+    
+
   add : Intermediate → SI-Monad ⊤
-  add w' = tell (λ x → [ w' ] ++ x)
+  add w' = do
+    m ← gets proj₁
+    addWithMode w' m
 
   new : SI-Monad Var
   new = do
-    s ← get
-    put (1 + s)
-    return s
+    m ← gets proj₁
+    v ← gets proj₂
+    put (m , (1 +ℕ v))
+    return v
 
   newVarVec : ∀ n → SI-Monad (Vec Var n)
   newVarVec nzero = return []
@@ -134,7 +172,7 @@ module Private where
   a-zero nzero = refl
   a-zero (suc a) = refl
   
-  a-b+b≡a : ∀ a b → a ≥ b → (a - b) + b ≡ a
+  a-b+b≡a : ∀ a b → a ≥ b → (a - b) +ℕ b ≡ a
   a-b+b≡a a .0 z≤n rewrite a-zero a | +-comm a 0 = refl
   a-b+b≡a (suc n) (suc m) (s≤s a≥b) rewrite +-comm (n - m) (suc m)
                                           | +-comm m (n - m) = cong suc (a-b+b≡a n m a≥b)
@@ -163,7 +201,7 @@ varEqLit (`Σ u x) vec (fstₗ , sndₗ) with splitAt (tySize u) vec
   s ← varEqLit (x fstₗ) (take (tySize (x fstₗ)) vecₜ) sndₗ
   land r s
  where
-   vecₜ : Vec Var (tySize (x fstₗ) + ((maxTySizeOver (enum u) x) - tySize (x fstₗ)))
+   vecₜ : Vec Var (tySize (x fstₗ) +ℕ ((maxTySizeOver (enum u) x) - tySize (x fstₗ)))
    vecₜ rewrite +-comm (tySize (x fstₗ)) (maxTySizeOver (enum u) x - tySize (x fstₗ))
              | a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x fstₗ)) (maxTySizeLem u fstₗ x) = snd
 
@@ -180,7 +218,7 @@ enumSigmaCond {u} (elem₁ ∷ enum₁) x v₁ v₂ = do
   r' ← land sat rest
   land r' restZ
  where
-   vecₜ : Vec Var (tySize (x elem₁) + (maxTySizeOver (enum u) x - tySize (x elem₁)))
+   vecₜ : Vec Var (tySize (x elem₁) +ℕ (maxTySizeOver (enum u) x - tySize (x elem₁)))
    vecₜ rewrite +-comm (tySize (x elem₁)) (maxTySizeOver (enum u) x - tySize (x elem₁))
               | a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x elem₁)) (maxTySizeLem u elem₁ x) = v₂
 
@@ -238,7 +276,9 @@ assertVarEqVar .(suc _) (x ∷ v₁) (x₁ ∷ v₂) = do
   assertVarEqVar _ v₁ v₂
 
 sourceToIntermediate : ∀ u → Source u → SI-Monad (Vec Var (tySize u))
-sourceToIntermediate u (Ind refl x) = indToIR u x
+sourceToIntermediate u (Ind refl x) = withMode PostponedMode (indToIR u x)
+
+
 sourceToIntermediate u (Lit x) = litToInd u x
 sourceToIntermediate `Base (Add source source₁) = do
   add (Log ("+ STI: " S++ showSource (Add source source₁)))
@@ -273,10 +313,10 @@ module Comp where
   compileSource : ∀ u → (S-Monad (Source u)) → Var × Builder × (Vec Var (tySize u) × List ℕ)
   compileSource u source = 
     let v , (asserts , input) , output = source 1
-    in  (do
-      compAssert (asserts [])
-      r ← sourceToIntermediate _ output
-      return (r , input [])) v
+        (mode , v') , (bld₁ , bld₂) , outputVars = (do
+           compAssert (asserts [])
+           sourceToIntermediate _ output) (NormalMode , v)
+    in v' , bld₁ ∘′ bld₂ , outputVars , input []
   open import Data.Nat.Show
 
   open import Z3.Cmd renaming (_+_ to _Z3+_; _*_ to _Z3*_)
@@ -336,7 +376,133 @@ module Comp where
   
   genMagmaSolve : ℕ → List (Var × ℕ) → List Intermediate → List String
   genMagmaSolve n l ir = ("R := PolynomialRing(FiniteField(" S++ show (Finite.size finite) S++ "), " S++ (show n) S++ ");") ∷
-                         ("P := [ " S++ intercalate ",\n" (map magmaPolyToString (genMagmaPoly n l ir)) S++ " ];") ∷
+                         ("P := [ " S++ intercalate ", " (map magmaPolyToString (genMagmaPoly n l ir)) S++ " ];") ∷
                          "GroebnerBasis(Ideal(P));" ∷ []
 
+--  directSolve
+
+  numUnknownsList : M.Map Var ℕ → S.Sets Var → List Var → ℕ → ℕ
+  numUnknownsList map set [] n = n
+  numUnknownsList map set (x ∷ l) n with S.member natOrd x set
+  numUnknownsList map set (x ∷ l) n | false with M.lookup natOrd x map
+  numUnknownsList map set (x ∷ l) n | false | nothing = numUnknownsList map (S.insert natOrd x set) l (suc n)
+  numUnknownsList map set (x ∷ l) n | false | just x₁ = numUnknownsList map set l n
+  numUnknownsList map set (x ∷ l) n | true = numUnknownsList map set l n
+
+  numUnknownsAux : M.Map Var ℕ → S.Sets Var → Intermediate → ℕ
+  numUnknownsAux m vars (IAdd x x₁) = numUnknownsList m vars (map proj₂ x₁) 0
+  numUnknownsAux m vars (IMul a b c d e) = numUnknownsList m vars (b ∷ c ∷ e ∷ []) 0
+  numUnknownsAux m vars (Log x) = 0
+
+  numUnknowns : M.Map Var ℕ → Intermediate → ℕ
+  numUnknowns map ir = numUnknownsAux map S.empty ir
+
+  Error = String
+
+
+  Coeff = ℕ
+  open Field field' renaming (zero to zerof; one to onef; _+_ to _+f_; -_ to -f_; _*_ to _*f_; 1/_ to 1f/_)
+
+  evalLinCombKnown : M.Map Var ℕ → List (f × Var) → f
+  evalLinCombKnown map [] = zerof
+  evalLinCombKnown map ((coeff , v) ∷ l) with M.lookup natOrd v map
+  evalLinCombKnown map ((coeff , v) ∷ l) | nothing = zero -- shouldn't happen
+  evalLinCombKnown map ((coeff , v) ∷ l) | just x = (coeff *f (ℕtoF v)) +f evalLinCombKnown map l
+
+  evalVarsKnown : M.Map Var ℕ → List Var → f
+  evalVarsKnown map [] = onef
+  evalVarsKnown map (x ∷ l) with M.lookup natOrd x map
+  evalVarsKnown map (x ∷ l) | nothing = zerof -- shouldn't happen
+  evalVarsKnown map (x ∷ l) | just x₁ = (ℕtoF x₁) * evalVarsKnown map l
+
+  solveNoUnknown : M.Map Var ℕ → Intermediate → Bool
+  solveNoUnknown map (IAdd x x₁) with fToℕ ((evalLinCombKnown map x₁) +f x) ≟ℕ 0
+  solveNoUnknown map (IAdd x x₁) | yes p = true
+  solveNoUnknown map (IAdd x x₁) | no ¬p = false
+  solveNoUnknown map (IMul a b c d e) with fToℕ (a * evalVarsKnown map (b ∷ c ∷ [])) ≟ℕ fToℕ (d * evalVarsKnown map (e ∷ []))
+  solveNoUnknown map (IMul a b c d e) | yes p = true
+  solveNoUnknown map (IMul a b c d e) | no ¬p = false
+  solveNoUnknown map (Log x) = true
+
+
+  -- outputs the constants and the coefficients of the variables
+  collectCoeff : M.Map Var ℕ → List (f × Var) → ℕ → ℕ × M.Map Var Coeff
+  collectCoeff m [] const = const , M.empty
+  collectCoeff m ((coeff , v) ∷ l) const with collectCoeff m l const
+  ... | const' , coeffMap with M.lookup natOrd v m -- is the value of v known?
+  collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | nothing with M.lookup natOrd v coeffMap
+  collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | nothing | nothing = const' , M.insert natOrd v (fToℕ coeff) coeffMap
+  collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | nothing | just x = const' , M.insert natOrd v (fToℕ coeff +ℕ x) coeffMap
+  collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | just x = (x *ℕ (fToℕ coeff)) +ℕ const' , coeffMap
+
+
+
+  directSolveAux : M.Map Var ℕ → List Intermediate → Error ⊎ (M.Map Var ℕ)
+  directSolveAux map [] = inj₂ map
+  directSolveAux map (IAdd x x₁ ∷ irs) with collectCoeff map x₁ (fToℕ x)
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap with M.size coeffMap
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize with mSize ≟ℕ 0
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | yes p with const ≟ℕ 0
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | yes p | yes p₁ = directSolveAux map irs
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | yes p | no ¬p = inj₁ ("Unsatisfiable constraint: " S++ showIntermediate (IAdd x x₁))
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p with mSize ≟ℕ 1
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | yes p with M.toList coeffMap
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | yes p | [] = inj₁ "Internal error: the impossible happened @ SourceIntermediate.agda:directSolveAux"
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | yes p | (v , coeff) ∷ t = directSolveAux (M.insert natOrd v (fToℕ ((-f (ℕtoF const)) *f (1f/ (ℕtoF coeff)))) map) irs
+  directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | no ¬p₁ = inj₁ ("Cannot solve constraint " S++ showIntermediate (IAdd x x₁) S++ " without hint")
+  directSolveAux map (IMul a b c d e ∷ irs) with numUnknowns map (IMul a b c d e)
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns with unknowns ≟ℕ 0
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | yes p with solveNoUnknown map (IMul a b c d e)
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | yes p | false = inj₁ ("Unsatisfiable " S++ showIntermediate (IMul a b c d e))
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | yes p | true = directSolveAux map irs
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p with unknowns ≟ℕ 1
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p with M.lookup natOrd b map
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing with M.lookup natOrd c map
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | nothing = inj₁ ("Cannot solve constraint " S++ showIntermediate (IMul a b c d e))
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x with M.lookup natOrd e map
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | nothing with fToℕ (a *f (ℕtoF x)) ≟ℕ fToℕ d
+     -- a * ⟦ b ⟧ * ⟦ c ⟧ = a * ⟦ b ⟧ * x = (a * x) * ⟦ b ⟧ = d * ⟦ e ⟧, and
+     -- since b & e are unknowns, b = e
+     -- and if a * x = d, it's a tautology
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | nothing | yes p₁ = directSolveAux map irs
+     -- if a * x /= d, then ⟦ b ⟧ = ⟦ e ⟧ = 0
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | nothing | no ¬p₁ = directSolveAux (M.insert natOrd b 0 map) irs
+     -- solve b
+     -- a * ⟦ b ⟧ * ⟦ c ⟧ = d * ⟦ e ⟧
+     -- => a * ⟦ b ⟧ * x = d * x₁
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ with (fToℕ (a *f ℕtoF x)) ≟ℕ 0
+   -- check whether or not d * x₁ ≡ 0 holds
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ | yes p₁ with fToℕ (d *f (ℕtoF x₁)) ≟ℕ 0
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ | yes p₁ | yes p₂ = directSolveAux map irs
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ | yes p₁ | no ¬p₁ = inj₁ ("Unsatisfiable constraint " S++ showIntermediate (IMul a b c d e))
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ | no ¬p₁ = directSolveAux (M.insert natOrd b (fToℕ ((d *f (ℕtoF x₁)) *f (1f/ (a *f (ℕtoF x))))) map) irs
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x with M.lookup natOrd c map
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing with M.lookup natOrd e map
+     -- a * ⟦ b ⟧ * ⟦ c ⟧ = d * ⟦ e ⟧
+     -- a * x * ⟦ c ⟧ = d * ⟦ e ⟧
+     -- similar to a case above
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | nothing with fToℕ (a *f (ℕtoF x)) ≟ℕ fToℕ d
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | nothing | yes p₁ = directSolveAux map irs
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | nothing | no ¬p₁ = directSolveAux (M.insert natOrd c 0 map) irs
+     -- a * x * ⟦ c ⟧ = d * x₁
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ with (fToℕ (a *f ℕtoF x)) ≟ℕ 0
+   -- check whether or not d * x₁ ≡ 0 holds
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ | yes p₁ with fToℕ (d *f (ℕtoF x₁)) ≟ℕ 0
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ | yes p₁ | yes p₂ = directSolveAux map irs
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ | yes p₁ | no ¬p₁ = inj₁ ("Unsatisfiable constraint " S++ showIntermediate (IMul a b c d e))
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ | no ¬p₁ = directSolveAux (M.insert natOrd c (fToℕ ((d *f (ℕtoF x₁)) *f (1f/ (a *f (ℕtoF x))))) map) irs
+     -- e must not be known, because there is exactly one unknown
+     -- a * x * x₁ = d * ⟦ e ⟧
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ with fToℕ d ≟ℕ 0
+  -- check whether or not a * x * x₁ ≡ 0 holds
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ | yes p₁ with fToℕ ((a *f (ℕtoF x)) *f (ℕtoF x₁)) ≟ℕ 0
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ | yes p₁ | yes p₂ = directSolveAux map irs
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ | yes p₁ | no ¬p₁ = inj₁ ("Unsatisfiable constraint " S++ showIntermediate (IMul a b c d e)) 
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ | no ¬p₁ = directSolveAux (M.insert natOrd e (fToℕ (((a *f (ℕtoF x)) *f (ℕtoF x₁)) *f (1f/ d))) map) irs
+  directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | no ¬p₁ = inj₁ ("Cannot solve constraint " S++ showIntermediate (IMul a b c d e))
+  directSolveAux map (Log x ∷ irs) = directSolveAux map irs
+  directSolve : List (Var × ℕ) → List Intermediate → Error ⊎ (M.Map Var ℕ)
+  directSolve l ir = directSolveAux (M.insert natOrd 0 1 (M.fromList natOrd l)) ir
+
 open Comp public
+

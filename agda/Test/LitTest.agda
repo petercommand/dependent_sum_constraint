@@ -5,6 +5,7 @@ open import Data.Field.Finite
 open import Data.Fin hiding (_≟_)
 open import Data.List
 open import Data.Nat hiding (_≟_)
+open import Data.Nat.Primality
 open import Data.Nat.Show renaming (show to showℕ)
 open import Data.Product hiding (map)
 open import Data.Unit hiding (_≟_)
@@ -13,11 +14,15 @@ open import Data.Vec hiding (_>>=_; map; _++_)
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
 
+
 N = 21888242871839275222246405745257275088548364400416034343698204186575808495617
 
+postulate
+  nPrime : Prime N
+
 FF = FiniteField N
-FField = isField N
-FFinite = isFinite N
+FField = isField N nPrime
+FFinite = isFinite N nPrime
 
 open import Language.Common
 
@@ -32,11 +37,12 @@ module Test where
   test : S-Monad (Source `Base)
   test = do
     m₁ ← new `Base
-    assertEq m₁ (Add (Lit (fieldElem 2)) (Lit (fieldElem 23)))
+    assertEq m₁ (Add (Lit (fieldElem nPrime 2)) (Lit (fieldElem nPrime 23)))
     return m₁
 open Test
 
-open import Compile.Generate FF FField FFinite (λ x → showℕ (FiniteField.elem x)) FiniteField.elem
+open import Compile.Generate FF FField FFinite (λ x → showℕ (FiniteField.elem x)) FiniteField.elem (fieldElem nPrime)
+
 
 open import IO
 

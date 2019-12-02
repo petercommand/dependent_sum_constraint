@@ -18,9 +18,9 @@ open import IO
 
 open import Level
 
-module Compile.Generate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ)  where
+module Compile.Generate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
 
-open import Compile.SourceIntermediate f field' finite showf fToℕ
+open import Compile.SourceIntermediate f field' finite showf fToℕ ℕtoF
 open import Language.Common
 open import Language.Intermediate.Show f showf
 open import Language.Source f finite showf

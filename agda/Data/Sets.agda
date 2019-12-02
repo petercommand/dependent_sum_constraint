@@ -10,6 +10,7 @@ postulate
 {-# FOREIGN GHC
 
 import Data.Set
+import qualified MAlonzo.Code.TypeClass.Ord as Ord
 
 #-}
 
@@ -21,5 +22,5 @@ postulate
   insert : ∀ {A : Set} → (_ : Ord A) → A → Sets A → Sets A
   member : ∀ {A : Set} → (_ : Ord A) → A → Sets A → Bool
 {-# COMPILE GHC empty = \ _ -> empty #-}
-{-# COMPILE GHC insert = \ _ OrdDict -> insert #-}
-{-# COMPILE GHC member = \ _ OrdDict -> member #-}
+{-# COMPILE GHC insert = \ _ Ord.OrdDict -> insert #-}
+{-# COMPILE GHC member = \ _ Ord.OrdDict -> member #-}

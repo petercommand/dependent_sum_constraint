@@ -23,7 +23,8 @@ executable dependent-sum
   build-depends:       base >=4.12 && <4.13,
                        ieee754,
                        text,
-                       containers
+                       containers,
+                       arithmoi
   hs-source-dirs:      .
   ghc-options:         -O -fwarn-incomplete-patterns -fno-warn-overlapping-patterns -Werror -Wno-missing-home-modules
   default-language:    Haskell2010

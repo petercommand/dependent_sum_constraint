@@ -13,7 +13,7 @@ with pkgs;
     stack
     gmp
     gnumake
-    (haskellPackages.ghcWithPackages (p: [ p.text p.ieee754 p.containers ]))
+    (haskellPackages.ghcWithPackages (p: [ p.text p.ieee754 p.containers p.arithmoi ]))
     procps
     pkgconfig
     cabal-install

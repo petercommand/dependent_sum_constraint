@@ -24,14 +24,14 @@ open import Language.TySize f finite
 open import Language.Universe f
 
 module S-Monad where
-  import Control.StateWriter
+  import Control.RWS
 
   import Function.Endomorphism.Propositional using (Endo)
 
   module Assert = Function.Endomorphism.Propositional (List (∃ (λ u → Source u × Source u)))
   --
   module Input = Function.Endomorphism.Propositional (List ℕ)
-  open Control.StateWriter Var (Assert.Endo × Input.Endo) (id , id) (λ a b → proj₁ a ∘′ proj₁ b , proj₂ a ∘′ proj₂ b) renaming (StateWriterMonad to S-Monad) public
+  open Control.RWS ⊤ (Assert.Endo × Input.Endo) Var (id , id) (λ a b → proj₁ a ∘′ proj₁ b , proj₂ a ∘′ proj₂ b) renaming (RWSMonad to S-Monad) public
 
 
 

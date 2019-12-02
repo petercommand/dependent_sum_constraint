@@ -1,6 +1,8 @@
+open import Agda.Builtin.Nat
+
 open import Data.Bool
 open import Data.Finite
-open import Data.List
+open import Data.List hiding (splitAt)
 open import Data.List.Membership.Propositional
 open import Data.List.Monad
 open import Data.List.Relation.Unary.Any
@@ -8,15 +10,17 @@ open import Data.List.Relation.Unary.Any.Properties
 open import Data.Nat
 open import Data.Nat.Max
 open import Data.Nat.Properties
+open import Data.Nat.Properties2
 open import Data.Product
 open import Data.Sum
 open import Data.Unit
-open import Data.Vec hiding ([_]; _>>=_; _++_)
+open import Data.Vec hiding ([_]; _>>=_; _++_; splitAt)
+open import Data.Vec.Split
 
 open import Relation.Binary.PropositionalEquality renaming ([_] to ℝ[_])
 
 module Language.TySize (f : Set) (finite : Finite f) where
-
+open import Language.Common
 import Language.Universe
 
 
@@ -89,3 +93,14 @@ maxTySizeLem `Two true x = max-monotoneᵣ (tySize (x false)) (max (tySize (x tr
 maxTySizeLem `Base val x = ∈→≥ (Finite.elems finite) x val (Finite.a∈elems finite val)
 maxTySizeLem (`Vec u x₁) val x = ∈→≥ (enum (`Vec u x₁)) x val (enumComplete _ val)
 maxTySizeLem (`Σ u x₁) val x = ∈→≥ (enum (`Σ u x₁)) x val (enumComplete _ val)
+
+maxTySplit : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec Var (maxTySizeOver (enum u) x) → Vec Var (tySize (x val)) × Vec Var (maxTySizeOver (enum u) x - tySize (x val))
+maxTySplit u val x vec = vecSplit
+  where
+    vecₜ : Vec ℕ (tySize (x val) + (maxTySizeOver (enum u) x - tySize (x val)))
+    vecₜ rewrite +-comm (tySize (x val)) (maxTySizeOver (enum u) x - tySize (x val))
+               | a-b+b≡a _ _ (maxTySizeLem u val x) = vec
+
+    vecSplit : Vec ℕ (tySize (x val)) × Vec ℕ (maxTySizeOver (enum u) x - tySize (x val))
+    vecSplit = splitAt (tySize (x val)) vecₜ
+

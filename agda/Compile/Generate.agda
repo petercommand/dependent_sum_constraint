@@ -30,12 +30,14 @@ open import Language.Universe f
 
 open import Z3.Cmd
 
-genMain : ∀ {u} → S-Monad (Source u) → List (Var × ℕ) → IO (Lift Level.zero ⊤)
-genMain m i =
-  let IR = compileSource _ m
+genMain : ∀ (prime : ℕ) {u} → S-Monad (Source u) → List (Var × ℕ) → IO (Lift Level.zero ⊤)
+genMain p m i =
+  let IR = compileSource p _ m
       n , result , (out , input) = IR
-      z3Cmd = genWitnessSMT n i (result [])
-      magma = genMagmaSolve n i (result [])
+      r = result []
+      z3Cmd = genWitnessSMT n i r
+      magma = genMagmaSolve n i r
+      solveResult = directSolve i r
   in
 
      ♯ writeFile "inputvars" "" >>
@@ -44,8 +46,10 @@ genMain m i =
      ♯ (♯ sequence′ (coFromList (map (appendFile "outvars" ∘′ (λ x → x S++ "\n") ∘′ show) (Data.Vec.toList out))) >>
      ♯ (♯ writeFile "constraints" "" >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "constraints" ∘′ (λ x → x S++ "\n") ∘′ showIntermediate) (result []))) >>
-     ♯ (♯ writeFile "test.smt" "" >>
+     ♯ (♯ writeFile "input.smt" "" >>
      ♯ (♯ writeFile "magma.input" "" >>
+     ♯ (♯ writeFile "solve.result" "" >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "magma.input" ∘′ (λ x → x S++ "\n")) magma)) >>
-     ♯ sequence′ (coFromList (map (appendFile "test.smt" ∘′ (λ x → x S++ "\n") ∘′ showZ3) (z3Cmd ++ (CheckSat ∷ GetModel ∷ []))))))))))))
+     ♯ (♯ sequence′ (coFromList (map (appendFile "solve.result") (showSolve solveResult))) >>
+     ♯ sequence′ (coFromList (map (appendFile "input.smt" ∘′ (λ x → x S++ "\n") ∘′ showZ3) (z3Cmd ++ (CheckSat ∷ GetModel ∷ []))))))))))))))
 

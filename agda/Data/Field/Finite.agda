@@ -13,6 +13,8 @@ open import Data.Nat.GCD
 open import Data.Nat.Primality
 open import Data.Nat.Properties renaming (_≟_ to _≟ℕ_)
 
+open import Math.Arithmoi
+
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
@@ -55,6 +57,14 @@ multInv {suc n} record { elem = (suc elem₁) ; nIsPrime = nIsPrime ; elem<n = e
     inv m n (+- x y eq) = x
     inv m n (-+ x y eq) = n - x
 
+fastInv : ∀ {n} {≢ : False (n ≟ℕ 0)} → FiniteField n → FiniteField n
+fastInv {suc n} record { elem = zero ; nIsPrime = nIsPrime ; elem<n = elem<n } =
+    record { elem = zero ; nIsPrime = nIsPrime ; elem<n = elem<n }
+fastInv {suc n} record { elem = (suc elem₁) ; nIsPrime = nIsPrime ; elem<n = elem<n } =
+    record { elem = mod (getInv (suc elem₁) (suc n)) (suc n)
+           ; nIsPrime = nIsPrime
+           ; elem<n = mod< (getInv (suc elem₁) (suc n)) (suc n) (s≤s z≤n) }
+
 isField : ∀ n {≢0 : False (n ≟ℕ 0)} → Prime n → Field (FiniteField n)
 isField (suc n) p = record { _+_ = λ x x₁ → record { elem = mod (elem x + elem x₁) (suc n)
                                                    ; nIsPrime = p
@@ -71,7 +81,7 @@ isField (suc n) p = record { _+_ = λ x x₁ → record { elem = mod (elem x + e
                          ; one = record { elem = mod 1 (suc n)
                                         ; nIsPrime = p
                                         ; elem<n = mod< 1 (suc n) (s≤s z≤n) }
-                         ; 1/_ = multInv }
+                         ; 1/_ = fastInv }
 
 private
   enumFieldElem : (n : ℕ) → Prime n → (m : ℕ) → .(n > m) → List (FiniteField n)

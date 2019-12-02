@@ -21,4 +21,5 @@ showIntermediate (IAdd x x₁) = "IAdd " ++ showf x ++ " " ++ aux x₁
     aux ((f , n) ∷ l) = "(" ++ showf f ++ ", " ++ showℕ n ++ ")" ++ " ∷ " ++ aux l
     
 showIntermediate (IMul a b c d e) = "IMul " ++ showf a ++ " " ++ showℕ b ++ " " ++ showℕ c ++ " " ++ showf d ++ " " ++ showℕ e
+showIntermediate (Hint x) = "Hint [redacted]"
 showIntermediate (Log x) = "Log " ++ x

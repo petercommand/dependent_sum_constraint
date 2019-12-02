@@ -46,4 +46,4 @@ open import Compile.Generate FF FField FFinite (λ x → showℕ (FiniteField.el
 
 open import IO
 
-main = run (genMain test [])
+main = run (genMain N test [])

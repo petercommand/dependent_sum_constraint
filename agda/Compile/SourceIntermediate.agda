@@ -112,7 +112,7 @@ neqzHint : ℕ → Var → Var → Var → M.Map Var ℕ → M.Map Var ℕ
 neqzHint prime n v v' m with M.lookup natOrd n m
 neqzHint prime n v v' m | nothing = m
 neqzHint prime n v v' m | just nzero = M.insert natOrd v 0 (M.insert natOrd v' 0 m)
-neqzHint prime n v v' m | just (suc x) = M.insert natOrd v (modℕ (getInv n prime) prime) (M.insert natOrd v' 1 m)
+neqzHint prime n v v' m | just (suc x) = M.insert natOrd v (modℕ (getInv (suc x) prime) prime) (M.insert natOrd v' 1 m)
 
 neqz : Var → SI-Monad Var
 neqz n = do
@@ -426,7 +426,7 @@ module Comp where
   evalLinCombKnown map [] = zerof
   evalLinCombKnown map ((coeff , v) ∷ l) with M.lookup natOrd v map
   evalLinCombKnown map ((coeff , v) ∷ l) | nothing = zero -- shouldn't happen
-  evalLinCombKnown map ((coeff , v) ∷ l) | just x = (coeff *f (ℕtoF v)) +f evalLinCombKnown map l
+  evalLinCombKnown map ((coeff , v) ∷ l) | just x = (coeff *f (ℕtoF x)) +f evalLinCombKnown map l
 
   evalVarsKnown : M.Map Var ℕ → List Var → f
   evalVarsKnown map [] = onef
@@ -452,8 +452,8 @@ module Comp where
   ... | const' , coeffMap with M.lookup natOrd v m -- is the value of v known?
   collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | nothing with M.lookup natOrd v coeffMap
   collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | nothing | nothing = const' , M.insert natOrd v (fToℕ coeff) coeffMap
-  collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | nothing | just x = const' , M.insert natOrd v (fToℕ coeff +ℕ x) coeffMap
-  collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | just x = (x *ℕ (fToℕ coeff)) +ℕ const' , coeffMap
+  collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | nothing | just x = const' , M.insert natOrd v (fToℕ (coeff +f ℕtoF x)) coeffMap
+  collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | just x = fToℕ ((ℕtoF x *f coeff) +f ℕtoF const') , coeffMap
 
 
 

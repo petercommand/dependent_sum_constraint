@@ -3,3 +3,5 @@ all:
 	g++ -g main.o ../libsnark/build/libsnark/libsnark.a -lgmp -lgmpxx ../libsnark/build/depends/libff/libff/libff.a ../libsnark/build/depends/libzm.a -lcrypto -lprocps -o main
 exec:
 	./main ../agda/constraints_serialize ../agda/solve.result
+clean:
+	rm main main.o

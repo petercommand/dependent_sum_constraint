@@ -534,6 +534,6 @@ module Comp where
 
   showSolve : Error ⊎ (M.Map Var ℕ) → List String
   showSolve (inj₁ x) = ("Error: " S++ x) ∷ []
-  showSolve (inj₂ y) = map (λ x → "(" S++ showℕ (proj₁ x) S++ ", " S++ showℕ (proj₂ x) S++ ")\n") (M.toList y)
+  showSolve (inj₂ y) = map (λ x → showℕ (proj₁ x) S++ " " S++ showℕ (proj₂ x) S++ "\n") (M.toList y)
 open Comp public
 

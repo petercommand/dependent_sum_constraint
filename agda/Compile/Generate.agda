@@ -7,7 +7,7 @@ open import Data.Finite
 open import Data.List
 open import Data.Nat
 open import Data.Nat.Show 
-open import Data.String hiding (show) renaming (_++_ to _S++_)
+open import Data.String hiding (show; length) renaming (_++_ to _S++_)
 open import Data.Product hiding (map)
 open import Data.Unit
 open import Data.Vec hiding (_++_; map)
@@ -46,10 +46,13 @@ genMain p m i =
      ♯ (♯ sequence′ (coFromList (map (appendFile "outvars" ∘′ (λ x → x S++ "\n") ∘′ show) (Data.Vec.toList out))) >>
      ♯ (♯ writeFile "constraints" "" >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "constraints" ∘′ (λ x → x S++ "\n") ∘′ showIntermediate) (result []))) >>
+     ♯ (♯ writeFile "constraints_serialize" "" >>
+     ♯ (♯ sequence′ (coFromList (map (appendFile "constraints_serialize" ∘′ (λ x → x S++ "\n")) (show (length input) ∷ show (pred n) ∷ []))) >>
+     ♯ (♯ sequence′ (coFromList (map (appendFile "constraints_serialize" ∘′ (λ x → x S++ "\n") ∘′ serializeIntermediate) (result []))) >>
      ♯ (♯ writeFile "input.smt" "" >>
      ♯ (♯ writeFile "magma.input" "" >>
      ♯ (♯ writeFile "solve.result" "" >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "magma.input" ∘′ (λ x → x S++ "\n")) magma)) >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "solve.result") (showSolve solveResult))) >>
-     ♯ sequence′ (coFromList (map (appendFile "input.smt" ∘′ (λ x → x S++ "\n") ∘′ showZ3) (z3Cmd ++ (CheckSat ∷ GetModel ∷ []))))))))))))))
+     ♯ sequence′ (coFromList (map (appendFile "input.smt" ∘′ (λ x → x S++ "\n") ∘′ showZ3) (z3Cmd ++ (CheckSat ∷ GetModel ∷ [])))))))))))))))))
 

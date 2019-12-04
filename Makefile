@@ -9,3 +9,4 @@ clean:
 	rm -rf libsnark/build
 exec:
 	$(MAKE) -C agda exec
+	$(MAKE) -C backend_interface exec

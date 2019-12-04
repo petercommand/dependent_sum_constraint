@@ -34,12 +34,12 @@ module Test where
   f : ⟦ `Two ⟧ → U
   f t with t ≟B false
   f t | yes p = `Two
-  f t | no ¬p = `One
+  f t | no ¬p = `Vec `One 2
 
   test : S-Monad (Source (`Σ `Two f))
   test = do
     m₁ ← new (`Σ `Two f)
-    assertEq m₁ (Lit (true , tt))
+    assertEq m₁ (Lit (false , true))
     return m₁
 open Test
 

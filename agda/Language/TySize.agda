@@ -9,7 +9,7 @@ open import Data.List.Misc
 open import Data.List.Monad
 open import Data.List.Relation.Unary.Any hiding (map)
 open import Data.List.Relation.Unary.Any.Properties
-open import Data.Nat
+open import Data.Nat hiding (_⊔_)
 open import Data.Nat.Max
 open import Data.Nat.Properties
 open import Data.Nat.Properties2
@@ -22,17 +22,20 @@ open import Data.Vec.Split
 open import Function
 
 open import Relation.Binary.PropositionalEquality renaming ([_] to ℝ[_])
+
+
 open import Relation.Nullary
 
 module Language.TySize (f : Set) (finite : Finite f) where
 open import Language.Common
 import Language.Universe
 
-
+open import Level renaming (zero to lzero; suc to lsuc)
 
 open Language.Universe f
 
 open import Axiom.Extensionality.Propositional
+
 
 postulate
   ext : ∀ {ℓ} {ℓ'} → Axiom.Extensionality.Propositional.Extensionality ℓ ℓ'
@@ -96,6 +99,17 @@ module Enum where
   piFromList u x .(d ∷ _) ((d , v) ∷ l) refl dom (here refl) = v
   piFromList u x (._ ∷ rest) (x₁ ∷ l) refl dom (there dom∈enough) = piFromList u x rest l refl dom dom∈enough
 
+  piFromListProofIrre : ∀ u (x : ⟦ u ⟧ → U) → (enough : List ⟦ u ⟧)
+      → (l l' : List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧)))
+      → l ≡ l'
+      → (p₁ : map proj₁ l ≡ enough)
+      → (p₂ : map proj₁ l' ≡ enough)
+      → (dom : ⟦ u ⟧)
+      → (p₃ : dom ∈ enough)
+      → piFromList u x enough l p₁ dom p₃ ≡ piFromList u x enough l' p₂ dom p₃
+  piFromListProofIrre u x .(fst ∷ map proj₁ l) ((fst , snd) ∷ l) .((fst , snd) ∷ l) refl refl refl .fst (here refl) = refl
+  piFromListProofIrre u x .(fst ∷ map proj₁ l) ((fst , snd) ∷ l) .((fst , snd) ∷ l) refl refl refl dom (there p₃) = piFromListProofIrre u x (map proj₁ l) l l refl refl refl dom p₃
+  
   listFuncToPi : ∀ u (x : ⟦ u ⟧ → U)
       → (eu : List ⟦ u ⟧)
       → (∀ x → x ∈ eu)
@@ -142,20 +156,40 @@ module Enum where
                                   trans (genFuncProj₁ u x pairs x₁ x₁∈genFunc)
                                         (map-proj₁->>= (enum u) (enum ∘ x)))
 
-  piFromLit : ∀ u x → (eu : List ⟦ u ⟧) → (f : ⟦ `Π u x ⟧) → List (Σ ⟦ u ⟧ λ v → ⟦ x v ⟧)
-  piFromLit u x [] f = []
-  piFromLit u x (x₁ ∷ eu) f = (x₁ , f x₁) ∷ piFromLit u x eu f
+  piToList : ∀ u x → (eu : List ⟦ u ⟧) → (f : ⟦ `Π u x ⟧) → List (Σ ⟦ u ⟧ λ v → ⟦ x v ⟧)
+  piToList u x [] f = []
+  piToList u x (x₁ ∷ eu) f = (x₁ , f x₁) ∷ piToList u x eu f
 
-  genFuncLem : ∀ u x l f → map proj₁ f ≡ map proj₁ l → f ∈ genFunc u x l
-  genFuncLem u x [] f eq = {!!}
+
+  piFromList∘piToList≗id : ∀ u x eu (∈eu : ∀ x → x ∈ eu) f p → ∀ t → f t ≡ piFromList u x eu (piToList u x eu f) p t (∈eu t)
+  piFromList∘piToList≗id u x eu ∈eu f p t = aux u x eu f p t (∈eu t)
     where
-      map-empty : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'} → (m : List A) → (f : A → B) → map f m ≡ [] → m ≡ []
-      map-empty [] f eq = refl
-  genFuncLem u x ((x₁₁ , x₁₂) ∷ l) ((x₂₁ , x₂₂) ∷ l₂) eq with genFunc u x l | inspect (genFunc u x) l
-  ... | t | ℝ[ refl ] with cong Data.List.head eq
-  ... | refl = ∈->>= t (λ ac → x₁₂ >>= (λ choice → ((x₁₁ , choice) ∷ ac) ∷ [])) l₂
-                 (genFuncLem u x l l₂ (cong tail' eq)) ((x₁₁ , x₂₂) ∷ l₂) {!!}
-      
+      aux : ∀ u x eu f p t t∈eu → f t ≡ piFromList u x eu (piToList u x eu f) p t t∈eu
+      aux u x (.t ∷ xs) f p t (here refl) with piToList u x xs f
+      ... | t₁ with p
+      ... | refl = refl
+      aux u x (._ ∷ xs) f p t (there t∈eu) with piToList u x xs f | inspect (piToList u x xs) f
+      ... | t₁ | ℝ[ prf ] with p
+      ... | refl = trans (aux u x xs f (cong (map proj₁) prf) t t∈eu) (piFromListProofIrre u x (map proj₁ t₁) _ _ prf (cong (map proj₁) prf) refl t t∈eu)
+  data FuncInst {ℓ} {ℓ'} (A : Set ℓ) (B : A → Set ℓ') : List (Σ A B) → List (Σ A (λ v → List (B v))) → Set (ℓ ⊔ ℓ') where
+    InstNil : FuncInst A B [] []
+    InstCons : ∀ l l' → (a : A) (b : B a) (ls : List (B a)) → b ∈ ls → (ins : FuncInst A B l l') → FuncInst A B ((a , b) ∷ l) ((a , ls) ∷ l')
+
+  map-empty : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'} → (m : List A) → (f : A → B) → map f m ≡ [] → m ≡ []
+  map-empty [] f eq = refl
+    
+  genFuncLem : ∀ u x l f → FuncInst _ _ f l → f ∈ genFunc u x l
+  genFuncLem u x .[] .[] InstNil = here refl
+  genFuncLem u x .((a , ls) ∷ l') .((a , b) ∷ l) (InstCons l l' a b ls x₁ finst) with genFunc u x l' | inspect (genFunc u x) l'
+  ... | t | ℝ[ refl ] = ∈->>= (genFunc u x l') _ l (genFuncLem u x l' l finst) ((a , b) ∷ l)
+                            (∈->>= ls _ b x₁ ((a , b) ∷ l) (here refl))
+
+  FuncInstLem : ∀ u x (f : ⟦ `Π u x ⟧) (l : List ⟦ u ⟧) → (∀ x₁ → f x₁ ∈ enum (x x₁)) → FuncInst ⟦ u ⟧ (λ v → ⟦ x v ⟧) (piToList u x l f) (l >>= (λ r → (r , enum (x r)) ∷ []))
+  FuncInstLem u x f [] p = InstNil
+  FuncInstLem u x f (x₁ ∷ l) p = InstCons (piToList u x l f) (l >>= (λ r → (r , enum (x r)) ∷ []))
+                          x₁ (f x₁) (enum (x x₁)) (p x₁) (FuncInstLem u x f l p)
+
+
   enumComplete `One tt = here refl
   enumComplete `Two false = here refl
   enumComplete `Two true = there (here refl)
@@ -163,12 +197,21 @@ module Enum where
   enumComplete (`Vec u zero) [] = here refl
   enumComplete (`Vec u (suc x₁)) (x ∷ x₂) = ∈l-∈l'-∈r (enum u) _∷_ x x₂ (enumComplete u x) (λ _ → enum (`Vec u x₁)) (enumComplete (`Vec u x₁) x₂)
   enumComplete (`Σ u x₁) (fst , snd) = ∈l-∈l'-∈r (enum u) _,_ fst snd (enumComplete u fst) (λ r → enum (x₁ r)) (enumComplete (x₁ fst) snd)
-  enumComplete (`Π u x₁) f = f∈listFuncToPi u x₁ (enum u) (enumComplete u) (genFunc _ _ (enum u >>= λ r → return (r , enum (x₁ r)))) (piFromLit u x₁ (enum u) f)
+  enumComplete (`Π u x₁) f = f∈listFuncToPi u x₁ (enum u) (enumComplete u) (genFunc _ _ (enum u >>= λ r → return (r , enum (x₁ r)))) (piToList u x₁ (enum u) f)
                                        (λ x x₃ → trans (genFuncProj₁ u x₁ (enum u >>= (λ r → return (r , enum (x₁ r)))) x x₃)
-                                                       (map-proj₁->>= (enum u) (enum ∘ x₁))) f {!!} {!!}
+                                                       (map-proj₁->>= (enum u) (enum ∘ x₁))) f (genFuncLem u x₁ (enum u >>= (λ r → (r , enum (x₁ r)) ∷ [])) _ (FuncInstLem u x₁ f (enum u) (λ x → enumComplete (x₁ x) (f x))))
+                                       (ext λ x → piFromList∘piToList≗id u x₁ (enum u) (enumComplete u) f (trans
+                                                                         (genFuncProj₁ u x₁ (enum u >>= (λ r → (r , enum (x₁ r)) ∷ []))
+                                                                                       (piToList u x₁ (enum u) f)
+                                                                                         (genFuncLem u x₁ (enum u >>= (λ r → (r , enum (x₁ r)) ∷ []))
+                                                                                           (piToList u x₁ (enum u) f)
+                                                                                             (FuncInstLem u x₁ f (enum u)
+                                                                                               (λ x₂ → enumComplete (x₁ x₂) (f x₂)))))
+                                                                         (map-proj₁->>= (enum u) (λ x₂ → enum (x₁ x₂)))) x)
 open Enum public
 
 maxTySizeOver : ∀ {u} → List ⟦ u ⟧ → (⟦ u ⟧ → U) → ℕ
+tySumOver : ∀ {u} → List ⟦ u ⟧ → (⟦ u ⟧ → U) → ℕ
 tySize : U → ℕ
 
 
@@ -178,10 +221,13 @@ tySize `Two = 1
 tySize `Base = 1
 tySize (`Vec u x) = x * tySize u
 tySize (`Σ u x) = tySize u + maxTySizeOver (enum u) x
-tySize (`Π u x) = {!!}
+tySize (`Π u x) = tySumOver (enum u) x
 
 maxTySizeOver [] fam = 0
 maxTySizeOver (x ∷ l) fam = max (tySize (fam x)) (maxTySizeOver l fam)
+
+tySumOver [] x = 0
+tySumOver (x₁ ∷ l) x = tySize (x x₁) + tySumOver l x
 
 ∈→≥ : ∀ {u} → (elem : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U) → (val : ⟦ u ⟧) → val ∈ elem → maxTySizeOver elem x ≥ tySize (x val)
 ∈→≥ (_ ∷ xs) x val (here refl) = max-left (tySize (x val)) (maxTySizeOver xs x)
@@ -190,14 +236,7 @@ maxTySizeOver (x ∷ l) fam = max (tySize (fam x)) (maxTySizeOver l fam)
 
 
 maxTySizeLem : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → maxTySizeOver (enum u) x ≥ tySize (x val)
-maxTySizeLem `One tt x rewrite max-a-0≡a (tySize (x tt)) = ≤-refl
-maxTySizeLem `Two false x = max-left (tySize (x false)) (max (tySize (x true)) zero)
-maxTySizeLem `Two true x = max-monotoneᵣ (tySize (x false)) (max (tySize (x true)) zero) (tySize (x true))
-                                           (max-left (tySize (x true)) zero)
-maxTySizeLem `Base val x = ∈→≥ (Finite.elems finite) x val (Finite.a∈elems finite val)
-maxTySizeLem (`Vec u x₁) val x = ∈→≥ (enum (`Vec u x₁)) x val (enumComplete _ val)
-maxTySizeLem (`Σ u x₁) val x = ∈→≥ (enum (`Σ u x₁)) x val (enumComplete _ val)
-maxTySizeLem (`Π u x₁) val x = {!!}
+maxTySizeLem u val x = ∈→≥ (enum u) x val (enumComplete _ val)
 
 maxTySplit : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec Var (maxTySizeOver (enum u) x) → Vec Var (tySize (x val)) × Vec Var (maxTySizeOver (enum u) x - tySize (x val))
 maxTySplit u val x vec = vecSplit

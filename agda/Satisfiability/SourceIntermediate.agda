@@ -181,11 +181,11 @@ neqzSound : ∀ (r : WriterMode)
   → (builderProd : Builder × Builder)
   → ∀ (v : Var) → (val : ℕ) → (solution' : List (Var × ℕ))
   → ListLookup v solution' val
-  → ∀ (init : ℕ) → init > builderMaxVar builderProd →
+  → ∀ (init : ℕ) → 
   let result = neqz v (prime , r , init)
   in BuilderProdSol (writerOutput result) solution'
   → ListLookup (output result) solution' (noteqZ val)
-neqzSound r builderProd v val solution' vIsVal init init>max isSol
+neqzSound r builderProd v val solution' vIsVal init isSol
     with addSound r builderProd (IMul onef init v onef (suc init)) solution' (2 + init)
     (let b₁₂ = writerOutput
                   (add (IMul onef init v onef (suc init))
@@ -198,7 +198,7 @@ neqzSound r builderProd v val solution' vIsVal init init>max isSol
                        (add (IMul onef (suc init) v onef v) (prime , r , suc (suc init)))
                 b₃₄ = writerOutput (neqz v (prime , r , init))
             in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ solution' refl refl (neqzSoundLem₂ r v init) isSol)
-neqzSound r builderProd v val solution' vIsVal init init>max isSol
+neqzSound r builderProd v val solution' vIsVal init isSol
    | multSol .(Field.one field') .init bval .v cval .(Field.one field') .(suc init) eval x x₁ x₂ x₃
        | multSol .(Field.one field') .(suc init) bval₁ .v cval₁ .(Field.one field') .v eval₁ x₄ x₅ x₆ x₇
        rewrite *-identityˡ (ℕtoF bval₁)

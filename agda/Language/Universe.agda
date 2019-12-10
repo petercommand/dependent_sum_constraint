@@ -19,7 +19,8 @@ data U where
   `Two : U
   `Base : U
   `Vec : (S : U) → ℕ → U
-  `Σ : (S : U) → (⟦ S ⟧ → U) → U
+  `Σ `Π : (S : U) → (⟦ S ⟧ → U) → U
+
 
 
 ⟦ `Zero ⟧ = ⊥
@@ -28,3 +29,6 @@ data U where
 ⟦ `Base ⟧ = f
 ⟦ `Vec ty x ⟧ = Vec ⟦ ty ⟧ x
 ⟦ `Σ fst snd ⟧ = Σ ⟦ fst ⟧ (λ f → ⟦ snd f ⟧)
+⟦ `Π fst snd ⟧ = (x : ⟦ fst ⟧) → ⟦ snd x ⟧
+
+

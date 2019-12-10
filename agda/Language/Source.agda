@@ -32,5 +32,6 @@ showSource {`Base} (Lit x) = "Lit `Base " ++ showf x
 showSource {`Vec u zero} (Lit x) = "[]"
 showSource {`Vec u (suc x₁)} (Lit (x ∷ x₂)) = "VecLit (" ++ showSource (Lit x) ++ " ∷ " ++ showSource (Lit x₂) ++ ")"
 showSource {`Σ u x₁} (Lit (fst , snd)) = "SigmaLit (" ++ showSource (Lit fst) ++ " , " ++ showSource (Lit snd) ++ ")"
+showSource {`Π u x₁} (Lit f) = "PiLit ([redacted])"
 showSource (Add s s₁) = "((" ++ showSource s ++ ") + (" ++ showSource s₁ ++ "))"
 showSource (Mul s s₁) = "((" ++ showSource s ++ ") * (" ++ showSource s₁ ++ "))"

@@ -1,3 +1,4 @@
+open import Data.Empty
 open import Data.Field
 open import Data.Finite
 open import Data.List hiding (lookup; head)
@@ -19,7 +20,9 @@ open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
 module Satisfiability.SourceIntermediate (f : Set) (field' : Field f) (isField : IsField f field')
-     (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field') (prime : ℕ) (isPrime : Prime prime) where
+     (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
+        (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field')
+        (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field') (prime : ℕ) (isPrime : Prime prime) where
 
 open import Language.Intermediate f
 
@@ -56,6 +59,7 @@ x ≈ y = ℕtoF x ≡ ℕtoF y
                    ; sym = λ x → sym x
                    ; trans = λ {i} {j} {k} → trans }
 
+open IsEquivalence ≈-IsEquiv renaming (refl to ≈-refl; sym to ≈-sym; trans to ≈-trans)
 data ListLookup : Var → List (Var × ℕ) → ℕ → Set where
   LookupHere : ∀ v l n n' → n ≈ n' → ListLookup v ((v , n) ∷ l) n'
   LookupThere : ∀ v l n t → ListLookup v l n → ¬ v ≡ proj₁ t → ListLookup v (t ∷ l) n
@@ -64,9 +68,13 @@ data ListLookup : Var → List (Var × ℕ) → ℕ → Set where
 
 ListLookup-Respects-≈ : ∀ v l n n' → n ≈ n' → ListLookup v l n → ListLookup v l n'
 ListLookup-Respects-≈ v .((v , n₁) ∷ l) n n' eq (LookupHere .v l n₁ .n x) = LookupHere v l n₁ n' (≈-trans x eq)
-  where
-    open IsEquivalence ≈-IsEquiv renaming (trans to ≈-trans)
 ListLookup-Respects-≈ v .(t ∷ l) n n' eq (LookupThere .v l .n t look x) = LookupThere v l n' t (ListLookup-Respects-≈ v l n n' eq look) x
+
+ListLookup-≈ : ∀ {v} {l} {n} {n'} → ListLookup v l n → ListLookup v l n' → n ≈ n'
+ListLookup-≈ {v} .{(v , n₁) ∷ l} {n} {n'} (LookupHere .v l n₁ .n x) (LookupHere .v .l .n₁ .n' x₁) = ≈-trans (≈-sym x) x₁
+ListLookup-≈ {v} .{(v , n₁) ∷ l} {n} {n'} (LookupHere .v l n₁ .n x) (LookupThere .v .l .n' .(v , n₁) look₂ x₁) = ⊥-elim (x₁ refl)
+ListLookup-≈ {v} .{(v , n₁) ∷ l} {n} {n'} (LookupThere .v l .n .(v , n₁) look₁ x) (LookupHere .v .l n₁ .n' x₁) = ⊥-elim (x refl)
+ListLookup-≈ {v} .{(t ∷ l)} {n} {n'} (LookupThere .v l .n t look₁ x) (LookupThere .v .l .n' .t look₂ x₁) = ListLookup-≈ look₁ look₂
 
 data LinearCombVal (solution : List (Var × ℕ)) : List (f × Var) → f → Set where
   LinearCombValBase : LinearCombVal solution [] zerof
@@ -87,6 +95,8 @@ data IntermediateSolution (solution : List (Var × ℕ)) : Intermediate → Set 
                  → ListLookup e solution eval
                  → ((a *F (ℕtoF bval)) *F (ℕtoF cval)) ≡ (d *F (ℕtoF eval))
                  → IntermediateSolution solution (IMul a b c d e)
+  hintSol : ∀ f → IntermediateSolution solution (Hint f) -- Hint does not have to be solved
+  logSol : ∀ s → IntermediateSolution solution (Log s)
 
 BuilderProdSol : Builder × Builder → List (Var × ℕ) → Set
 BuilderProdSol (fst , snd) sol = ∀ x → x ∈ (fst (snd [])) → IntermediateSolution sol x
@@ -137,3 +147,36 @@ assertTrueSound r builder v sol' init isSol' | addSol .(Field.one field') .(((Fi
         lem with cong (_+F_ (ℕtoF varVal)) x₁
         ... | hyp rewrite sym (+-assoc (ℕtoF varVal) (-F (ℕtoF varVal)) onef)
                         | +-invʳ (ℕtoF varVal) | +-identityˡ onef | +-identityʳ (ℕtoF varVal) = sym hyp
+
+notZ : ℕ → ℕ
+notZ zero = 0
+notZ (suc n) = 1
+
+
+neqzSound : ∀ (r : WriterMode)
+  → (builderProd : Builder × Builder)
+  → ∀ (v : Var) → (val : ℕ) → (solution' : List (Var × ℕ))
+  → ListLookup v solution' val
+  → ∀ (init : ℕ) → init > builderMaxVar builderProd →
+  let result = neqz v (prime , r , init)
+  in BuilderProdSol (writerOutput result) solution'
+  → ListLookup (output result) solution' (notZ val)
+neqzSound r builderProd v val solution' vIsVal init init>max isSol
+    with addSound r builderProd (IMul onef init v onef (suc init)) solution' (2 + init) {!!}
+       | addSound r builderProd (IMul onef (suc init) v onef v) solution' (2 + init) {!!}
+neqzSound r builderProd v val solution' vIsVal init init>max isSol
+   | multSol .(Field.one field') .init bval .v cval .(Field.one field') .(suc init) eval x x₁ x₂ x₃
+       | multSol .(Field.one field') .(suc init) bval₁ .v cval₁ .(Field.one field') .v eval₁ x₄ x₅ x₆ x₇
+       rewrite *-identityˡ (ℕtoF bval₁)
+             | *-identityˡ (ℕtoF eval₁)
+             | *-identityˡ (ℕtoF bval)
+             | *-identityˡ (ℕtoF eval)
+             | ListLookup-≈ x₅ x₁
+             | ListLookup-≈ x₄ x₂
+             | ListLookup-≈ x₁ vIsVal
+             | ListLookup-≈ x₆ vIsVal with val
+... | zero = ListLookup-Respects-≈ _ _ _ _ (trans lem₁ (sym ℕtoF-0≡0)) x₂
+  where
+    lem₁ : ℕtoF eval ≡ zerof
+    lem₁ = trans (sym x₃) (subst (λ t → (ℕtoF bval *F t) ≡ zerof) (sym ℕtoF-0≡0) (*-zeroʳ (ℕtoF bval)))
+... | suc n = {!!}

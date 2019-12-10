@@ -208,6 +208,8 @@ module Enum where
                                                                                              (FuncInstLem u x₁ f (enum u)
                                                                                                (λ x₂ → enumComplete (x₁ x₂) (f x₂)))))
                                                                          (map-proj₁->>= (enum u) (λ x₂ → enum (x₁ x₂)))) x)
+
+
 open Enum public
 
 maxTySizeOver : ∀ {u} → List ⟦ u ⟧ → (⟦ u ⟧ → U) → ℕ

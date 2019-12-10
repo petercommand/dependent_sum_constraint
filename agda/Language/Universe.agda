@@ -22,6 +22,7 @@ data U where
   `Σ `Π : (S : U) → (⟦ S ⟧ → U) → U
 
 
+
 ⟦ `Zero ⟧ = ⊥
 ⟦ `One ⟧ = ⊤
 ⟦ `Two ⟧ = Bool
@@ -29,3 +30,5 @@ data U where
 ⟦ `Vec ty x ⟧ = Vec ⟦ ty ⟧ x
 ⟦ `Σ fst snd ⟧ = Σ ⟦ fst ⟧ (λ f → ⟦ snd f ⟧)
 ⟦ `Π fst snd ⟧ = (x : ⟦ fst ⟧) → ⟦ snd x ⟧
+
+

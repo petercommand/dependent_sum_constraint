@@ -179,7 +179,16 @@ allEqz vec = do
   add (Log ("allEqz result:" S++ showℕ r))
   return r
 
+piVarEqLit : ∀ u (x : ⟦ u ⟧ → U) (eu : List ⟦ u ⟧) → Vec Var (tySumOver eu x) → ⟦ `Π u x ⟧ → SI-Monad Var
 varEqLit : ∀ u → Vec Var (tySize u) → ⟦ u ⟧ → SI-Monad Var
+
+piVarEqLit u x [] vec f = trivial
+piVarEqLit u x (x₁ ∷ eu) vec f with splitAt (tySize (x x₁)) vec
+... | fst , snd = do
+  r ← varEqLit (x x₁) fst (f x₁)
+  s ← piVarEqLit u x eu snd f
+  land r s
+
 varEqLit `One vec lit = allEqz vec
 varEqLit `Two vec false = allEqz vec
 varEqLit `Two vec true = anyNeqz vec
@@ -202,10 +211,12 @@ varEqLit (`Σ u x) vec (fstₗ , sndₗ) with splitAt (tySize u) vec
    vecₜ : Vec Var (tySize (x fstₗ) +ℕ ((maxTySizeOver (enum u) x) - tySize (x fstₗ)))
    vecₜ rewrite +-comm (tySize (x fstₗ)) (maxTySizeOver (enum u) x - tySize (x fstₗ))
              | a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x fstₗ)) (maxTySizeLem u fstₗ x) = snd
-
+varEqLit (`Π u x) vec f = piVarEqLit u x (enum u) vec f
 
 enumSigmaCond : ∀ {u} → List ⟦ u ⟧ → (x : ⟦ u ⟧ → U) → Vec Var (tySize u) → Vec Var (maxTySizeOver (enum u) x) → SI-Monad Var
+enumPiCond : ∀ {u} → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U) → Vec Var (tySumOver eu x) → SI-Monad Var
 tyCond : ∀ u → Vec Var (tySize u) → SI-Monad Var
+
 enumSigmaCond [] x v₁ v₂ = trivial
 enumSigmaCond {u} (elem₁ ∷ enum₁) x v₁ v₂ = do
   eqElem₁ ← varEqLit u v₁ elem₁
@@ -220,6 +231,12 @@ enumSigmaCond {u} (elem₁ ∷ enum₁) x v₁ v₂ = do
    vecₜ rewrite +-comm (tySize (x elem₁)) (maxTySizeOver (enum u) x - tySize (x elem₁))
               | a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x elem₁)) (maxTySizeLem u elem₁ x) = v₂
 
+enumPiCond [] x vec = trivial
+enumPiCond (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
+... | fst , rest = do
+  r ← tyCond (x x₁) fst
+  s ← enumPiCond eu x rest
+  land r s
 tyCond `Zero vec = trivial
 tyCond `One vec = allEqz vec
 tyCond `Two vec = do
@@ -238,6 +255,7 @@ tyCond (`Σ u x) vec with splitAt (tySize u) vec
   r ← tyCond u fst
   s ← enumSigmaCond (enum u) x fst snd
   land r s
+tyCond (`Π u x) vec = enumPiCond (enum u) x vec
 
 indToIR : ∀ u → Vec Var (tySize u) → SI-Monad (Vec Var (tySize u))
 indToIR `Zero vec = return []
@@ -258,12 +276,25 @@ indToIR (`Σ u x) vec = do
   t ← tyCond (`Σ u x) vec
   isTrue t
   return vec
+indToIR (`Π u x) vec = do
+  t ← tyCond (`Π u x) vec
+  isTrue t
+  return vec
+
 
 allZHint : ∀ {n} → Vec Var n → M.Map Var ℕ → M.Map Var ℕ
 allZHint [] = id
 allZHint (x ∷ v) = allZHint v ∘′ M.insert natOrd x 0
 
+
+piLitEqVecHint : ∀ u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U) → ⟦ `Π u x ⟧ → Vec Var (tySumOver eu x) → M.Map Var ℕ → M.Map Var ℕ
 litEqVecHint : ∀ u → ⟦ u ⟧ → Vec Var (tySize u) → M.Map Var ℕ → M.Map Var ℕ
+
+piLitEqVecHint u [] x f vec = id
+piLitEqVecHint u (x₁ ∷ eu) x f vec with splitAt (tySize (x x₁)) vec
+... | fst , rest = litEqVecHint (x x₁) (f x₁) fst ∘′ piLitEqVecHint u eu x f rest
+
+
 litEqVecHint `One tt (v ∷ []) = M.insert natOrd v 0
 litEqVecHint `Two false (v ∷ []) = M.insert natOrd v 0
 litEqVecHint `Two true (v ∷ []) = M.insert natOrd v 1
@@ -274,7 +305,7 @@ litEqVecHint (`Vec u (suc x)) (x₁ ∷ l) v | fst , snd = litEqVecHint _ l snd 
 litEqVecHint (`Σ u x) l v with splitAt (tySize u) v
 litEqVecHint (`Σ u x) (l₁ , l₂) v | v₁ , v₂ with maxTySplit u l₁ x v₂
 ... | v₂₁ , v₂₂ = allZHint v₂₂ ∘′ litEqVecHint (x l₁) l₂ v₂₁ ∘′ litEqVecHint u l₁ v₁
-
+litEqVecHint (`Π u x) f vec = piLitEqVecHint u (enum u) x f vec
 
 litToInd : ∀ u → ⟦ u ⟧ → SI-Monad (Vec Var (tySize u))
 litToInd u l = do

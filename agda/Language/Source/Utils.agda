@@ -1,6 +1,8 @@
 open import Data.Fin hiding (_+_)
 open import Data.Finite
 open import Data.List hiding ([_]; splitAt)
+open import Data.List.Membership.Propositional
+open import Data.List.Relation.Unary.Any hiding (map)
 open import Data.Nat
 open import Data.Nat.Properties
 open import Data.Product
@@ -83,3 +85,14 @@ iterM (suc n) act = do
  where
   castF : Fin (n + 1) → Fin (1 + n)
   castF f rewrite +-comm 1 n = f
+
+appAux : ∀ {u} {x : ⟦ u ⟧ → U} → (eu : List ⟦ u ⟧) → (val : ⟦ u ⟧) → (mem : val ∈ eu) → Vec ℕ (tySumOver eu x) → S-Monad (Source (x val))
+appAux {_} {x} .(val ∷ _) val (here refl) vec with splitAt (tySize (x val)) vec
+... | fst , _ = return (Ind refl fst)
+appAux {_} {x} (x₁ ∷ _) val (there mem) vec with splitAt (tySize (x x₁)) vec
+... | _ , rest = appAux _ val mem rest
+
+app : ∀ {u} {x : ⟦ u ⟧ → U} → Source (`Π u x) → (val : ⟦ u ⟧) → S-Monad (Source (x val))
+app {u} (Ind refl x₁) val = appAux (enum u) val (enumComplete u val) x₁
+app (Lit x) val = return (Lit (x val))
+

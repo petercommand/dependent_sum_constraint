@@ -1,6 +1,7 @@
 module Data.Field where
 
 open import Relation.Binary.PropositionalEquality
+open import Relation.Nullary
 import Algebra.FunctionProperties
 
 record Field {a} (f : Set a) : Set a where
@@ -27,8 +28,8 @@ record IsField {a} (f : Set a) (field' : Field f) : Set a where
       *-assoc : Associative _*_
       +-invˡ : LeftInverse zero -_ _+_
       +-invʳ : RightInverse zero -_ _+_
-      *-invˡ : LeftInverse one 1/_ _*_
-      *-invʳ : RightInverse one 1/_ _*_
+      *-invˡ : ∀ x → ¬ x ≡ zero → (1/ x) * x ≡ one
+      *-invʳ : ∀ x → ¬ x ≡ zero → x * (1/ x) ≡ one
       *-distr-+ˡ : _*_ DistributesOverˡ _+_
       *-distr-+ʳ : _*_ DistributesOverʳ _+_
       -one*f≡-f : ∀ f → (- one) * f ≡ - f

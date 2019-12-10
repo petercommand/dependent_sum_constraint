@@ -19,7 +19,7 @@ open import Language.Common
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
-module Satisfiability.SourceIntermediate (f : Set) (field' : Field f) (isField : IsField f field')
+module Satisfiability.SourceIntermediate (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
      (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
         (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field')
         (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field') (prime : ℕ) (isPrime : Prime prime) where
@@ -101,6 +101,12 @@ data IntermediateSolution (solution : List (Var × ℕ)) : Intermediate → Set 
 BuilderProdSol : Builder × Builder → List (Var × ℕ) → Set
 BuilderProdSol (fst , snd) sol = ∀ x → x ∈ (fst (snd [])) → IntermediateSolution sol x
 
+BuilderProdSolSubsetImp : ∀ b₁ b₂ b₃ b₄ b₁₂ b₃₄ sol
+    → (b₁ , b₂) ≡ b₁₂ → (b₃ , b₄) ≡ b₃₄
+    → (∀ x → x ∈ (b₁ (b₂ [])) → x ∈ (b₃ (b₄ [])))
+    → BuilderProdSol (b₃ , b₄) sol → BuilderProdSol (b₁ , b₂) sol 
+BuilderProdSolSubsetImp b₁ b₂ b₃ b₄ b₁₂ b₃₄ sol refl refl subs isSol x x∈b₁₂ = isSol x (subs x x∈b₁₂)
+
 linearCombMaxVar : List (f × Var) → ℕ
 linearCombMaxVar [] = 1
 linearCombMaxVar ((fst , snd) ∷ l) = snd ⊔ linearCombMaxVar l
@@ -148,9 +154,27 @@ assertTrueSound r builder v sol' init isSol' | addSol .(Field.one field') .(((Fi
         ... | hyp rewrite sym (+-assoc (ℕtoF varVal) (-F (ℕtoF varVal)) onef)
                         | +-invʳ (ℕtoF varVal) | +-identityˡ onef | +-identityʳ (ℕtoF varVal) = sym hyp
 
-notZ : ℕ → ℕ
-notZ zero = 0
-notZ (suc n) = 1
+noteqZ : ℕ → ℕ
+noteqZ n with ℕtoF n ≟F zerof
+noteqZ n | yes p = 0
+noteqZ n | no ¬p = 1
+
+neqzSoundLem₁ : ∀ r v init →
+  let b₁₂ = writerOutput
+                  (add (IMul onef init v onef (suc init))
+                    (prime , r , suc (suc init)))
+      b₃₄ = writerOutput (neqz v (prime , r , init))
+  in ∀ x → x ∈ proj₁ b₁₂ (proj₂ b₁₂ []) → x ∈ proj₁ b₃₄ (proj₂ b₃₄ [])
+neqzSoundLem₁ NormalMode v init x (here px) = there (here px)
+neqzSoundLem₁ PostponedMode v init x (here px) = there (here px)
+
+neqzSoundLem₂ : ∀ r v init →
+  let b₁₂ = writerOutput
+                (add (IMul onef (suc init) v onef v) (prime , r , suc (suc init)))
+      b₃₄ = writerOutput (neqz v (prime , r , init))
+  in ∀ x → x ∈ proj₁ b₁₂ (proj₂ b₁₂ []) → x ∈ proj₁ b₃₄ (proj₂ b₃₄ [])
+neqzSoundLem₂ NormalMode v init x (here px) = there (there (here px))
+neqzSoundLem₂ PostponedMode v init x (here px) = there (there (here px))
 
 
 neqzSound : ∀ (r : WriterMode)
@@ -160,10 +184,20 @@ neqzSound : ∀ (r : WriterMode)
   → ∀ (init : ℕ) → init > builderMaxVar builderProd →
   let result = neqz v (prime , r , init)
   in BuilderProdSol (writerOutput result) solution'
-  → ListLookup (output result) solution' (notZ val)
+  → ListLookup (output result) solution' (noteqZ val)
 neqzSound r builderProd v val solution' vIsVal init init>max isSol
-    with addSound r builderProd (IMul onef init v onef (suc init)) solution' (2 + init) {!!}
-       | addSound r builderProd (IMul onef (suc init) v onef v) solution' (2 + init) {!!}
+    with addSound r builderProd (IMul onef init v onef (suc init)) solution' (2 + init)
+    (let b₁₂ = writerOutput
+                  (add (IMul onef init v onef (suc init))
+                    (prime , r , suc (suc init)))
+         b₃₄ = writerOutput (neqz v (prime , r , init))
+     in 
+       BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ solution' refl refl (neqzSoundLem₁ r v init) isSol)
+       | addSound r builderProd (IMul onef (suc init) v onef v) solution' (2 + init)
+           (let b₁₂ = writerOutput
+                       (add (IMul onef (suc init) v onef v) (prime , r , suc (suc init)))
+                b₃₄ = writerOutput (neqz v (prime , r , init))
+            in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ solution' refl refl (neqzSoundLem₂ r v init) isSol)
 neqzSound r builderProd v val solution' vIsVal init init>max isSol
    | multSol .(Field.one field') .init bval .v cval .(Field.one field') .(suc init) eval x x₁ x₂ x₃
        | multSol .(Field.one field') .(suc init) bval₁ .v cval₁ .(Field.one field') .v eval₁ x₄ x₅ x₆ x₇
@@ -174,9 +208,24 @@ neqzSound r builderProd v val solution' vIsVal init init>max isSol
              | ListLookup-≈ x₅ x₁
              | ListLookup-≈ x₄ x₂
              | ListLookup-≈ x₁ vIsVal
-             | ListLookup-≈ x₆ vIsVal with val
-... | zero = ListLookup-Respects-≈ _ _ _ _ (trans lem₁ (sym ℕtoF-0≡0)) x₂
+             | ListLookup-≈ x₆ vIsVal with ℕtoF val ≟F zerof
+... | yes p rewrite p
+                  | *-zeroʳ (ℕtoF bval) = ListLookup-Respects-≈ _ _ _ _ (trans (sym x₃) (sym ℕtoF-0≡0)) x₂
+... | no ¬p = ListLookup-Respects-≈ _ _ _ _ (trans lem₁ (sym ℕtoF-1≡1)) x₂
   where
-    lem₁ : ℕtoF eval ≡ zerof
-    lem₁ = trans (sym x₃) (subst (λ t → (ℕtoF bval *F t) ≡ zerof) (sym ℕtoF-0≡0) (*-zeroʳ (ℕtoF bval)))
-... | suc n = {!!}
+    open ≡-Reasoning
+    lem₁ : ℕtoF eval ≡ onef
+    lem₁ =
+      begin
+        ℕtoF eval
+      ≡⟨ sym (*-identityʳ (ℕtoF eval)) ⟩
+        ℕtoF eval *F onef
+      ≡⟨ cong (_*F_ (ℕtoF eval)) (sym (*-invʳ (ℕtoF val) ¬p)) ⟩
+        ℕtoF eval *F (ℕtoF val *F (1F/ ℕtoF val))
+      ≡⟨ sym (*-assoc (ℕtoF eval) (ℕtoF val) (1F/ ℕtoF val)) ⟩
+        (ℕtoF eval *F (ℕtoF val)) *F (1F/ ℕtoF val)
+      ≡⟨ cong (λ x → _*F_ x (1F/ (ℕtoF val))) x₇ ⟩
+        ℕtoF val *F (1F/ ℕtoF val)
+      ≡⟨ *-invʳ (ℕtoF val) ¬p ⟩
+        onef
+      ∎

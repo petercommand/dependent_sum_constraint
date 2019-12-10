@@ -99,8 +99,8 @@ open SI-Monad hiding (SI-Monad)
 open SI-Monad using (SI-Monad) public
 open Field field' hiding (_+_)
 
-isTrue : Var → SI-Monad ⊤
-isTrue v = add (IAdd one ((- one , v) ∷ []))
+assertTrue : Var → SI-Monad ⊤
+assertTrue v = add (IAdd one ((- one , v) ∷ []))
 
 
 
@@ -274,11 +274,11 @@ indToIR (`Vec u (suc x)) vec with splitAt (tySize u) vec
   return vec
 indToIR (`Σ u x) vec = do
   t ← tyCond (`Σ u x) vec
-  isTrue t
+  assertTrue t
   return vec
 indToIR (`Π u x) vec = do
   t ← tyCond (`Π u x) vec
-  isTrue t
+  assertTrue t
   return vec
 
 
@@ -312,7 +312,7 @@ litToInd u l = do
   vec ← newVarVec (tySize u)
   add (Hint (litEqVecHint u l vec))
   r ← varEqLit u vec l
-  isTrue r
+  assertTrue r
   return vec
 
 

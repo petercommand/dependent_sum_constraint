@@ -440,7 +440,16 @@ init eval[x₂]
 -}
 
 notFunc : ℕ → ℕ
-notFunc = {!!}
+notFunc a with ℕtoF a ≟F zerof
+notFunc a | yes p = 1
+notFunc a | no ¬p = 0
+
+lnotSoundLem : ∀ r v init →
+  let b₁₂ = writerOutput (add (IAdd onef (((-F onef) , v) ∷ ((-F onef) , init) ∷ [])) (prime , r , suc init))
+      b₃₄ = writerOutput (lnot v (prime , r , init))
+  in ∀ x → x ∈ proj₁ b₁₂ (proj₂ b₁₂ []) → x ∈ proj₁ b₃₄ (proj₂ b₃₄ [])
+lnotSoundLem NormalMode v init x (here px) = here px
+lnotSoundLem PostponedMode v init x (here px) = here px
 
 lnotSound : ∀ (r : WriterMode)
   → (builderProd : Builder × Builder)
@@ -452,8 +461,31 @@ lnotSound : ∀ (r : WriterMode)
   let result = lnot v (prime , r , init)
   in BuilderProdSol (writerOutput result) solution'
   → ListLookup (output result) solution' (notFunc val) 
-lnotSound r builder v val sol look₁ valBool init isSol = {!!}
+lnotSound r builder v val sol look₁ valBool init isSol
+  with addSound r builder (IAdd onef ((-F onef , v) ∷ (-F onef , init) ∷ [])) sol (suc init)
+        (let b₁₂ = writerOutput (add (IAdd onef (((-F onef) , v) ∷ ((-F onef) , init) ∷ [])) (prime , r , suc init))
+             b₃₄ = writerOutput (lnot v (prime , r , init))
+         in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (lnotSoundLem r v init) isSol)
+lnotSound r builder v val sol look₁ valBool init isSol | addSol .(Field.one field') .(((Field.- field') (Field.one field') , v) ∷ ((Field.- field') (Field.one field') , init) ∷ []) .((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal)) ((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal₁)) (Field.zero field'))) (LinearCombValCons .((Field.- field') (Field.one field')) .v varVal .(((Field.- field') (Field.one field') , init) ∷ []) .((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal₁)) (Field.zero field')) x (LinearCombValCons .((Field.- field') (Field.one field')) .init varVal₁ .[] .(Field.zero field') x₂ LinearCombValBase)) x₁ rewrite -one*f≡-f (ℕtoF varVal)
+                                         | -one*f≡-f (ℕtoF varVal₁)
+                                         | +-identityʳ (-F ℕtoF varVal₁)
+                                         | ListLookup-≈ x look₁ = lem valBool
+          where
+             lem : isBool val → ListLookup init sol (notFunc val)
+             lem valBool with ℕtoF val ≟F zerof
+             lem valBool | yes p rewrite p | -zero≡zero
+                                       | +-identityˡ (-F (ℕtoF varVal₁))
+                                       | +-comm (-F ℕtoF varVal₁) onef = ListLookup-Respects-≈ _ _ _ _ (trans (sym (a-b≡zero→a≡b x₁)) (sym ℕtoF-1≡1)) x₂
+             lem (isZero n x) | no ¬p = ⊥-elim (¬p x)
+             lem (isOne n x) | no ¬p rewrite x | +-comm (-F onef) (-F (ℕtoF varVal₁))
+                                           | +-assoc (-F ℕtoF varVal₁) (-F onef) onef
+                                           | +-invˡ onef | +-identityʳ (-F (ℕtoF varVal₁))
+                                           = ListLookup-Respects-≈ _ _ _ _ (trans (-≡zero→≡zero x₁) (sym ℕtoF-0≡0)) x₂
+{-
+init varVal₁[x₂]
+v varVal[x] val[look₁]
 
+-}
 impFunc : ℕ → ℕ → ℕ
 impFunc = {!!}
 

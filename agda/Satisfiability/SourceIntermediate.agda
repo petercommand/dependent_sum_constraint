@@ -10,7 +10,7 @@ open import Data.Nat.Primality
 
 open import Data.Product hiding (map)
 open import Data.Vec
-open import Data.String hiding (_≈_)
+open import Data.String hiding (_≈_; _≟_)
 
 open import Function
 
@@ -82,7 +82,32 @@ data LinearCombVal (solution : List (Var × ℕ)) : List (f × Var) → f → Se
       → ListLookup var solution varVal
       → LinearCombVal solution l acc
       → LinearCombVal solution ((coeff , var) ∷ l) ((coeff *F ℕtoF varVal) +F acc)
+{-
+-- this function might return incorrect value if var is not is the map 
+partialLookup : Var → List (Var × ℕ) → ℕ
+partialLookup v [] = 0 -- the user has to guarentee this doesn't happen
+partialLookup v ((fst , snd) ∷ l) with v ≟ fst
+partialLookup v ((fst , snd) ∷ l) | yes p = snd
+partialLookup v ((fst , snd) ∷ l) | no ¬p = partialLookup v l
 
+linearCombSum : (solution : List (Var × ℕ)) → List (f × Var) → f
+linearCombSum solution [] = zerof
+linearCombSum solution ((coeff , var) ∷ l) = (coeff *F (ℕtoF (partialLookup var solution))) +F linearCombSum solution l
+
+partialLookupCorrect : ∀ var sol val → ListLookup var sol val → partialLookup var sol ≈ val
+partialLookupCorrect var .((var , n) ∷ l) val (LookupHere .var l n .val x) with var ≟ var
+partialLookupCorrect var .((var , n) ∷ l) val (LookupHere .var l n .val x) | yes p = x
+partialLookupCorrect var .((var , n) ∷ l) val (LookupHere .var l n .val x) | no ¬p = ⊥-elim (¬p refl)
+partialLookupCorrect var .(t ∷ l) val (LookupThere .var l .val t l₁ x) with var ≟ proj₁ t
+partialLookupCorrect var .(t ∷ l) val (LookupThere .var l .val t l₁ x) | yes refl = ⊥-elim (x refl)
+partialLookupCorrect var .(t ∷ l) val (LookupThere .var l .val t l₁ x) | no ¬p = partialLookupCorrect var l val l₁
+
+linearCombValToEq : ∀ solution l val → LinearCombVal solution l val → linearCombSum solution l ≡ val
+linearCombValToEq sol .[] .(Field.zero field') LinearCombValBase = refl
+linearCombValToEq sol .((coeff , var) ∷ l) .((field' Field.+ (field' Field.* coeff) (ℕtoF varVal)) acc) (LinearCombValCons coeff var varVal l acc x lin) rewrite partialLookupCorrect var sol varVal x = cong (_+F_ (coeff *F ℕtoF varVal)) (linearCombValToEq sol l acc lin)
+
+
+-}
 
 data IntermediateSolution (solution : List (Var × ℕ)) : Intermediate → Set where
   addSol : ∀ coeff linComb linCombVal
@@ -229,3 +254,134 @@ neqzSound r builderProd v val solution' vIsVal init isSol
       ≡⟨ *-invʳ (ℕtoF val) ¬p ⟩
         onef
       ∎
+
+data isBool : ℕ → Set where
+  isZero : ∀ n → ℕtoF n ≡ zerof → isBool n
+  isOne : ∀ n → ℕtoF n ≡ onef → isBool n
+
+
+orFunc : ℕ → ℕ → ℕ
+orFunc a b with ℕtoF a ≟F zerof
+orFunc a b | yes p with ℕtoF b ≟F zerof
+orFunc a b | yes p | yes p₁ = 0
+orFunc a b | yes p | no ¬p = 1
+orFunc a b | no ¬p = 1
+
+lorSoundLem₁ : ∀ init sol val val' varVal₃ → isBool val → isBool val' → (hyp : (ℕtoF val +F (ℕtoF val' +F ((-F (ℕtoF val *F ℕtoF val')) +F (-F ℕtoF varVal₃)))) ≡ zerof) → ListLookup (suc init) sol varVal₃ → ListLookup (suc init) sol (orFunc val val')
+lorSoundLem₁ init sol val val' varVal₃ valBool val'Bool hyp look₁ with ℕtoF val ≟F zerof
+lorSoundLem₁ init sol val val' varVal₃ valBool val'Bool hyp look₁ | yes p with ℕtoF val' ≟F zerof
+lorSoundLem₁ init sol val val' varVal₃ valBool val'Bool hyp look₁ | yes p | yes p₁ rewrite p | p₁
+                                                                        | +-identityˡ (zerof +F ((-F (zerof *F zerof)) +F (-F ℕtoF varVal₃)))
+                                                                        | *-zeroˡ zerof
+                                                                        | -zero≡zero
+                                                                        | +-identityˡ (-F ℕtoF varVal₃)
+                                                                        | +-identityˡ (-F ℕtoF varVal₃) = ListLookup-Respects-≈ (suc init) sol varVal₃ zero lem look₁
+     where
+       lem : varVal₃ ≈ 0
+       lem with cong (_+F_ (ℕtoF varVal₃)) hyp
+       ... | t rewrite +-invʳ (ℕtoF varVal₃)
+                     | +-identityʳ (ℕtoF varVal₃) = trans (sym t) (sym ℕtoF-0≡0)
+lorSoundLem₁ init sol val val' varVal₃ valBool val'Bool hyp look₁ | yes p | no ¬p rewrite p
+                                                                       | *-zeroˡ (ℕtoF val')
+                                                                       | -zero≡zero
+                                                                       | +-identityˡ (-F ℕtoF varVal₃) with val'Bool
+... | isZero .val' prf = ⊥-elim (¬p prf)
+... | isOne .val' prf rewrite prf
+                            | +-identityˡ (onef +F (-F ℕtoF varVal₃))
+                            with cong (λ x → x +F (ℕtoF varVal₃)) hyp
+... | hyp₁ = ListLookup-Respects-≈  (suc init) sol _ _ lem look₁
+      where
+        open ≡-Reasoning
+        lem : varVal₃ ≈ 1
+        lem =
+            begin
+                ℕtoF varVal₃
+            ≡⟨ sym (+-identityˡ (ℕtoF varVal₃)) ⟩
+               zerof +F ℕtoF varVal₃
+            ≡⟨ sym hyp₁ ⟩
+               (onef +F (-F ℕtoF varVal₃)) +F ℕtoF varVal₃
+            ≡⟨ +-assoc onef (-F (ℕtoF varVal₃)) (ℕtoF varVal₃) ⟩
+               onef +F ((-F (ℕtoF varVal₃)) +F ℕtoF varVal₃)
+            ≡⟨ cong (_+F_ onef) (+-invˡ (ℕtoF varVal₃)) ⟩
+               onef +F zerof
+            ≡⟨ +-identityʳ onef ⟩
+               onef
+            ≡⟨ sym ℕtoF-1≡1 ⟩
+                ℕtoF 1
+            ∎
+lorSoundLem₁ init sol val val' varVal₃ (isZero .val prf) val'Bool hyp look₁ | no ¬p = ⊥-elim (¬p prf)
+lorSoundLem₁ init sol val val' varVal₃ (isOne .val prf) (isZero .val' prf') hyp look₁ | no ¬p rewrite prf | prf'
+                                                                                                    | *-zeroʳ onef
+                                                                                                    | -zero≡zero
+                                                                                                    | +-identityˡ (-F ℕtoF varVal₃)
+                                                                                                    | +-identityˡ (-F ℕtoF varVal₃) = ListLookup-Respects-≈ (suc init) sol _ _ (trans (sym (a-b≡zero→a≡b hyp)) (sym ℕtoF-1≡1)) look₁
+lorSoundLem₁ init sol val val' varVal₃ (isOne .val prf) (isOne .val' prf') hyp look₁ | no ¬p rewrite prf | prf'
+                                                                                                   | *-identityˡ onef
+                                                                                                   | sym (+-assoc onef (-F onef) (-F (ℕtoF varVal₃)))
+                                                                                                   | +-invʳ onef
+                                                                                                   | +-identityˡ (-F ℕtoF varVal₃) = ListLookup-Respects-≈ (suc init) sol _ _ (trans (sym (a-b≡zero→a≡b hyp)) (sym ℕtoF-1≡1)) look₁
+
+lorSoundLem₂ : ∀ r v v' init →
+  let b₁₂ = writerOutput (add (IMul onef v v' onef init) (prime , r , suc (suc init)))
+      b₃₄ = writerOutput (lor v v' (prime , r , init))
+  in ∀ x → x ∈ proj₁ b₁₂ (proj₂ b₁₂ []) → x ∈ proj₁ b₃₄ (proj₂ b₃₄ [])
+lorSoundLem₂ NormalMode v v' init x (here px) = here px
+lorSoundLem₂ PostponedMode v v' init x (here px) = here px
+
+lorSoundLem₃ : ∀ r v v' init →
+  let b₁₂ = writerOutput (add (IAdd zerof
+                                   ((onef , v) ∷ (onef , v') ∷ ((-F onef) , init) ∷ ((-F onef) , 1 + init) ∷ []))
+                              (prime , r , suc (suc init)))
+      b₃₄ = writerOutput (lor v v' (prime , r , init))
+  in ∀ x → x ∈ proj₁ b₁₂ (proj₂ b₁₂ []) → x ∈ proj₁ b₃₄ (proj₂ b₃₄ [])
+lorSoundLem₃ NormalMode v v' init x (here px) = there (here px)
+lorSoundLem₃ PostponedMode v v' init x (here px) = there (here px)
+
+lorSound : ∀ (r : WriterMode)
+  → (builderProd : Builder × Builder)
+  → (v v' : Var) → (val val' : ℕ)
+  → (solution' : List (Var × ℕ))
+  → ListLookup v solution' val
+  → ListLookup v' solution' val'
+  → isBool val → isBool val'
+  → ∀ (init : ℕ) →
+  let result = lor v v' (prime , r , init)
+  in BuilderProdSol (writerOutput result) solution'
+  → ListLookup (output result) solution' (orFunc val val') 
+lorSound r builder v v' val val' sol look₁ look₂ valBool val'Bool init isSol
+    with addSound r builder (IMul onef v v' onef init) sol (2 + init)
+           (let b₁₂ = writerOutput (add (IMul onef v v' onef init) (prime , r , suc (suc init)))
+                b₃₄ = writerOutput (lor v v' (prime , r , init))
+            in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄)
+                 (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (lorSoundLem₂ r v v' init) isSol)
+       | addSound r builder (IAdd zerof ((onef , v) ∷ (onef , v') ∷ (-F onef , init) ∷ (-F onef , (1 + init)) ∷ [])) sol (2 + init)
+           (let b₁₂ = writerOutput (add
+                                      (IAdd zerof
+                                       ((onef , v) ∷
+                                        (onef , v') ∷ ((-F onef) , init) ∷ ((-F onef) , 1 + init) ∷ []))
+                                      (prime , r , suc (suc init)))
+                b₃₄ = writerOutput (lor v v' (prime , r , init))
+            in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄)
+                 (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (lorSoundLem₃ r v v' init) isSol)
+lorSound r builder v v' val val' sol look₁ look₂ valBool val'Bool init isSol | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | addSol .(Field.zero field') .((Field.one field' , v) ∷ (Field.one field' , v') ∷ ((Field.- field') (Field.one field') , init) ∷ ((Field.- field') (Field.one field') , suc init) ∷ []) .((field' Field.+ (field' Field.* Field.one field') (ℕtoF varVal)) ((field' Field.+ (field' Field.* Field.one field') (ℕtoF varVal₁)) ((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal₂)) ((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal₃)) (Field.zero field'))))) (LinearCombValCons .(Field.one field') .v varVal .((Field.one field' , v') ∷ ((Field.- field') (Field.one field') , init) ∷ ((Field.- field') (Field.one field') , suc init) ∷ []) .((field' Field.+ (field' Field.* Field.one field') (ℕtoF varVal₁)) ((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal₂)) ((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal₃)) (Field.zero field')))) x₄ (LinearCombValCons .(Field.one field') .v' varVal₁ .(((Field.- field') (Field.one field') , init) ∷ ((Field.- field') (Field.one field') , suc init) ∷ []) .((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal₂)) ((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal₃)) (Field.zero field'))) x₆ (LinearCombValCons .((Field.- field') (Field.one field')) .init varVal₂ .(((Field.- field') (Field.one field') , suc init) ∷ []) .((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal₃)) (Field.zero field')) x₇ (LinearCombValCons .((Field.- field') (Field.one field')) .(suc init) varVal₃ .[] .(Field.zero field') x₈ LinearCombValBase)))) x₅
+  rewrite ListLookup-≈ x₇ x₂
+        | ListLookup-≈ x₆ x₁
+        | ListLookup-≈ x₁ look₂
+        | ListLookup-≈ x₄ x
+        | ListLookup-≈ x look₁
+        | *-identityˡ (ℕtoF val)
+        | *-identityˡ (ℕtoF val')
+        | *-identityˡ (ℕtoF eval)
+        | -one*f≡-f (ℕtoF eval)
+        | -one*f≡-f (ℕtoF varVal₃)
+        | +-identityʳ (-F (ℕtoF varVal₃))
+        | +-identityʳ (-F (ℕtoF eval))
+        | sym x₃
+        | +-identityʳ (ℕtoF val +F (ℕtoF val' +F ((-F (ℕtoF val *F ℕtoF val')) +F (-F ℕtoF varVal₃))))
+        = lorSoundLem₁ init sol val val' varVal₃ valBool val'Bool x₅ x₈
+{-
+init varVal₂[x₇] eval[x₂]
+(suc init) varVal₃[x₈]
+v' varVal₁[x₆] cval[x₁] val'[look₂]
+v varVal[x₄] bval[x] val[look₁]
+-}

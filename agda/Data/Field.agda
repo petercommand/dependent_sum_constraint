@@ -33,4 +33,22 @@ record IsField {a} (f : Set a) (field' : Field f) : Set a where
       *-distr-+ˡ : _*_ DistributesOverˡ _+_
       *-distr-+ʳ : _*_ DistributesOverʳ _+_
       -one*f≡-f : ∀ f → (- one) * f ≡ - f
+      -zero≡zero : - zero ≡ zero
 
+    a-b≡zero→a≡b : ∀ {a} {b} → a + (- b) ≡ zero → a ≡ b
+    a-b≡zero→a≡b {a} {b} p =
+        begin
+          a
+        ≡⟨ sym (+-identityʳ a) ⟩
+          a + zero
+        ≡⟨ cong (_+_ a) (sym (+-invˡ b)) ⟩
+          (a + ((- b) + b))
+        ≡⟨ sym (+-assoc a (- b) b) ⟩
+          ((a + (- b)) + b)
+        ≡⟨ cong (λ x → x + b) p ⟩
+           zero + b
+        ≡⟨ +-identityˡ b ⟩
+          b
+        ∎
+      where
+        open ≡-Reasoning

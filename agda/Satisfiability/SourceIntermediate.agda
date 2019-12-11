@@ -385,3 +385,89 @@ init varVal₂[x₇] eval[x₂]
 v' varVal₁[x₆] cval[x₁] val'[look₂]
 v varVal[x₄] bval[x] val[look₁]
 -}
+
+andFunc : ℕ → ℕ → ℕ
+andFunc a b with ℕtoF a ≟F zerof
+andFunc a b | yes p = 0
+andFunc a b | no ¬p with ℕtoF b ≟F zerof
+andFunc a b | no ¬p | yes p = 0
+andFunc a b | no ¬p | no ¬p₁ = 1
+
+landSoundLem : ∀ r v v' init →
+  let b₁₂ = writerOutput (add (IMul onef v v' onef init) (prime , r , suc init))
+      b₃₄ = writerOutput (land v v' (prime , r , init))
+  in ∀ x → x ∈ proj₁ b₁₂ (proj₂ b₁₂ []) → x ∈ proj₁ b₃₄ (proj₂ b₃₄ [])
+landSoundLem NormalMode v v' init x (here px) = here px
+landSoundLem PostponedMode v v' init x (here px) = here px
+
+landSound : ∀ (r : WriterMode)
+  → (builderProd : Builder × Builder)
+  → (v v' : Var) → (val val' : ℕ)
+  → (solution' : List (Var × ℕ))
+  → ListLookup v solution' val
+  → ListLookup v' solution' val'
+  → isBool val → isBool val'
+  → ∀ (init : ℕ) →
+  let result = land v v' (prime , r , init)
+  in BuilderProdSol (writerOutput result) solution'
+  → ListLookup (output result) solution' (andFunc val val') 
+landSound r builder v v' val val' sol look₁ look₂ valBool val'Bool init isSol with addSound r builder (IMul onef v v' onef init) sol (suc init)
+       (let b₁₂ = writerOutput (add (IMul onef v v' onef init) (prime , r , suc init))
+            b₃₄ = writerOutput (land v v' (prime , r , init))
+        in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (landSoundLem r v v' init) isSol)
+landSound r builder v v' val val' sol look₁ look₂ valBool val'Bool init isSol | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃
+  rewrite ListLookup-≈ x₁ look₂
+        | ListLookup-≈ x look₁
+        | *-identityˡ (ℕtoF val)
+        | *-identityˡ (ℕtoF eval) = lem valBool val'Bool
+    where
+
+
+
+      lem : isBool val → isBool val' → ListLookup init sol (andFunc val val')
+      lem valBool val'Bool with ℕtoF val ≟F zerof
+      lem valBool val'Bool | yes p rewrite p | *-zeroˡ (ℕtoF val') = ListLookup-Respects-≈ _ _ _ _ (trans (sym x₃) (sym ℕtoF-0≡0)) x₂
+      lem valBool val'Bool | no ¬p with ℕtoF val' ≟F zerof
+      lem valBool val'Bool | no ¬p | yes p rewrite p | *-zeroʳ (ℕtoF val) = ListLookup-Respects-≈ _ _ _ _ (trans (sym x₃) (sym ℕtoF-0≡0)) x₂
+      lem (isZero n x) (isZero n₁ x₁) | no ¬p | no ¬p₁ = ⊥-elim (¬p x)
+      lem (isZero n x) (isOne n₁ x₁) | no ¬p | no ¬p₁ = ⊥-elim (¬p x)
+      lem (isOne n x) (isZero n₁ x₁) | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ x₁)
+      lem (isOne n x) (isOne n₁ x₁) | no ¬p | no ¬p₁ rewrite x | x₁ | *-identityˡ onef = ListLookup-Respects-≈ _ _ _ _ (trans (sym x₃) (sym ℕtoF-1≡1)) x₂
+{-
+v bval[x] val[look₁]
+v' cval[x₁] val'[look₂]
+init eval[x₂]
+-}
+
+notFunc : ℕ → ℕ
+notFunc = {!!}
+
+lnotSound : ∀ (r : WriterMode)
+  → (builderProd : Builder × Builder)
+  → (v : Var) → (val : ℕ)
+  → (solution' : List (Var × ℕ))
+  → ListLookup v solution' val
+  → isBool val
+  → ∀ (init : ℕ) →
+  let result = lnot v (prime , r , init)
+  in BuilderProdSol (writerOutput result) solution'
+  → ListLookup (output result) solution' (notFunc val) 
+lnotSound r builder v val sol look₁ valBool init isSol = {!!}
+
+impFunc : ℕ → ℕ → ℕ
+impFunc = {!!}
+
+limpSound : ∀ (r : WriterMode)
+  → (builderProd : Builder × Builder)
+  → (v v' : Var) → (val val' : ℕ)
+  → (solution' : List (Var × ℕ))
+  → ListLookup v solution' val
+  → ListLookup v' solution' val'
+  → isBool val → isBool val'
+  → ∀ (init : ℕ) →
+  let result = limp v v' (prime , r , init)
+  in BuilderProdSol (writerOutput result) solution'
+  → ListLookup (output result) solution' (impFunc val val') 
+limpSound r builder v v' val val' sol look₁ look₂ valBool val'Bool init isSol = {!!}
+
+

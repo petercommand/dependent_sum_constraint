@@ -1,9 +1,12 @@
+{-# OPTIONS --prop #-}
 open import Agda.Builtin.Nat renaming (zero to nzero) hiding (_+_; _*_)
 
 open import Data.Bool
 open import Data.Field
 open import Data.Finite
 open import Data.List hiding (splitAt; head; take; drop; intercalate; concat)
+import Data.List.Properties
+module LP = Data.List.Properties
 import Data.Map
 module M = Data.Map
 open import Data.MaybeC
@@ -13,8 +16,10 @@ open import Data.Nat.Show renaming (show to showℕ)
 open import Data.Nat.Properties
 open import Data.Nat.Properties2
 open import Data.Product hiding (map)
+open import Data.ProductPrime
 import Data.Sets
 module S = Data.Sets
+open import Data.Squash
 open import Data.String renaming (_++_ to _S++_) hiding (show; fromList)
 open import Data.String.Intercalate
 open import Data.Sum hiding (map)
@@ -47,21 +52,51 @@ module SI-Monad where
   
   open Function.Endomorphism.Propositional (List Intermediate) renaming (Endo to Builder) public
 
-  import Control.RWS
+  import Control.RWS-Invariant
 
   data WriterMode : Set where
     NormalMode : WriterMode
     PostponedMode : WriterMode
   {-
+    The reader component is used to store the prime number used
     The state component records the "mode" that determines how the writer writes, and records the first unused var that's incremented every time a var is allocated
     The writer component forces delayed evaluation of some of the constraints during proof gen.
   -}
-  open Control.RWS ℕ (Builder × Builder) (WriterMode × Var) (id , id) (λ { (f₁ , f₂) (s₁ , s₂) → (f₁ ∘′ s₁ , f₂ ∘′ s₂) }) hiding (_>>=_; _>>_; return; RWSMonad)
-  open Control.RWS ℕ (Builder × Builder) (WriterMode × Var) (id , id) (λ { (f₁ , f₂) (s₁ , s₂) → (f₁ ∘′ s₁ , f₂ ∘′ s₂) }) using (_>>=_; _>>_; return; ask) renaming (RWSMonad to SI-Monad) public
+  WriterInvariant : Builder × Builder → Prop
+  WriterInvariant = λ builder → Squash (∀ x → proj₁ builder x ≡ (proj₁ builder []) ++ x × proj₂ builder x ≡ (proj₂ builder []) ++ x)
+
+
+
+
+  mempty-WriterInvariant : WriterInvariant (id , id)
+  mempty-WriterInvariant = sq (λ x → refl , refl)
+
+  mappend-WriterInvariant : ∀ {a} {b} → WriterInvariant a → WriterInvariant b
+             → WriterInvariant (let f₁ , f₂ = a
+                                    s₁ , s₂ = b
+                                in f₁ ∘′ s₁ , f₂ ∘′ s₂)
+  mappend-WriterInvariant {f₁ , f₂} {s₁ , s₂} (sq ia) (sq ib) = sq lem
+   where
+     lem : ∀ x → (f₁ ∘′ s₁) x ≡ (f₁ ∘′ s₁) [] ++ x × (f₂ ∘′ s₂) x ≡ (f₂ ∘′ s₂) [] ++ x
+     lem x with ia (s₁ x)
+     ... | p₁ , p₂ rewrite p₁ | p₂ with ia (s₁ [])
+     ... | p₃ , p₄ rewrite p₃ | p₄ with ib x
+     ... | p₅ , p₆ rewrite p₅ | p₆ with ia (s₂ [] ++ x)
+     ... | p₇ , p₈ rewrite p₇ | p₈ with ia (s₂ [])
+     ... | p₉ , p₁₀ rewrite p₉ | p₁₀ = sym (LP.++-assoc (f₁ []) (s₁ []) x) , sym (LP.++-assoc (f₂ []) (s₂ []) x) 
+     {-
+
+f1 (s1 x)
+= f1 [] ++ s1 x
+= f1 [] ++ (s1 []) ++ x
+
+     -}
+  open Control.RWS-Invariant ℕ (Builder × Builder) (WriterMode × Var) WriterInvariant (id , id) mempty-WriterInvariant (λ { (f₁ , f₂) (s₁ , s₂) → (f₁ ∘′ s₁ , f₂ ∘′ s₂) }) mappend-WriterInvariant hiding (_>>=_; _>>_; return; RWSInvMonad)
+  open Control.RWS-Invariant ℕ (Builder × Builder) (WriterMode × Var) WriterInvariant (id , id) mempty-WriterInvariant (λ { (f₁ , f₂) (s₁ , s₂) → (f₁ ∘′ s₁ , f₂ ∘′ s₂) }) mappend-WriterInvariant using (_>>=_; _>>_; return; ask) renaming (RWSInvMonad to SI-Monad) public
 
   addWithMode : Intermediate → WriterMode → SI-Monad ⊤
-  addWithMode w NormalMode = tell ((λ x → [ w ] ++ x) , id)
-  addWithMode w PostponedMode = tell (id , λ x → [ w ] ++ x)
+  addWithMode w NormalMode = tell ((λ x → [ w ] ++ x) , id) (sq (λ x → refl , refl))
+  addWithMode w PostponedMode = tell (id , λ x → [ w ] ++ x) (sq (λ x → refl , refl))
 
   writerSwitch : WriterMode → SI-Monad ⊤
   writerSwitch  m = do
@@ -360,7 +395,7 @@ module Comp where
   compileSource : ∀ (n : ℕ) u → (S-Monad (Source u)) → Var × Builder × (Vec Var (tySize u) × List ℕ)
   compileSource n u source = 
     let v , (asserts , input) , output = source (tt , 1)
-        (mode , v') , (bld₁ , bld₂) , outputVars = (do
+        (((mode , v') , (bld₁ , bld₂) , outputVars) , inv) = (do
            compAssert (asserts [])
            sourceToIntermediate _ output) (n , (NormalMode , v))
     in v' , bld₁ ∘′ bld₂ , outputVars , input []

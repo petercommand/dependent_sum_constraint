@@ -9,7 +9,7 @@ open import Data.Nat.Primality
 
 
 open import Data.Product hiding (map)
-open import Data.Vec
+open import Data.Vec hiding (_>>=_)
 open import Data.String hiding (_≈_; _≟_)
 
 open import Function
@@ -41,8 +41,9 @@ open Field field' renaming ( _+_ to _+F_
                            ; zero to zerof
                            ; one to onef)
 open IsField isField
-open import Compile.SourceIntermediate f field' finite showf fToℕ ℕtoF
-open SI-Monad
+open import Compile.SourceIntermediate f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
+import Compile.SourceIntermediate
+open Compile.SourceIntermediate.SI-Monad f field' finite showf fToℕ ℕtoF
 
 
 output : ∀ {a} {b} {c} {S : Set a} {W : Set b} {A : Set c} → (S × W × A) → A
@@ -50,6 +51,9 @@ output (s , w , a) = a
 
 writerOutput : ∀ {a} {b} {c} {S : Set a} {W : Set b} {A : Set c} → (S × W × A) → W
 writerOutput (s , w , a) = w
+
+varOut : ∀ {a} {b} {c} {d} {S₁ : Set a} {S₂ : Set b} {W : Set c} {A : Set d} → ((S₁ × S₂) × W × A) → S₂
+varOut ((_ , s) , _ , _) = s
 
 _≈_ : ℕ → ℕ → Set
 x ≈ y = ℕtoF x ≡ ℕtoF y
@@ -125,6 +129,14 @@ data IntermediateSolution (solution : List (Var × ℕ)) : Intermediate → Set 
 
 BuilderProdSol : Builder × Builder → List (Var × ℕ) → Set
 BuilderProdSol (fst , snd) sol = ∀ x → x ∈ (fst (snd [])) → IntermediateSolution sol x
+
+BuilderProdSol->>=⁻ : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'}
+    → (p₁ : SI-Monad A)
+    → (p₂ : A → SI-Monad B)
+    → ∀ r init sol
+    → BuilderProdSol (writerOutput ((p₁ >>= p₂) (prime , r , init))) sol
+    → BuilderProdSol (writerOutput (p₂ (output (p₁ (prime , r , init))) (prime , r , (varOut (p₁ (prime , r , init)))))) sol
+BuilderProdSol->>=⁻ p₁ p₂ r init sol isSol = {!!}
 
 BuilderProdSolSubsetImp : ∀ b₁ b₂ b₃ b₄ b₁₂ b₃₄ sol
     → (b₁ , b₂) ≡ b₁₂ → (b₃ , b₄) ≡ b₃₄
@@ -486,8 +498,9 @@ init varVal₁[x₂]
 v varVal[x] val[look₁]
 
 -}
+
 impFunc : ℕ → ℕ → ℕ
-impFunc = {!!}
+impFunc a b = orFunc (notFunc a) b
 
 limpSound : ∀ (r : WriterMode)
   → (builderProd : Builder × Builder)
@@ -500,6 +513,14 @@ limpSound : ∀ (r : WriterMode)
   let result = limp v v' (prime , r , init)
   in BuilderProdSol (writerOutput result) solution'
   → ListLookup (output result) solution' (impFunc val val') 
-limpSound r builder v v' val val' sol look₁ look₂ valBool val'Bool init isSol = {!!}
+limpSound r builder v v' val val' sol look₁ look₂ valBool val'Bool init isSol
+    with lnotSound r builder v val sol look₁ valBool init {!!}
+... | sound₁ = lorSound r builder init v' (notFunc val) val' sol sound₁ look₂ {!!} val'Bool
+                 (varOut (lnot v (prime , r , init))) {!!}
 
 
+{-
+sound₁ : ListLookup init sol (notFunc val)
+sound₂ : ListLookup (suc (suc init)) sol (orFunc (notFunc val) val')
+
+-}

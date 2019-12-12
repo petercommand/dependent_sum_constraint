@@ -1,3 +1,4 @@
+{-# OPTIONS --prop #-}
 open import Codata.Musical.Colist using (Colist) renaming (fromList to coFromList)
 open import Codata.Musical.Notation
 
@@ -21,6 +22,7 @@ open import Level
 module Compile.Generate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
 
 open import Compile.SourceIntermediate f field' finite showf fToℕ ℕtoF
+open import Compile.Solve f field' finite showf fToℕ ℕtoF
 open import Language.Common
 open import Language.Intermediate.Show f showf
 open import Language.Source f finite showf
@@ -35,11 +37,8 @@ genMain p m i =
   let IR = compileSource p _ m
       n , result , (out , input) = IR
       r = result []
-      z3Cmd = genWitnessSMT n i r
-      magma = genMagmaSolve n i r
       solveResult = directSolve i r
   in
-
      ♯ writeFile "inputvars" "" >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "inputvars" ∘′ (λ x → x S++ "\n") ∘′ show) input)) >>
      ♯ (♯ writeFile "outvars" "" >>
@@ -49,10 +48,7 @@ genMain p m i =
      ♯ (♯ writeFile "constraints_serialize" "" >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "constraints_serialize" ∘′ (λ x → x S++ "\n")) (show (length input) ∷ show (pred n) ∷ []))) >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "constraints_serialize" ∘′ (λ x → x S++ "\n") ∘′ serializeIntermediate) (result []))) >>
-     ♯ (♯ writeFile "input.smt" "" >>
-     ♯ (♯ writeFile "magma.input" "" >>
      ♯ (♯ writeFile "solve.result" "" >>
-     ♯ (♯ sequence′ (coFromList (map (appendFile "magma.input" ∘′ (λ x → x S++ "\n")) magma)) >>
-     ♯ (♯ sequence′ (coFromList (map (appendFile "solve.result") (showSolve solveResult))) >>
-     ♯ sequence′ (coFromList (map (appendFile "input.smt" ∘′ (λ x → x S++ "\n") ∘′ showZ3) (z3Cmd ++ (CheckSat ∷ GetModel ∷ [])))))))))))))))))
+     ♯ sequence′ (coFromList (map (appendFile "solve.result") (showSolve solveResult))))))))))))
+
 

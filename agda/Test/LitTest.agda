@@ -1,3 +1,4 @@
+{-# OPTIONS --prop #-}
 module Test.LitTest where
 
 open import Data.Bool renaming (_≟_ to _≟B_)

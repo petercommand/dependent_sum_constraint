@@ -4,6 +4,7 @@ open import Data.Field
 open import Data.Finite
 open import Data.List hiding (lookup; head)
 open import Data.List.Membership.Propositional
+open import Data.List.Membership.Propositional.Properties
 open import Data.List.Relation.Unary.Any
 open import Data.Nat
 open import Data.Nat.Primality
@@ -11,9 +12,9 @@ open import Data.Nat.Primality
 
 open import Data.Product hiding (map)
 open import Data.ProductPrime
-open import Data.Vec hiding (_>>=_)
+open import Data.Vec hiding (_>>=_; _++_)
 open import Data.Squash
-open import Data.String hiding (_≈_; _≟_)
+open import Data.String hiding (_≈_; _≟_; _++_)
 
 open import Function
 
@@ -107,13 +108,6 @@ BuilderProdSol : Builder × Builder → List (Var × ℕ) → Prop
 BuilderProdSol (fst , snd) sol = ∀ x → x ∈ (fst (snd [])) → IntermediateSolution sol x
 
 
-BuilderProdSol->>=⁻ : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'}
-    → (p₁ : SI-Monad A)
-    → (p₂ : A → SI-Monad B)
-    → ∀ r init sol
-    → BuilderProdSol (writerOutput ((p₁ >>= p₂) (prime , r , init))) sol
-    → BuilderProdSol (writerOutput (p₂ (output (p₁ (prime , r , init))) (prime , r , (varOut (p₁ (prime , r , init)))))) sol
-BuilderProdSol->>=⁻ p₁ p₂ r init sol isSol = {!writerInv (p₁ (prime , r , init))!}
 
 BuilderProdSolSubsetImp : ∀ b₁ b₂ b₃ b₄ (b₁₂ : Builder × Builder) (b₃₄ : Builder × Builder) sol
     → (b₁ , b₂) ≡ b₁₂ → (b₃ , b₄) ≡ b₃₄
@@ -121,6 +115,94 @@ BuilderProdSolSubsetImp : ∀ b₁ b₂ b₃ b₄ (b₁₂ : Builder × Builder)
     → BuilderProdSol (b₃ , b₄) sol → BuilderProdSol (b₁ , b₂) sol 
 BuilderProdSolSubsetImp b₁ b₂ b₃ b₄ b₁₂ b₃₄ sol refl refl subs isSol x x∈b₁₂ = isSol x (subs x x∈b₁₂)
 
+BuilderProdSol->>=⁻ : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'}
+    → (p₁ : SI-Monad A)
+    → (p₂ : A → SI-Monad B)
+    → ∀ r init sol
+    → BuilderProdSol (writerOutput ((p₁ >>= p₂) (prime , r , init))) sol
+    → BuilderProdSol (writerOutput (p₂ (output (p₁ (prime , r , init))) (prime , r , (varOut (p₁ (prime , r , init)))))) sol
+BuilderProdSol->>=⁻ p₁ p₂ r init sol isSol x x∈p₂ with writerInv ((p₁ >>= p₂) (prime , r , init))
+... | sq inv₁ with writerInv (p₁ (prime , r , init))
+... | sq inv₂ = isSol x lem
+  where
+    open ≡-Reasoning
+    lemEq : let p₁′ = p₁ (prime , r , init)
+                wo = writerOutput ((p₁ >>= p₂) (prime , r , init))
+                wo₁ = writerOutput p₁′
+                wo₂ = writerOutput (p₂ (output p₁′) (prime , r , varOut p₁′))
+            in proj₁ wo (proj₂ wo []) ≡ (proj₁ wo₁ [] ++ proj₁ wo₂ []) ++ (proj₂ wo₂ [] ++ proj₂ wo₂ [])
+    lemEq = let p₁′ = p₁ (prime , r , init)
+                wo = writerOutput ((p₁ >>= p₂) (prime , r , init))
+                wo₁ = writerOutput p₁′
+                wo₂ = writerOutput (p₂ (output p₁′) (prime , r , varOut p₁′))
+             in begin
+                   proj₁ wo (proj₂ wo [])
+                ≡⟨ proj₁ (inv₁ (proj₂ wo [])) ⟩
+                   proj₁ wo [] ++ proj₂ wo []
+                ≡⟨ refl ⟩
+                   proj₁ wo₁ (proj₁ wo₂ []) ++ (proj₂ wo₁ (proj₂ wo₂ []))
+                ≡⟨ {!!} ⟩
+                   (proj₁ wo₁ [] ++ proj₁ wo₂ []) ++ (proj₂ wo₂ [] ++ proj₂ wo₂ [])
+                ∎
+    lem : let wo = writerOutput ((p₁ >>= p₂) (prime , r , init))
+          in x ∈ proj₁ wo (proj₂ wo [])
+    lem = {!!}
+{-
+    lem : let wo = writerOutput ((p₁ >>= p₂) (prime , r , init))
+          in x ∈ proj₁ wo (proj₂ wo [])
+    lem with let wo = writerOutput ((p₁ >>= p₂) (prime , r , init))
+             in inv₁ (proj₂ wo [])
+    ... | fst₁ , _ rewrite fst₁
+        with let p₁′ = p₁ (prime , r , init)
+                 wo₂ = writerOutput (p₂ (output p₁′) (prime , r , (varOut p₁′)))
+             in inv₂ (proj₁ wo₂ [])
+    ... | fst₂ , _ rewrite fst₂
+         = {!!}
+-}
+{-
+x ∈ proj₁ wo (proj₂ wo [])
+  ≡ { writer invariant }
+x ∈ proj₁ wo [] ++ proj₂ wo []
+  ≡ { def of wo }
+x ∈ proj₁ (writerOutput ((p₁ >>= p₂) (prime , r , init))) [] ++ proj₂ wo []
+  ≡ { def of >>= }
+x ∈ proj₁ (writerOutput (let ((r' , init') , w , a) , inv = p₁ (prime , r , init)
+                             ((r'' , init'') , w' b) , inv = p₂ a (prime , r' , init')
+                          in ((r'' , init'') , mappend w w' , b))) [] ++ proj₂ wo []
+  ≡ { def of writer output }
+x ∈ proj₁ (let ((r' , init') , w , a) , inv = p₁ (prime , r , init)
+                ((r'' , init'') , w' b) , inv = p₂ a (prime , r' , init')
+            in mappend w w') [] ++ proj₂ wo []
+  ≡ { eta expand }
+x ∈ proj₁ (let ((r' , init') , w , a) , inv = p₁ (prime , r , init)
+                ((r'' , init'') , w' b) , inv = p₂ a (prime , r' , init')
+            in mappend (proj₁ w , proj₂ w) (proj₁ w' , proj₂ w')) [] ++ proj₂ wo []
+  ≡ { def of mappend }
+x ∈ proj₁ (let ((r' , init') , w , a) , inv = p₁ (prime , r , init)
+                ((r'' , init'') , w' b) , inv = p₂ a (prime , r' , init')
+            in (proj₁ w ∘′ proj₁ w', proj₂ w ∘′ proj₂ w')) [] ++ proj₂ wo []
+  ≡ { def of proj₁ }
+x ∈ (let ((r' , init') , w , a) , inv = p₁ (prime , r , init)
+          ((r'' , init'') , w' b) , inv = p₂ a (prime , r' , init')
+      in (proj₁ w ∘′ proj₁ w')) [] ++ proj₂ wo []
+  ≡ { def of ∘′ }
+x ∈ (let ((r' , init') , w , a) , inv = p₁ (prime , r , init)
+          ((r'' , init'') , w' b) , inv = p₂ a (prime , r' , init')
+      in (proj₁ w (proj₁ w' []))) ++ proj₂ wo []
+  ≡ { ... } 
+x ∈ let ((r' , init') , w , a) , inv = p₁ (prime , r , init)
+          ((r'' , init'') , w' b) , inv = p₂ a (prime , r' , init')
+     in (proj₁ w (proj₁ w' [])) ++ (proj₂ w (proj₂ w' []))
+  ≡ { writer invariant }
+x ∈ let ((r' , init') , w , a) , inv = p₁ (prime , r , init)
+          ((r'' , init'') , w' b) , inv = p₂ a (prime , r' , init')
+     in (proj₁ w [] ++ proj₁ w' []) ++ (proj₂ w (proj₂ w' []))
+  ≡ { writer invariant }
+x ∈ let ((r' , init') , w , a) , inv = p₁ (prime , r , init)
+          ((r'' , init'') , w' b) , inv = p₂ a (prime , r' , init')
+     in (proj₁ w [] ++ proj₁ w' []) ++ (proj₂ w [] ++ proj₂ w' [])
+-}
+{-
 linearCombMaxVar : List (f × Var) → ℕ
 linearCombMaxVar [] = 1
 linearCombMaxVar ((fst , snd) ∷ l) = snd ⊔ linearCombMaxVar l
@@ -495,7 +577,7 @@ limpSound r builder v v' val val' sol look₁ look₂ valBool val'Bool init isSo
     with lnotSound r builder v val sol look₁ valBool init {!!}
 ... | sound₁ = lorSound r builder init v' (notFunc val) val' sol sound₁ look₂ {!!} val'Bool
                  (varOut (lnot v (prime , r , init))) {!!}
-
+-}
 {-
 sound₁ : ListLookup init sol (notFunc val)
 sound₂ : ListLookup (suc (suc init)) sol (orFunc (notFunc val) val')

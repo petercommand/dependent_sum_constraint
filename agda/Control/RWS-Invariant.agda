@@ -66,5 +66,17 @@ tell w pw = λ { (r , s) → (s , w , tt) , pw }
 ask : RWSInvMonad R
 ask = λ { (r , s) → (s , mempty , r) , P-mempty }
 
-
 {-# INLINE ask #-}
+
+asks : ∀ {a} {A : Set a} → (R → A) → RWSInvMonad A
+asks f = do
+  r ← ask
+  return (f r)
+
+{-# INLINE asks #-}
+
+
+local : ∀ {a} {A : Set a} → R → RWSInvMonad A → RWSInvMonad A
+local r m (r' , s) = m (r' , s)
+
+{-# INLINE local #-}

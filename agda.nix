@@ -21,6 +21,8 @@ let pkgs = import ./pkgs.nix {};
        cp -r $agdaDrv/* .
        chmod -R 755 *
        ghc -i$./ -Werror ./MAlonzo/Code/Test/$ARGS.hs -main-is MAlonzo.Code.Test.$ARGS --make -fwarn-incomplete-patterns -fno-warn-overlapping-patterns -o $out/$name
+       cd $out
+       ./$name
      '';
      executable = true;
      destination = "/builder.sh";

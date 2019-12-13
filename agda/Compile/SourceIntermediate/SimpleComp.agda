@@ -123,18 +123,15 @@ enumPiCond : ∀ {u} → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U) → Vec
 tyCond : ∀ u → Vec Var (tySize u) → SI-Monad Var
 
 enumSigmaCond [] x v₁ v₂ = trivial
-enumSigmaCond {u} (elem₁ ∷ enum₁) x v₁ v₂ = do
+enumSigmaCond {u} (elem₁ ∷ enum₁) x v₁ v₂ with maxTySplit u elem₁ x v₂
+... | fst , snd = do
   eqElem₁ ← varEqLit u v₁ elem₁
-  tyCons ← tyCond (x elem₁) (take (tySize (x elem₁)) vecₜ)
-  restZ ← allEqz (drop (tySize (x elem₁)) vecₜ)
+  tyCons ← tyCond (x elem₁) fst
+  restZ ← allEqz snd
   sat ← limp eqElem₁ tyCons
   rest ← enumSigmaCond enum₁ x v₁ v₂
   r' ← land sat rest
   land r' restZ
- where
-   vecₜ : Vec Var (tySize (x elem₁) +ℕ (maxTySizeOver (enum u) x - tySize (x elem₁)))
-   vecₜ rewrite +-comm (tySize (x elem₁)) (maxTySizeOver (enum u) x - tySize (x elem₁))
-              | a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x elem₁)) (maxTySizeLem u elem₁ x) = v₂
 
 enumPiCond [] x vec = trivial
 enumPiCond (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec

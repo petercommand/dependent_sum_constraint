@@ -54,9 +54,9 @@ import Compile.SourceIntermediate.Base
 open Compile.SourceIntermediate.Base f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
 open Compile.SourceIntermediate.Base f field' finite showf fToℕ ℕtoF using (SI-Monad) public
 
-open import Compile.SourceIntermediate.LogicGates f field' finite showf fToℕ ℕtoF
-open import Compile.SourceIntermediate.SimpleComp f field' finite showf fToℕ ℕtoF
-open import Compile.SourceIntermediate.Hints  f field' finite showf fToℕ ℕtoF
+open import Compile.SourceIntermediate.LogicGates f field' finite showf fToℕ ℕtoF public
+open import Compile.SourceIntermediate.SimpleComp f field' finite showf fToℕ ℕtoF public
+open import Compile.SourceIntermediate.Hints  f field' finite showf fToℕ ℕtoF public
 
 
 
@@ -77,8 +77,6 @@ assertVarEqVar .(suc _) (x ∷ v₁) (x₁ ∷ v₂) = do
 
 sourceToIntermediate : ∀ u → Source u → SI-Monad (Vec Var (tySize u))
 sourceToIntermediate u (Ind refl x) = withMode PostponedMode (indToIR u x)
-
-
 sourceToIntermediate u (Lit x) = litToInd u x
 sourceToIntermediate `Base (Add source source₁) = do
   add (Log ("+ STI: " S++ showSource (Add source source₁)))

@@ -76,12 +76,8 @@ anyNeqz (x ∷ vec) = do
 
 allEqz : ∀ {n} → Vec Var n → SI-Monad Var
 allEqz vec = do
-  add (Log "1")
   ¬r ← anyNeqz vec
-  add (Log "2")
   r ← lnot ¬r
-  add (Log ("allEqz ¬r: " S++ showℕ ¬r))
-  add (Log ("allEqz result:" S++ showℕ r))
   return r
 
 piVarEqLit : ∀ u (x : ⟦ u ⟧ → U) (eu : List ⟦ u ⟧) → Vec Var (tySumOver eu x) → ⟦ `Π u x ⟧ → SI-Monad Var
@@ -108,14 +104,13 @@ varEqLit (`Vec u (suc x)) vec (l ∷ lit) with splitAt (tySize u) vec
   s ← varEqLit (`Vec u x) snd lit
   land r s
 varEqLit (`Σ u x) vec (fstₗ , sndₗ) with splitAt (tySize u) vec
-... | fst , snd = do
+... | fst , snd with maxTySplit u fstₗ x snd
+... | vecₜ₁ , vecₜ₂ = do
   r ← varEqLit u fst fstₗ
-  s ← varEqLit (x fstₗ) (take (tySize (x fstₗ)) vecₜ) sndₗ
+  s ← varEqLit (x fstₗ) vecₜ₁ sndₗ
   land r s
- where
-   vecₜ : Vec Var (tySize (x fstₗ) +ℕ ((maxTySizeOver (enum u) x) - tySize (x fstₗ)))
-   vecₜ rewrite +-comm (tySize (x fstₗ)) (maxTySizeOver (enum u) x - tySize (x fstₗ))
-             | a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x fstₗ)) (maxTySizeLem u fstₗ x) = snd
+
+
 varEqLit (`Π u x) vec f = piVarEqLit u x (enum u) vec f
 
 enumSigmaCond : ∀ {u} → List ⟦ u ⟧ → (x : ⟦ u ⟧ → U) → Vec Var (tySize u) → Vec Var (maxTySizeOver (enum u) x) → SI-Monad Var

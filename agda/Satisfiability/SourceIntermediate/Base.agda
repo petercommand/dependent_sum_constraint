@@ -62,6 +62,12 @@ data ListLookup : Var → List (Var × ℕ) → ℕ → Prop where
   LookupHere : ∀ v l n n' → n ≈ n' → ListLookup v ((v , n) ∷ l) n'
   LookupThere : ∀ v l n t → ListLookup v l n → ¬ v ≡ proj₁ t → ListLookup v (t ∷ l) n
 
+data BatchListLookup : {n : ℕ} → Vec Var n → List (Var × ℕ) → Vec ℕ n → Prop where
+  BatchLookupNil : ∀ l → BatchListLookup [] l []
+  BatchLookupCons : ∀ {len} v n (vec₁ : Vec Var len) vec₂ l
+        → ListLookup v l n
+        → BatchListLookup vec₁ l vec₂
+        → BatchListLookup (v ∷ vec₁) l (n ∷ vec₂)
 ⊥-elim′ : ∀ {w} {Whatever : Prop w} → ⊥ → Whatever
 ⊥-elim′ ()
 
@@ -79,13 +85,13 @@ ListLookup-≈ {v} .{(t ∷ l)} {n} {n'} (LookupThere .v l .n t look₁ x) (Look
 
 data LinearCombVal (solution : List (Var × ℕ)) : List (f × Var) → f → Prop where
   LinearCombValBase : LinearCombVal solution [] zerof
-  LinearCombValCons : ∀ coeff var varVal l acc
+  LinearCombValCons : ∀ coeff var varVal {l} {acc}
       → ListLookup var solution varVal
       → LinearCombVal solution l acc
       → LinearCombVal solution ((coeff , var) ∷ l) ((coeff *F ℕtoF varVal) +F acc)
 
 data IntermediateSolution (solution : List (Var × ℕ)) : Intermediate → Prop where
-  addSol : ∀ coeff linComb linCombVal
+  addSol : ∀ {coeff} {linComb} {linCombVal}
                  → LinearCombVal solution linComb linCombVal
                  → linCombVal +F coeff ≡ zerof
                  → IntermediateSolution solution (IAdd coeff linComb)
@@ -291,7 +297,7 @@ assertTrueSound : ∀ (r : WriterMode)
      BuilderProdSol (writerOutput result) solution'
    → ListLookup v solution' 1
 assertTrueSound r v sol' init isSol' with addSound r (IAdd onef ((-F onef , v) ∷ []))  sol' init isSol'
-assertTrueSound r v sol' init isSol' | addSol .(Field.one field') .(((Field.- field') (Field.one field') , v) ∷ []) .((field' Field.+ (field' Field.* (Field.- field') (Field.one field')) (ℕtoF varVal)) (Field.zero field')) (LinearCombValCons .((Field.- field') (Field.one field')) .v varVal .[] .(Field.zero field') x LinearCombValBase) x₁
+assertTrueSound r v sol' init isSol' | addSol (LinearCombValCons .((Field.- field') (Field.one field')) .v varVal x LinearCombValBase) x₁
   rewrite +-identityʳ ((-F onef) *F ℕtoF varVal)
         | -one*f≡-f (ℕtoF varVal) = ListLookup-Respects-≈  _ _ _ _ (sq (trans lem (sym ℕtoF-1≡1))) x
       where

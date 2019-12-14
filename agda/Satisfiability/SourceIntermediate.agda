@@ -96,6 +96,7 @@ varEqLitSound : ∀ (r : WriterMode)
   → (l : ⟦ u ⟧)
   → (sol : List (Var × ℕ))
   → BatchListLookup vec sol val
+  → ListLookup 0 sol 1
   → ∀ (init : ℕ) →
   let result = varEqLit u vec l ((r , prime) , init)
   in BuilderProdSol (writerOutput result) sol
@@ -108,11 +109,14 @@ piVarEqLitSound : ∀ (r : WriterMode)
   → (pi : ⟦ `Π u x ⟧)
   → (sol : List (Var × ℕ))
   → BatchListLookup vec sol val
+  → ListLookup 0 sol 1
   → ∀ (init : ℕ) →
   let result = piVarEqLit u x eu vec pi ((r , prime) , init)
   in BuilderProdSol (writerOutput result) sol
   → ListLookup (output result) sol (piVarEqLitFunc x eu val pi)
-varEqLitSound r `One vec val l sol look init isSol
+varEqLitSound r `One vec val l sol look tri init isSol
+  = {!!}
+{-
   = let sound₁ = allEqzSound r vec val sol look init isSol
     in ListLookup-Respects-≈  _ _ _ _ (lem val l) sound₁
   where
@@ -120,7 +124,10 @@ varEqLitSound r `One vec val l sol look init isSol
     lem (x ∷ val) l with ℕtoF x ≟F zerof
     lem (x ∷ []) l | yes p = sq refl
     lem (x ∷ val) l | no ¬p = sq refl
-varEqLitSound r `Two vec val false sol look init isSol
+-}
+varEqLitSound r `Two vec val false sol look tri init isSol
+  = {!!}
+{-
   = let sound₁ = allEqzSound r vec val sol look init isSol
     in ListLookup-Respects-≈ _ _ _ _ (lem val) sound₁
   where
@@ -128,7 +135,10 @@ varEqLitSound r `Two vec val false sol look init isSol
     lem (x ∷ val) with ℕtoF x ≟F zerof
     lem (x ∷ []) | yes p = sq refl
     lem (x ∷ val) | no ¬p = sq refl
-varEqLitSound r `Two vec val true sol look init isSol
+-}
+varEqLitSound r `Two vec val true sol look tri init isSol
+  = {!!}
+{-
   = let sound₁ = anyNeqzSound r vec val sol look init isSol
     in ListLookup-Respects-≈ _ _ _ _ (lem val) sound₁
   where
@@ -136,7 +146,10 @@ varEqLitSound r `Two vec val true sol look init isSol
     lem (x ∷ val) with ℕtoF x ≟F zerof
     lem (x ∷ []) | yes p = sq refl
     lem (x ∷ val) | no ¬p = sq refl
-varEqLitSound r `Base (x ∷ []) val l sol look init isSol
+-}
+varEqLitSound r `Base (x ∷ []) val l sol look tri init isSol
+  = {!!}
+{-
     with let
            p₁₁ = new
            p₂₂ = add (IAdd l ((-F onef , x) ∷ (-F onef , init) ∷ []))
@@ -146,7 +159,7 @@ varEqLitSound r `Base (x ∷ []) val l sol look init isSol
            p₃₃ = λ _ → allEqz (init ∷ [])
            p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
          in addSound r (IAdd l ((-F onef , x) ∷ (-F onef , init) ∷ [])) sol (suc init) p₂₂IsSol
-varEqLitSound r `Base (x ∷ []) (val ∷ []) l sol look₁@(BatchLookupCons .x .val .[] .[] .sol x₄ look) init isSol | addSol (LinearCombValCons .((Field.- field') (Field.one field')) .x varVal x₁ (LinearCombValCons .((Field.- field') (Field.one field')) .init varVal₁ x₃ LinearCombValBase)) x₂
+varEqLitSound r `Base (x ∷ []) (val ∷ []) l sol look₁@(BatchLookupCons .x .val .[] .[] .sol x₄ look) tri init isSol | addSol (LinearCombValCons .((Field.- field') (Field.one field')) .x varVal x₁ (LinearCombValCons .((Field.- field') (Field.one field')) .init varVal₁ x₃ LinearCombValBase)) x₂
   rewrite -one*f≡-f (ℕtoF varVal)
         | -one*f≡-f (ℕtoF varVal₁)
         | +-identityʳ (-F ℕtoF varVal₁)
@@ -161,7 +174,7 @@ varEqLitSound r `Base (x ∷ []) (val ∷ []) l sol look₁@(BatchLookupCons .x 
            p₃₃ = λ _ → allEqz (init ∷ [])
            p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
            sound₂ = allEqzSound r (init ∷ []) (varVal₁ ∷ []) sol (BatchLookupCons _ _ _ _ _ x₃ look) (varOut (p₁₂ input)) p₃₃IsSol
-          in ListLookup-Respects-≈ _ _ _ _ {!lem!} sound₂
+          in ListLookup-Respects-≈ _ _ _ _ lem sound₂
   where
     lem : allEqzFunc (varVal₁ ∷ []) ≈ varEqLitFunc `Base (val ∷ []) l
     lem with ℕtoF varVal₁ ≟F zerof
@@ -182,10 +195,22 @@ varEqLitSound r `Base (x ∷ []) (val ∷ []) l sol look₁@(BatchLookupCons .x 
                               | +-invˡ l
                               | +-identityʳ (-F (ℕtoF varVal₁)) = ⊥-elim′ (¬p (-≡zero→≡zero x₂))
     lem | no ¬p | no ¬p₁ = sq refl
+-}
+varEqLitSound r (`Vec u zero) vec val l sol look tri init isSol = tri
+varEqLitSound r (`Vec u (suc x)) vec val (l ∷ ls) sol look tri init isSol with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd   | [ prf ] with splitAt (tySize u) val | inspect (splitAt (tySize u)) val
+... | fstv , sndv | [ prf₂ ] = let
+                                   input = ((r , prime) , init)
+                                   p₁₁ = varEqLit u fst l
+                                   p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   r' = output (p₁₁ input)
+                                   p₂₃ = varEqLit (`Vec u x) snd ls >>= λ s → land r' s
+                                   sound₁ = varEqLitSound r u fst fstv l sol {!!} tri init {!!}
+                                   sound₂ = varEqLitSound r (`Vec u x) snd sndv ls sol {!!} tri (varOut (p₁₁ input)) {!!}
+                                   sound₃ = landSound r r' (output (p₁₂ input)) (varEqLitFunc u fstv l) (varEqLitFunc (`Vec u x) sndv ls) sol sound₁ sound₂ {!!} {!!} (varOut (p₁₂ input)) {!!}
+                               in sound₃
+varEqLitSound r (`Σ u x) vec val l sol look tri init isSol = {!!}
+varEqLitSound r (`Π u x) vec val l sol look tri init isSol = {!!}
 
-varEqLitSound r (`Vec u x) vec val l sol look init isSol = {!!}
-varEqLitSound r (`Σ u x) vec val l sol look init isSol = {!!}
-varEqLitSound r (`Π u x) vec val l sol look init isSol = {!!}
-
-piVarEqLitSound r u x eu vec val pi sol look init isSol = {!!}
+piVarEqLitSound r u x eu vec val pi sol look tri init isSol = {!!}
 

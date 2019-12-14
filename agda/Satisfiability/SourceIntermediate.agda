@@ -53,12 +53,12 @@ open Compile.SourceIntermediate.SI-Monad f field' finite showf fToℕ ℕtoF
 
 open import Satisfiability.SourceIntermediate.Base f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime
 open import Satisfiability.SourceIntermediate.LogicGates f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime
-open import Satisfiability.SourceIntermediate.SimpleComp f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime    
+open import Satisfiability.SourceIntermediate.SimpleComp f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime onef≠zerof
 {-
 data UList (u : U) (x : ⟦ u ⟧ → U) : List ⟦ u ⟧ → Set where
   UNil : UList u x []
   UCons : ∀ val {l} → ⟦ x val ⟧ → UList u x l → UList u x (val ∷ l)
-
+-}
 
 
 
@@ -161,25 +161,31 @@ varEqLitSound r `Base (x ∷ []) (val ∷ []) l sol look₁@(BatchLookupCons .x 
            p₃₃ = λ _ → allEqz (init ∷ [])
            p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
            sound₂ = allEqzSound r (init ∷ []) (varVal₁ ∷ []) sol (BatchLookupCons _ _ _ _ _ x₃ look) (varOut (p₁₂ input)) p₃₃IsSol
-          in ListLookup-Respects-≈ _ _ _ _ (lem sound₂) sound₂
+          in ListLookup-Respects-≈ _ _ _ _ {!lem!} sound₂
   where
-    lem : _ → allEqzFunc (varVal₁ ∷ []) ≈ varEqLitFunc `Base (val ∷ []) l
-    lem sound₂ with ℕtoF varVal₁ ≟F zerof
-    lem sound₂ | yes p with ℕtoF val ≟F l
-    lem sound₂ | yes p | yes p₁ = sq refl
-    lem sound₂ | yes p | no ¬p rewrite p
+    lem : allEqzFunc (varVal₁ ∷ []) ≈ varEqLitFunc `Base (val ∷ []) l
+    lem with ℕtoF varVal₁ ≟F zerof
+    lem | yes p with ℕtoF val ≟F l
+    lem | yes p | yes p₁ = sq refl
+    lem | yes p | no ¬p rewrite p
                                      | -zero≡zero
                                      | +-identityʳ (-F (ℕtoF varVal))
                                      | +-comm (-F (ℕtoF varVal)) l
                                      with ListLookup-≈ x₄ x₁
     ... | sq eq₁ = ⊥-elim′ (¬p (trans eq₁ (sym (a-b≡zero→a≡b x₂))))
-    lem sound₂ | no ¬p with ℕtoF val ≟F l
-    lem sound₂ | no ¬p | yes p = {!!}
-    lem sound₂ | no ¬p | no ¬p₁ = {!!}
+    lem | no ¬p with ℕtoF val ≟F l
+    lem | no ¬p | yes p with ListLookup-≈ x₁ x₄
+    ... | sq eq₁        rewrite eq₁
+                              | p
+                              | +-comm (-F l) (-F (ℕtoF varVal₁))
+                              | +-assoc (-F (ℕtoF varVal₁)) (-F l) l
+                              | +-invˡ l
+                              | +-identityʳ (-F (ℕtoF varVal₁)) = ⊥-elim′ (¬p (-≡zero→≡zero x₂))
+    lem | no ¬p | no ¬p₁ = sq refl
 
 varEqLitSound r (`Vec u x) vec val l sol look init isSol = {!!}
 varEqLitSound r (`Σ u x) vec val l sol look init isSol = {!!}
 varEqLitSound r (`Π u x) vec val l sol look init isSol = {!!}
 
 piVarEqLitSound r u x eu vec val pi sol look init isSol = {!!}
--}
+

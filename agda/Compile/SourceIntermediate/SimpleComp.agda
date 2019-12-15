@@ -134,7 +134,6 @@ enumPiCond (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
   r ← tyCond (x x₁) fst
   s ← enumPiCond eu x rest
   land r s
-tyCond `Zero vec = trivial
 tyCond `One vec = allEqz vec
 tyCond `Two vec = do
   isZero ← varEqLit `Two vec false
@@ -155,7 +154,6 @@ tyCond (`Σ u x) vec with splitAt (tySize u) vec
 tyCond (`Π u x) vec = enumPiCond (enum u) x vec
 
 indToIR : ∀ u → Vec Var (tySize u) → SI-Monad (Vec Var (tySize u))
-indToIR `Zero vec = return []
 indToIR `One vec@(v ∷ []) = do
   add (IAdd zero ((one , v) ∷ []))
   return vec

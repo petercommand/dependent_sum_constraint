@@ -134,7 +134,6 @@ module Enum where
   enum : (u : U) → List ⟦ u ⟧
   enumComplete : ∀ u → (x : ⟦ u ⟧) → x ∈ enum u
 
-  enum `Zero = []
   enum `One = [ tt ]
   enum `Two = false ∷ true ∷ []
   enum `Base = Finite.elems finite
@@ -217,7 +216,6 @@ tySumOver : ∀ {u} → List ⟦ u ⟧ → (⟦ u ⟧ → U) → ℕ
 tySize : U → ℕ
 
 
-tySize `Zero = 0
 tySize `One = 1
 tySize `Two = 1
 tySize `Base = 1

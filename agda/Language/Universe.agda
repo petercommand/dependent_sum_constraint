@@ -14,7 +14,6 @@ data U : Set
 ⟦_⟧ : U → Set
 
 data U where
-  `Zero : U
   `One : U
   `Two : U
   `Base : U
@@ -23,7 +22,6 @@ data U where
 
 
 
-⟦ `Zero ⟧ = ⊥
 ⟦ `One ⟧ = ⊤
 ⟦ `Two ⟧ = Bool
 ⟦ `Base ⟧ = f

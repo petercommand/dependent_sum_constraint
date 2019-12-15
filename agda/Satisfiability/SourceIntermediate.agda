@@ -59,3 +59,36 @@ data UList (u : U) (x : ⟦ u ⟧ → U) : List ⟦ u ⟧ → Set where
   UNil : UList u x []
   UCons : ∀ val {l} → ⟦ x val ⟧ → UList u x l → UList u x (val ∷ l)
 -}
+
+tyCondFunc : ∀ u → (vec : Vec ℕ (tySize u)) → ℕ
+enumSigmaCondFunc : ∀ u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
+  → (val₁ : Vec ℕ (tySize u))
+  → (val₂ : Vec ℕ (maxTySizeOver (enum u) x))
+  → ℕ
+
+tyCondFunc `One vec = {!!}
+tyCondFunc `Two vec = {!!}
+tyCondFunc `Base vec = {!!}
+tyCondFunc (`Vec u x) vec = {!!}
+tyCondFunc (`Σ u x) vec = {!!}
+tyCondFunc (`Π u x) vec = {!!}
+
+enumSigmaCondFunc u [] x val val₁ = 1
+enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
+enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ | fst₁ , snd₁ =
+  andFunc (impFunc (varEqLitFunc u v₁ x₁) (andFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁)))
+          (enumSigmaCondFunc u eu x v₁ v₂)
+
+enumSigmaCondSound : ∀ r u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
+   → (vec₁ : Vec Var (tySize u))
+   → (vec₂ : Vec Var (maxTySizeOver (enum u) x))
+   → (val₁ : Vec ℕ (tySize u))
+   → (val₂ : Vec ℕ (maxTySizeOver (enum u) x))
+   → (sol : List (Var × ℕ))
+   → BatchListLookup vec₁ sol val₁
+   → BatchListLookup vec₂ sol val₂
+   → ListLookup 0 sol 1
+   → ∀ init →
+   let result = enumSigmaCond eu x vec₁ vec₂ ((r , prime) , init)
+   in BuilderProdSol (writerOutput result) sol
+     → ListLookup (output result) sol {!!}

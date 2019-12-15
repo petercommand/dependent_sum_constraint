@@ -1,8 +1,11 @@
 {-# OPTIONS --prop #-}
+
+open import Agda.Builtin.Nat
+
 open import Data.Empty
 open import Data.Field
 open import Data.Finite
-open import Data.List hiding (lookup; head)
+open import Data.List hiding (lookup; head; splitAt)
 open import Data.List.Membership.Propositional
 open import Data.List.Membership.Propositional.Properties
 open import Data.List.Relation.Unary.Any
@@ -12,11 +15,15 @@ open import Data.Nat.Primality
 
 open import Data.Product hiding (map)
 open import Data.ProductPrime
-open import Data.Vec hiding (_>>=_; _++_)
+open import Data.Vec hiding (_>>=_; _++_; splitAt)
+open import Data.Vec.Split
 open import Data.Squash
 open import Data.String hiding (_≈_; _≟_; _++_)
 open import Data.Sum
 open import Data.Unit
+
+open import Eliminator.PropositionalEquality
+
 open import Function
 
 open import Language.Common
@@ -29,6 +36,9 @@ module Satisfiability.SourceIntermediate.Base (f : Set) (_≟F_ : Decidable {A =
         (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field')
         (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field') (prime : ℕ) (isPrime : Prime prime) where
 
+
+open import Language.TySize f finite
+open import Language.Universe f
 open import Language.Intermediate f
 
 
@@ -68,6 +78,81 @@ data BatchListLookup : {n : ℕ} → Vec Var n → List (Var × ℕ) → Vec ℕ
         → ListLookup v l n
         → BatchListLookup vec₁ l vec₂
         → BatchListLookup (v ∷ vec₁) l (n ∷ vec₂)
+
+BatchListLookup-Split₁ :
+  ∀ a b → (vec : Vec Var (a + b))
+     → (l : List (Var × ℕ))
+     → (val : Vec ℕ (a + b))
+     → (vec₁ : Vec Var a) → (vec₂ : Vec Var b)
+     → (val₁ : Vec ℕ a) → (val₂ : Vec ℕ b)
+     → splitAt a vec ≡ (vec₁ , vec₂)
+     → splitAt a val ≡ (val₁ , val₂)
+     → BatchListLookup vec l val
+     → BatchListLookup vec₁ l val₁
+BatchListLookup-Split₁ zero b vec l val [] vec₂ [] val₂ eq₁ eq₂ look = BatchLookupNil l
+BatchListLookup-Split₁ (suc a) b (x ∷ vec) l (x₁ ∷ val) (.x ∷ .(proj₁ (splitAt a vec))) .(proj₂ (splitAt a vec)) (.x₁ ∷ .(proj₁ (splitAt a val))) .(proj₂ (splitAt a val)) refl refl (BatchLookupCons .x .x₁ .vec .val .l x₂ look)
+   with splitAt a vec | inspect (splitAt a) vec
+... | fst , snd | [ eq₁ ] with splitAt a val | inspect (splitAt a) val
+... | fstv , sndv | [ eq₂ ] = BatchLookupCons x x₁ fst fstv l x₂ (BatchListLookup-Split₁ a b vec l val fst snd fstv sndv eq₁ eq₂ look)
+
+BatchListLookup-Split₂ :
+  ∀ a b → (vec : Vec Var (a + b))
+     → (l : List (Var × ℕ))
+     → (val : Vec ℕ (a + b))
+     → (vec₁ : Vec Var a) → (vec₂ : Vec Var b)
+     → (val₁ : Vec ℕ a) → (val₂ : Vec ℕ b)
+     → splitAt a vec ≡ (vec₁ , vec₂)
+     → splitAt a val ≡ (val₁ , val₂)
+     → BatchListLookup vec l val
+     → BatchListLookup vec₂ l val₂
+BatchListLookup-Split₂ .0 b vec l val [] .vec [] .val refl refl look = look
+BatchListLookup-Split₂ (suc a) b (x₂ ∷ vec) l (x₃ ∷ val) (.x₂ ∷ .(proj₁ (splitAt a vec))) .(proj₂ (splitAt a vec)) (.x₃ ∷ .(proj₁ (splitAt a val))) .(proj₂ (splitAt a val)) refl refl (BatchLookupCons .x₂ .x₃ .vec .val .l x look) 
+   with splitAt a vec | inspect (splitAt a) vec
+... | fst , snd | [ eq₁ ] with splitAt a val | inspect (splitAt a) val
+... | fstv , sndv | [ eq₂ ] = BatchListLookup-Split₂ a b vec l val fst snd fstv sndv eq₁ eq₂ look
+
+subst′ : ∀ {ℓ} {ℓ'} → {A : Set ℓ} → (P : A → Prop ℓ') → ∀ {x} {y} → x ≡ y → P x → P y
+subst′ _ refl px = px
+
+BatchListLookupLenSubst : ∀ {len} {len₁} {l} → (vec val : Vec ℕ len) (prf : len ≡ len₁) → BatchListLookup vec l val
+   → BatchListLookup (subst (Vec ℕ) prf vec) l (subst (Vec ℕ) prf val)
+BatchListLookupLenSubst {len} {len₁} {l} vec val refl look = look
+
+BatchListLookup-MaxTySplit₁ :
+  ∀ u (uval : ⟦ u ⟧) (x : ⟦ u ⟧ → U) l
+  → (vec : Vec Var (maxTySizeOver (enum u) x))
+  → (vec₁ : Vec Var (tySize (x uval)))
+  → (val : Vec Var (maxTySizeOver (enum u) x))
+  → (val₁ : Vec Var (tySize (x uval)))
+  → proj₁ (maxTySplit u uval x vec) ≡ vec₁
+  → proj₁ (maxTySplit u uval x val) ≡ val₁
+  → BatchListLookup vec l val
+  → BatchListLookup vec₁ l val₁
+BatchListLookup-MaxTySplit₁ u uval x l vec vec₁ val val₁ eq₁ eq₂ look =
+  let
+      sub₁ = BatchListLookupLenSubst vec val (maxTyVecSizeEq u uval x) look  
+      hyp = BatchListLookup-Split₁ (tySize (x uval)) _ (subst (Vec ℕ) (maxTyVecSizeEq u uval x) vec) l (subst (Vec ℕ) (maxTyVecSizeEq u uval x) val)  (proj₁ (maxTySplit u uval x vec)) (proj₂ (maxTySplit u uval x vec)) (proj₁ (maxTySplit u uval x val)) (proj₂ (maxTySplit u uval x val)) refl refl sub₁
+      hyp₁ = subst′ (λ t → BatchListLookup t l (proj₁ (maxTySplit u uval x val))) eq₁ hyp
+      hyp₂ = subst′ (λ t → BatchListLookup vec₁ l t) eq₂ hyp₁
+  in hyp₂
+
+BatchListLookup-MaxTySplit₂ :
+  ∀ u (uval : ⟦ u ⟧) (x : ⟦ u ⟧ → U) l
+  → (vec : Vec Var (maxTySizeOver (enum u) x))
+  → (vec₁ : Vec Var (maxTySizeOver (enum u) x - tySize (x uval)))
+  → (val : Vec Var (maxTySizeOver (enum u) x))
+  → (val₁ : Vec Var (maxTySizeOver (enum u) x - tySize (x uval)))
+  → proj₂ (maxTySplit u uval x vec) ≡ vec₁
+  → proj₂ (maxTySplit u uval x val) ≡ val₁
+  → BatchListLookup vec l val
+  → BatchListLookup vec₁ l val₁
+BatchListLookup-MaxTySplit₂ u uval x l vec vec₁ val val₁ eq₁ eq₂ look = 
+  let
+    sub₁ = BatchListLookupLenSubst vec val (maxTyVecSizeEq u uval x) look  
+    hyp = BatchListLookup-Split₂ (tySize (x uval)) _ (subst (Vec ℕ) (maxTyVecSizeEq u uval x) vec) l (subst (Vec ℕ) (maxTyVecSizeEq u uval x) val)  (proj₁ (maxTySplit u uval x vec)) (proj₂ (maxTySplit u uval x vec)) (proj₁ (maxTySplit u uval x val)) (proj₂ (maxTySplit u uval x val)) refl refl sub₁
+    hyp₁ = subst′ (λ t → BatchListLookup t l (proj₂ (maxTySplit u uval x val))) eq₁ hyp
+    hyp₂ = subst′ (λ t → BatchListLookup vec₁ l t) eq₂ hyp₁
+  in hyp₂
 ⊥-elim′ : ∀ {w} {Whatever : Prop w} → ⊥ → Whatever
 ⊥-elim′ ()
 

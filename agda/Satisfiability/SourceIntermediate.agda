@@ -90,6 +90,34 @@ piVarEqLitFunc x [] vec pi = 1
 piVarEqLitFunc x (x₁ ∷ eu) vec pi with splitAt (tySize (x x₁)) vec
 ... | fst , snd = andFunc (varEqLitFunc (x x₁) fst (pi x₁)) (piVarEqLitFunc x eu snd pi)
 
+varEqLitFuncIsBool : ∀ u vec v → isBool (varEqLitFunc u vec v)
+piVarEqLitFuncIsBool : ∀ {u} (x : ⟦ u ⟧ → U) eu vec pi → isBool (piVarEqLitFunc x eu vec pi)
+
+varEqLitFuncIsBool `One (x ∷ vec) v with ℕtoF x ≟F zerof
+varEqLitFuncIsBool `One (x ∷ vec) v | yes p = isOne 1 ℕtoF-1≡1
+varEqLitFuncIsBool `One (x ∷ vec) v | no ¬p = isZero zero ℕtoF-0≡0
+varEqLitFuncIsBool `Two (x ∷ vec) false with ℕtoF x ≟F zerof
+varEqLitFuncIsBool `Two (x ∷ vec) false | yes p = isOne 1 ℕtoF-1≡1
+varEqLitFuncIsBool `Two (x ∷ vec) false | no ¬p = isZero zero ℕtoF-0≡0
+varEqLitFuncIsBool `Two (x ∷ vec) true with ℕtoF x ≟F zerof
+varEqLitFuncIsBool `Two (x ∷ vec) true | yes p = isZero zero ℕtoF-0≡0
+varEqLitFuncIsBool `Two (x ∷ vec) true | no ¬p = isOne 1 ℕtoF-1≡1
+varEqLitFuncIsBool `Base (x ∷ vec) v with ℕtoF x ≟F v
+varEqLitFuncIsBool `Base (x ∷ vec) v | yes p = isOne 1 ℕtoF-1≡1
+varEqLitFuncIsBool `Base (x ∷ vec) v | no ¬p = isZero zero ℕtoF-0≡0
+varEqLitFuncIsBool (`Vec u zero) vec v = isOne 1 ℕtoF-1≡1
+varEqLitFuncIsBool (`Vec u (suc x)) vec (l ∷ lit) with splitAt (tySize u) vec
+... | fst , snd = andFuncIsBool (varEqLitFunc u fst l) (varEqLitFunc (`Vec u x) snd lit)
+varEqLitFuncIsBool (`Σ u x) vec (fstₗ , sndₗ) with splitAt (tySize u) vec
+... | fst , snd with maxTySplit u fstₗ x snd
+... | vecₜ₁ , vecₜ₂ = andFuncIsBool (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) vecₜ₁ sndₗ)
+varEqLitFuncIsBool (`Π u x) vec v = piVarEqLitFuncIsBool x (enum u) vec v
+
+
+piVarEqLitFuncIsBool x [] vec pi = isOne 1 ℕtoF-1≡1
+piVarEqLitFuncIsBool x (x₁ ∷ eu) vec pi with splitAt (tySize (x x₁)) vec
+... | fst , snd = andFuncIsBool (varEqLitFunc (x x₁) fst (pi x₁)) (piVarEqLitFunc x eu snd pi)
+
 varEqLitSound : ∀ (r : WriterMode)
   → ∀ u → (vec : Vec Var (tySize u))
   → (val : Vec Var (tySize u))
@@ -115,8 +143,6 @@ piVarEqLitSound : ∀ (r : WriterMode)
   in BuilderProdSol (writerOutput result) sol
   → ListLookup (output result) sol (piVarEqLitFunc x eu val pi)
 varEqLitSound r `One vec val l sol look tri init isSol
-  = {!!}
-{-
   = let sound₁ = allEqzSound r vec val sol look init isSol
     in ListLookup-Respects-≈  _ _ _ _ (lem val l) sound₁
   where
@@ -124,10 +150,7 @@ varEqLitSound r `One vec val l sol look tri init isSol
     lem (x ∷ val) l with ℕtoF x ≟F zerof
     lem (x ∷ []) l | yes p = sq refl
     lem (x ∷ val) l | no ¬p = sq refl
--}
 varEqLitSound r `Two vec val false sol look tri init isSol
-  = {!!}
-{-
   = let sound₁ = allEqzSound r vec val sol look init isSol
     in ListLookup-Respects-≈ _ _ _ _ (lem val) sound₁
   where
@@ -135,10 +158,7 @@ varEqLitSound r `Two vec val false sol look tri init isSol
     lem (x ∷ val) with ℕtoF x ≟F zerof
     lem (x ∷ []) | yes p = sq refl
     lem (x ∷ val) | no ¬p = sq refl
--}
 varEqLitSound r `Two vec val true sol look tri init isSol
-  = {!!}
-{-
   = let sound₁ = anyNeqzSound r vec val sol look init isSol
     in ListLookup-Respects-≈ _ _ _ _ (lem val) sound₁
   where
@@ -146,10 +166,7 @@ varEqLitSound r `Two vec val true sol look tri init isSol
     lem (x ∷ val) with ℕtoF x ≟F zerof
     lem (x ∷ []) | yes p = sq refl
     lem (x ∷ val) | no ¬p = sq refl
--}
 varEqLitSound r `Base (x ∷ []) val l sol look tri init isSol
-  = {!!}
-{-
     with let
            p₁₁ = new
            p₂₂ = add (IAdd l ((-F onef , x) ∷ (-F onef , init) ∷ []))
@@ -195,7 +212,6 @@ varEqLitSound r `Base (x ∷ []) (val ∷ []) l sol look₁@(BatchLookupCons .x 
                               | +-invˡ l
                               | +-identityʳ (-F (ℕtoF varVal₁)) = ⊥-elim′ (¬p (-≡zero→≡zero x₂))
     lem | no ¬p | no ¬p₁ = sq refl
--}
 varEqLitSound r (`Vec u zero) vec val l sol look tri init isSol = tri
 varEqLitSound r (`Vec u (suc x)) vec val (l ∷ ls) sol look tri init isSol with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
 ... | fst , snd   | [ prf ] with splitAt (tySize u) val | inspect (splitAt (tySize u)) val
@@ -203,14 +219,64 @@ varEqLitSound r (`Vec u (suc x)) vec val (l ∷ ls) sol look tri init isSol with
                                    input = ((r , prime) , init)
                                    p₁₁ = varEqLit u fst l
                                    p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   p₂₂ = varEqLit (`Vec u x) snd ls
                                    r' = output (p₁₁ input)
-                                   p₂₃ = varEqLit (`Vec u x) snd ls >>= λ s → land r' s
-                                   sound₁ = varEqLitSound r u fst fstv l sol {!!} tri init {!!}
-                                   sound₂ = varEqLitSound r (`Vec u x) snd sndv ls sol {!!} tri (varOut (p₁₁ input)) {!!}
-                                   sound₃ = landSound r r' (output (p₁₂ input)) (varEqLitFunc u fstv l) (varEqLitFunc (`Vec u x) sndv ls) sol sound₁ sound₂ {!!} {!!} (varOut (p₁₂ input)) {!!}
+                                   p₃₃ = λ s → land r' s
+                                   p₂₃ = λ r → varEqLit (`Vec u x) snd ls >>= λ s → land r s
+                                   p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   sound₁ = varEqLitSound r u fst fstv l sol (BatchListLookup-Split₁ (tySize u) (tySize (`Vec u x)) vec sol val fst snd fstv sndv prf prf₂ look) tri init p₁₁IsSol
+                                   sound₂ = varEqLitSound r (`Vec u x) snd sndv ls sol (BatchListLookup-Split₂ (tySize u) (tySize (`Vec u x)) vec sol val fst snd fstv sndv prf prf₂ look) tri (varOut (p₁₁ input)) p₂₂IsSol
+                                   sound₃ = landSound r r' (output (p₁₂ input)) (varEqLitFunc u fstv l) (varEqLitFunc (`Vec u x) sndv ls) sol sound₁ sound₂ (varEqLitFuncIsBool u fstv l) (varEqLitFuncIsBool (`Vec u x) sndv ls) (varOut (p₁₂ input)) p₃₃IsSol
                                in sound₃
-varEqLitSound r (`Σ u x) vec val l sol look tri init isSol = {!!}
-varEqLitSound r (`Π u x) vec val l sol look tri init isSol = {!!}
+varEqLitSound r (`Σ u x) vec val (fstₗ , sndₗ) sol look tri init isSol with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd | [ prf ] with splitAt (tySize u) val | inspect (splitAt (tySize u)) val
+... | fstv , sndv | [ prf₂ ] with maxTySplit u fstₗ x snd | inspect (maxTySplit u fstₗ x) snd
+... | snd₁ , snd₂ | [ prf₃ ] with maxTySplit u fstₗ x sndv | inspect (maxTySplit u fstₗ x) sndv
+... | sndv₁ , sndv₂ | [ prf₄ ] =
+     let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       r' = output (p₁₁ input)
+       p₃₃ = λ s → land r' s
+       p₂₃ = λ r → varEqLit (x fstₗ) snd₁ sndₗ >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r (varOut (p₁₁ input)) sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r (varOut (p₁₁ input)) sol p₂₃IsSol
+       lookFst = BatchListLookup-Split₁ (tySize u) _ vec sol val fst snd fstv sndv prf prf₂ look
+       lookSnd = BatchListLookup-Split₂ (tySize u) _ vec sol val fst snd fstv sndv prf prf₂ look
+       sound₁ = varEqLitSound r u fst fstv fstₗ sol lookFst tri init p₁₁IsSol
+       sound₂ = varEqLitSound r (x fstₗ) snd₁ sndv₁ sndₗ sol (BatchListLookup-MaxTySplit₁ u fstₗ x sol snd snd₁ sndv sndv₁ (cong proj₁ prf₃) (cong proj₁ prf₄) lookSnd) tri (varOut (p₁₁ input)) p₂₂IsSol
+       sound₃ = landSound r (output (p₁₁ input)) (output (p₁₂ input)) (varEqLitFunc u fstv fstₗ) (varEqLitFunc (x fstₗ) sndv₁ sndₗ) sol sound₁ sound₂ (varEqLitFuncIsBool u fstv fstₗ) (varEqLitFuncIsBool (x fstₗ) sndv₁ sndₗ) (varOut (p₁₂ input)) p₃₃IsSol
+     in sound₃
+varEqLitSound r (`Π u x) vec val l sol look tri init isSol = piVarEqLitSound r u x (enum u) vec val l sol look tri init isSol
 
-piVarEqLitSound r u x eu vec val pi sol look tri init isSol = {!!}
+piVarEqLitSound r u x [] vec val pi sol look tri init isSol = tri
+piVarEqLitSound r u x (x₁ ∷ eu) vec val pi sol look tri init isSol with splitAt (tySize (x x₁)) vec | inspect (splitAt (tySize (x x₁))) vec
+... | fst , snd | [ prf₁ ] with splitAt (tySize (x x₁)) val | inspect (splitAt (tySize (x x₁))) val
+... | fstv , sndv | [ prf₂ ] =
+     let
+       input = ((r , prime) , init)
+       lookFst = BatchListLookup-Split₁ (tySize (x x₁)) _ vec sol val fst snd fstv sndv prf₁ prf₂ look
+       lookSnd = BatchListLookup-Split₂ (tySize (x x₁)) _ vec sol val fst snd fstv sndv prf₁ prf₂ look
+       p₁₁ = varEqLit (x x₁) fst (pi x₁)
+       p₁₂ = varEqLit (x x₁) fst (pi x₁) >>= λ r → piVarEqLit u x eu snd pi
+       p₂₂ = piVarEqLit u x eu snd pi
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = λ s → land r' s 
+       p₂₃ = λ r → piVarEqLit u x eu snd pi >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       sound₁ = varEqLitSound r (x x₁) fst fstv (pi x₁) sol lookFst tri init p₁₁IsSol
+       sound₂ = piVarEqLitSound r u x eu snd sndv pi sol lookSnd tri (varOut (p₁₁ input)) p₂₂IsSol
+       sound₃ = landSound r r' s (varEqLitFunc (x x₁) fstv (pi x₁)) (piVarEqLitFunc x eu sndv pi) sol sound₁ sound₂ (varEqLitFuncIsBool (x x₁) fstv (pi x₁)) (piVarEqLitFuncIsBool x eu sndv pi) (varOut (p₁₂ input)) p₃₃IsSol
+     in sound₃
 

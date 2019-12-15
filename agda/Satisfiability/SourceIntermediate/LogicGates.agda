@@ -261,6 +261,13 @@ andFunc a b | no ¬p with ℕtoF b ≟F zerof
 andFunc a b | no ¬p | yes p = 0
 andFunc a b | no ¬p | no ¬p₁ = 1
 
+andFuncIsBool : ∀ a b → isBool (andFunc a b)
+andFuncIsBool a b with ℕtoF a ≟F zerof
+andFuncIsBool a b | yes p = isZero zero ℕtoF-0≡0
+andFuncIsBool a b | no ¬p with ℕtoF b ≟F zerof
+andFuncIsBool a b | no ¬p | yes p = isZero zero ℕtoF-0≡0
+andFuncIsBool a b | no ¬p | no ¬p₁ = isOne 1 ℕtoF-1≡1
+
 landSoundLem : ∀ r v v' init →
   let b₁₂ = writerOutput (add (IMul onef v v' onef init) ((r , prime) , suc init))
       b₃₄ = writerOutput (land v v' ((r , prime) , init))

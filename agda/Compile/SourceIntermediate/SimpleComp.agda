@@ -123,10 +123,10 @@ enumSigmaCond {u} (elem₁ ∷ enum₁) x v₁ v₂ with maxTySplit u elem₁ x 
   eqElem₁ ← varEqLit u v₁ elem₁
   tyCons ← tyCond (x elem₁) fst
   restZ ← allEqz snd
-  sat ← limp eqElem₁ tyCons
+  tyCons&restZ ← land tyCons restZ
+  sat ← limp eqElem₁ tyCons&restZ
   rest ← enumSigmaCond enum₁ x v₁ v₂
-  r' ← land sat rest
-  land r' restZ
+  land sat rest
 
 enumPiCond [] x vec = trivial
 enumPiCond (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec

@@ -18,6 +18,6 @@ with pkgs;
     pkgconfig
     cabal-install
     pythonPackages.markdown
-    z3
+    glibcLocales
 ]
 

@@ -13,10 +13,11 @@ let pkgs = import ./pkgs.nix {};
       buildInputs = import ./build_input.nix { inherit pkgs; } ++ [ pkgs.AgdaStdlib ];
    };
    createBuilder = pkgs.writeTextFile {
-     name = "createBuilder";
+     name = "dependent-sum-agda-builder";
      text = ''
        #!/bin/sh
        source $stdenv/setup
+       export LANG=en_US.utf8
        mkdir -p $out
        cp -r $agdaDrv/* .
        chmod -R 755 *
@@ -30,7 +31,7 @@ let pkgs = import ./pkgs.nix {};
 
 in
 pkgs.stdenv.mkDerivation {
-  name = "dependent-sum";
+  name = "dependent-sum-agda";
   builder = "${createBuilder}/builder.sh";
   inherit agdaDrv ARGS;
   unpackPhase = true;

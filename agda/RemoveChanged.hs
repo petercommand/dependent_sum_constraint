@@ -18,6 +18,9 @@ dropLast (x:xs) = x : dropLast xs
 main :: IO ()
 main = do
   cwd <- getCurrentDirectory
+  agdaBuildExists <- doesFileExist "agda-build"
+  when (not agdaBuildExists) $
+    copyFile "stack-build-tmp" "stack-build"
   agdaBuild <- T.readFile "agda-build"
   stackBuildTmp <- T.readFile "stack-build-tmp"
   let findLink r@(x:xs) = length (filter (== "Linking") r) /= 0

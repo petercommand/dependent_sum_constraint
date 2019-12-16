@@ -134,7 +134,6 @@ module Enum where
   enum : (u : U) → List ⟦ u ⟧
   enumComplete : ∀ u → (x : ⟦ u ⟧) → x ∈ enum u
 
-  enum `Zero = []
   enum `One = [ tt ]
   enum `Two = false ∷ true ∷ []
   enum `Base = Finite.elems finite
@@ -217,7 +216,6 @@ tySumOver : ∀ {u} → List ⟦ u ⟧ → (⟦ u ⟧ → U) → ℕ
 tySize : U → ℕ
 
 
-tySize `Zero = 0
 tySize `One = 1
 tySize `Two = 1
 tySize `Base = 1
@@ -240,13 +238,16 @@ tySumOver (x₁ ∷ l) x = tySize (x x₁) + tySumOver l x
 maxTySizeLem : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → maxTySizeOver (enum u) x ≥ tySize (x val)
 maxTySizeLem u val x = ∈→≥ (enum u) x val (enumComplete _ val)
 
-maxTySplit : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec Var (maxTySizeOver (enum u) x) → Vec Var (tySize (x val)) × Vec Var (maxTySizeOver (enum u) x - tySize (x val))
-maxTySplit u val x vec = vecSplit
-  where
-    vecₜ : Vec ℕ (tySize (x val) + (maxTySizeOver (enum u) x - tySize (x val)))
-    vecₜ rewrite +-comm (tySize (x val)) (maxTySizeOver (enum u) x - tySize (x val))
-               | a-b+b≡a _ _ (maxTySizeLem u val x) = vec
 
-    vecSplit : Vec ℕ (tySize (x val)) × Vec ℕ (maxTySizeOver (enum u) x - tySize (x val))
-    vecSplit = splitAt (tySize (x val)) vecₜ
+
+maxTyVecSizeEq : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → maxTySizeOver (enum u) x ≡ tySize (x val) + (maxTySizeOver (enum u) x - tySize (x val))
+maxTyVecSizeEq u val x = sym (trans (+-comm (tySize (x val)) (maxTySizeOver (enum u) x - tySize (x val)))
+                            (a-b+b≡a _ _ (maxTySizeLem u val x)))
+
+maxTySplitAux : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec ℕ (tySize (x val) + (maxTySizeOver (enum u) x - tySize (x val))) → Vec Var (tySize (x val)) × Vec Var (maxTySizeOver (enum u) x - tySize (x val))
+maxTySplitAux u val x vec = splitAt (tySize (x val)) vec
+
+
+maxTySplit : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec Var (maxTySizeOver (enum u) x) → Vec Var (tySize (x val)) × Vec Var (maxTySizeOver (enum u) x - tySize (x val))
+maxTySplit u val x vec = maxTySplitAux u val x (subst (Vec ℕ) (maxTyVecSizeEq u val x) vec)
 

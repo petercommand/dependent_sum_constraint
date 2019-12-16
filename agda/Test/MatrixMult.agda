@@ -1,3 +1,4 @@
+{-# OPTIONS --prop #-}
 module Test.MatrixMult where
 
 open import Data.Bool renaming (_≟_ to _≟B_)

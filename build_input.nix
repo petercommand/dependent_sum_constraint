@@ -2,6 +2,7 @@
 with pkgs;
 [
     haskellPackages.Agda
+    AgdaStdlib
     gcc
     git
     cacert

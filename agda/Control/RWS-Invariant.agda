@@ -77,6 +77,6 @@ asks f = do
 
 
 local : ∀ {a} {A : Set a} → R → RWSInvMonad A → RWSInvMonad A
-local r m (r' , s) = m (r' , s)
+local r m (r' , s) = m (r , s)
 
 {-# INLINE local #-}

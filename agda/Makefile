@@ -5,10 +5,11 @@ all:
 	./gen_main.sh ${ARGS}
 	stack build 2>&1 | tee stack-build-tmp
 #	stack build --executable-profiling --library-profiling --ghc-options="-fprof-auto -rtsopts" 2>&1 | tee stack-build-tmp
-nix:
+ci:
 	agda -c --ghc-dont-call-ghc --include-path ${AgdaStdlib}/share/agda Test/${ARGS}.agda | tee agda-build
 	echo "" >> stack-build-tmp
 	./gen_main.sh ${ARGS}
+	stack build 2>&1 | tee stack-build-tmp
 exec:
 	stack exec dependent-sum
 #	stack exec dependent-sum --profile -- +RTS -p

@@ -1,5 +1,6 @@
 all:
-	cd libsnark/ && mkdir -p build && cd build && env CXXFLAGS="-Wno-unused-variable" cmake .. && make
+	git submodule init && git submodule update
+	cd libsnark/ && git submodule init && git submodule update && mkdir -p build && cd build && env CXXFLAGS="-Wno-unused-variable" cmake .. && make
 	$(MAKE) -C agda
 clean:
 	$(MAKE) -C agda clean

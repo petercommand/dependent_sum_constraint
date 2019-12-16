@@ -13,6 +13,9 @@ ci:
 clean:
 	$(MAKE) -C agda clean
 	rm -rf libsnark/build
+ciexec:
+	$(MAKE) -C agda ciexec
+	$(MAKE) -C backend_interface exec
 exec:
 	$(MAKE) -C agda exec
 	$(MAKE) -C backend_interface exec

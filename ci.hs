@@ -31,5 +31,6 @@ main = do
       ExitSuccess -> return $ RunSuccess t
       ExitFailure _ -> return $ RunFailed t
   let failures = filter (not . isSuccess) r
+  putStrLn $ show r
   when (length failures /= 0) $
     exitWith (ExitFailure 1)

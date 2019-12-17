@@ -11,7 +11,6 @@ nix:
 	echo "" >> stack-build-tmp
 	./gen_main.sh ${ARGS}
 ci:
-	rm .agda-lib
 	agda -c --ghc-dont-call-ghc --include-path ${AgdaStdlib}/share/agda Test/${ARGS}.agda | tee agda-build
 	echo "" >> stack-build-tmp
 	./gen_main.sh ${ARGS}

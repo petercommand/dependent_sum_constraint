@@ -1,3 +1,0 @@
-name: dependent-sum-constraint
-depend: standard-library
-include: .

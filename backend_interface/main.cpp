@@ -111,5 +111,6 @@ int main(int argc, char** argv) {
   }
   else {
     cout << "proof is not accepted by verifier" << endl;
+    exit(1);
   }
 }

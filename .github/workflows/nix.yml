@@ -12,4 +12,4 @@ jobs:
     - uses: cachix/install-nix-action@v6
     - name: Run a multi-line script
       run: |
-        nix-shell --run "make ci ARGS=DependentSumSimple && make ciexec"
+        nix-shell --run "runghc ci.hs"

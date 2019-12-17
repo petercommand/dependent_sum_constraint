@@ -1,3 +1,4 @@
+{-# OPTIONS --prop #-}
 module Test.SimpleMult where
 
 open import Data.Bool renaming (_≟_ to _≟B_)
@@ -5,6 +6,7 @@ open import Data.Field.Finite
 open import Data.Fin hiding (_≟_)
 open import Data.List
 open import Data.Nat hiding (_≟_)
+open import Data.Nat.Primality
 open import Data.Nat.Show renaming (show to showℕ)
 open import Data.Product hiding (map)
 open import Data.Unit hiding (_≟_)
@@ -15,9 +17,13 @@ open import Relation.Nullary
 
 N = 21888242871839275222246405745257275088548364400416034343698204186575808495617
 
+postulate
+  nPrime : Prime N
+
+
 FF = FiniteField N
-FField = isField N
-FFinite = isFinite N
+FField = isField N nPrime
+FFinite = isFinite N nPrime
 
 open import Language.Common
 
@@ -48,8 +54,7 @@ module Test where
 open Test
 
 
-open import Compile.Generate FF FField FFinite (λ x → showℕ (FiniteField.elem x)) FiniteField.elem
-
+open import Compile.Generate FF FField FFinite (λ x → showℕ (FiniteField.elem x)) FiniteField.elem (fieldElem nPrime)
 open import IO
 
-main = run (genMain test ((1 , 10) ∷ (2 , 20) ∷ []))
+main = run (genMain N test ((1 , 10) ∷ (2 , 20) ∷ []))

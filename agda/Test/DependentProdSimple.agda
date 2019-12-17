@@ -1,3 +1,4 @@
+{-# OPTIONS --prop #-}
 module Test.DependentProdSimple where
 open import Data.Bool renaming (_≟_ to _≟B_)
 open import Data.Field.Finite

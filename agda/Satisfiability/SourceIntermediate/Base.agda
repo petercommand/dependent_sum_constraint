@@ -22,7 +22,6 @@ open import Data.String hiding (_≈_; _≟_; _++_)
 open import Data.Sum
 open import Data.Unit
 
-open import Eliminator.PropositionalEquality
 
 open import Function
 

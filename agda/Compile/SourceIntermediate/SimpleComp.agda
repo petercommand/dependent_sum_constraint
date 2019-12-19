@@ -92,11 +92,8 @@ piVarEqLit u x (x₁ ∷ eu) vec f with splitAt (tySize (x x₁)) vec
 
 varEqLit `One vec lit = allEqz vec
 varEqLit `Two vec false = allEqz vec
-varEqLit `Two vec true = anyNeqz vec
-varEqLit `Base (x ∷ []) lit = do
-  v ← new
-  add (IAdd lit ((- one , x) ∷ (- one , v) ∷ []))
-  allEqz (v ∷ [])
+varEqLit `Two (x ∷ vec) true = varEqBaseLit x one
+varEqLit `Base (x ∷ vec) lit = varEqBaseLit x lit
 varEqLit (`Vec u nzero) vec lit = trivial
 varEqLit (`Vec u (suc x)) vec (l ∷ lit) with splitAt (tySize u) vec
 ... | fst , snd = do

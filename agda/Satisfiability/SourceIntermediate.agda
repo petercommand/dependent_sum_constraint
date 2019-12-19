@@ -138,15 +138,85 @@ tyCondSound r `One vec val sol look₁ tri init isSol =
    lem (x ∷ []) | yes p = sq refl
    lem (x ∷ val) | no ¬p = sq refl
 tyCondSound r `Two vec val sol look₁ tri init isSol =
-  let sound₁ = varEqLitSound r `Two vec val false sol look₁ tri init ?
-  
-  in {!!}
-tyCondSound r `Base vec val sol look₁ tri init isSol = {!!}
-tyCondSound r (`Vec u x) vec val sol look₁ tri init isSol = {!!}
-tyCondSound r (`Σ u x) vec val sol look₁ tri init isSol = {!!}
-tyCondSound r (`Π u x) vec val sol look₁ tri init isSol = {!!}
+  let
+    input = ((r , prime) , init)
+    p₁₁ = varEqLit `Two vec false
+    p₁₂ = varEqLit `Two vec false >>= λ isZero -> varEqLit `Two vec true
+    p₂₂ = varEqLit `Two vec true
+    isZero = output (p₁₁ input)
+    isOne = output (p₁₂ input)
+    p₃₃ = λ isOne → lor isZero isOne
+    p₂₃ = λ isZero → varEqLit `Two vec true >>= λ isOne → lor isZero isOne
+    p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r init sol isSol
+    p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r init sol isSol
+    p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    
+    sound₁ = varEqLitSound r `Two vec val false sol look₁ tri init p₁₁IsSol
+    sound₂ = varEqLitSound r `Two vec val true sol look₁ tri _ p₂₂IsSol
+    sound₃ = lorSound r isZero isOne _ _ sol sound₁ sound₂ (varEqLitFuncIsBool `Two val false) (varEqLitFuncIsBool `Two val true) _ p₃₃IsSol
+  in ListLookup-Respects-≈ _ _ _ _ (lem val) sound₃
+ where
+   lem : ∀ val → lorFunc (varEqLitFunc `Two val false) (varEqLitFunc `Two val true) ≈ tyCondFunc `Two val
+   lem val with ℕtoF (varEqLitFunc `Two val false) ≟F zerof
+   lem (x ∷ val) | yes p with ℕtoF x ≟F zerof
+   lem (x ∷ val) | yes p | yes p₁ = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) p))
+   lem (x ∷ val) | yes p | no ¬p with ℕtoF 1 ≟F zerof
+   lem (x ∷ val) | yes p | no ¬p | yes p₁ = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) p₁))
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ with ℕtoF x ≟F onef
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | yes p₁ with ℕtoF 1 ≟F zerof
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | yes p₁ | yes p₂ = sq (sym (trans p₂ (sym p)))
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | yes p₁ | no ¬p₂ = sq refl
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | no ¬p₂ with ℕtoF 0 ≟F zerof
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | no ¬p₂ | yes p₁ = sq refl
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | no ¬p₂ | no ¬p₃ = ⊥-elim′ (¬p₃ p)
+   lem (x ∷ val) | no ¬p with ℕtoF x ≟F zerof
+   lem (x ∷ val) | no ¬p | yes p = sq refl
+   lem (x ∷ val) | no ¬p | no ¬p₁ with ℕtoF x ≟F onef
+   lem (x ∷ val) | no ¬p | no ¬p₁ | yes p = sq refl
+   lem (x ∷ val) | no ¬p | no ¬p₁ | no ¬p₂ = ⊥-elim′ (¬p ℕtoF-0≡0)
+tyCondSound r `Base vec val sol look₁ tri init isSol = tri
+tyCondSound r (`Vec u zero) vec val sol look₁ tri init isSol = tri
+tyCondSound r (`Vec u (suc x)) vec val sol look₁ tri init isSol with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd | [ prf₁ ] with splitAt (tySize u) val | inspect (splitAt (tySize u)) val
+... | fstv , sndv | [ prf₂ ] =
+  let p₁₁ = tyCond u fst
+      p₂₂ = tyCond (`Vec u x) snd
+      r' = output (p₁₁ ((r , prime) , init))
+      p₃₃ = λ s → land r' s
+      p₂₃ = λ r → tyCond (`Vec u x) snd >>= λ s → land r s
+      p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+      p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol      
+      p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol     
+      p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol  
+      lookFst = BatchListLookup-Split₁ (tySize u) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      lookSnd = BatchListLookup-Split₂ (tySize u) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      sound₁ = tyCondSound r u fst fstv sol lookFst tri init p₁₁IsSol
+      sound₂ = tyCondSound r (`Vec u x) snd sndv sol lookSnd tri _ p₂₂IsSol
+      sound₃ = landSound r _ _ _ _ sol sound₁ sound₂ {!!} {!!} _ p₃₃IsSol
+  in sound₃
+tyCondSound r (`Σ u x) vec val sol look₁ tri init isSol with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd | [ prf₁ ] with splitAt (tySize u) val | inspect (splitAt (tySize u)) val
+... | fstv , sndv | [ prf₂ ] =
+  let p₁₁ = tyCond u fst
+      p₂₂ = enumSigmaCond (enum u) x fst snd
+      r' = output (p₁₁ ((r , prime) , init))
+      p₃₃ = λ s → land r' s
+      p₂₃ = λ r → enumSigmaCond (enum u) x fst snd >>= λ s → land r s
+      p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+      p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol      
+      p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol     
+      p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol  
+      lookFst = BatchListLookup-Split₁ (tySize u) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      lookSnd = BatchListLookup-Split₂ (tySize u) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      sound₁ = tyCondSound r u fst fstv sol lookFst tri _ p₁₁IsSol
+      sound₂ = enumSigmaCondSound r u (enum u) x fst snd fstv sndv sol lookFst lookSnd tri _ p₂₂IsSol
+      sound₃ = landSound r _ _ _ _ sol sound₁ sound₂ {!!} {!!} _ p₃₃IsSol
+  in sound₃
+tyCondSound r (`Π u x) vec val sol look₁ tri init isSol = enumPiCondSound r u (enum u) x vec val sol look₁ tri init isSol
 
 
-enumPiCondSound r u euu x vec val sol look₁ tri init isSol = {!!}
+enumPiCondSound r u [] x vec val sol look₁ tri init isSol = {!tri!}
+enumPiCondSound r u (x₁ ∷ eu) x vec val sol look₁ tri init isSol = {!!}
 
 enumSigmaCondSound r u eu x vec₁ vec₂ val₁ val₂ sol look₁ look₂ tri init isSol = {!!}

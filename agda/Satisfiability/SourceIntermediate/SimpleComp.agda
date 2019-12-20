@@ -481,6 +481,11 @@ enumPiCondFuncIsBool u [] x vec = isOne 1 ℕtoF-1≡1
 enumPiCondFuncIsBool u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
 enumPiCondFuncIsBool u (x₁ ∷ eu) x vec | fst₁ , snd₁ = andFuncIsBool (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
 
+enumPiCondFuncIsBoolStrict : ∀ u eu x vec → isBoolStrict (enumPiCondFunc u eu x vec)
+enumPiCondFuncIsBoolStrict u [] x vec = isOneS refl
+enumPiCondFuncIsBoolStrict u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
+enumPiCondFuncIsBoolStrict u (x₁ ∷ eu) x vec | fst₁ , snd₁ = andFuncIsBoolStrict (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
+
 tyCondFunc `One (x ∷ vec) with ℕtoF x ≟F zerof
 tyCondFunc `One (x ∷ vec) | yes p = 1
 tyCondFunc `One (x ∷ vec) | no ¬p = 0
@@ -522,6 +527,31 @@ tyCondFuncIsBool (`Σ u x) vec | fst , snd | no ¬p | yes p = isZero zero ℕtoF
 tyCondFuncIsBool (`Σ u x) vec | fst , snd | no ¬p | no ¬p₁ = isOne 1 ℕtoF-1≡1
 tyCondFuncIsBool (`Π u x) vec = enumPiCondFuncIsBool u (enum u) x vec
 
+tyCondFuncIsBoolStrict : ∀ u vec → isBoolStrict (tyCondFunc u vec)
+tyCondFuncIsBoolStrict `One (x ∷ vec) with ℕtoF x ≟F zerof
+tyCondFuncIsBoolStrict `One (x ∷ vec) | yes p = isOneS refl
+tyCondFuncIsBoolStrict `One (x ∷ vec) | no ¬p = isZeroS refl
+tyCondFuncIsBoolStrict `Two (x ∷ vec) with ℕtoF x ≟F zerof
+tyCondFuncIsBoolStrict `Two (x ∷ vec) | yes p = isOneS refl
+tyCondFuncIsBoolStrict `Two (x ∷ vec) | no ¬p with ℕtoF x ≟F onef
+tyCondFuncIsBoolStrict `Two (x ∷ vec) | no ¬p | yes p = isOneS refl
+tyCondFuncIsBoolStrict `Two (x ∷ vec) | no ¬p | no ¬p₁ = isZeroS refl
+tyCondFuncIsBoolStrict `Base vec = isOneS refl
+tyCondFuncIsBoolStrict (`Vec u zero) vec = isOneS refl
+tyCondFuncIsBoolStrict (`Vec u (suc x)) vec with splitAt (tySize u) vec
+... | fst , snd with ℕtoF (tyCondFunc u fst) ≟F zerof
+tyCondFuncIsBoolStrict (`Vec u (suc x)) vec | fst , snd | yes p = isZeroS refl
+tyCondFuncIsBoolStrict (`Vec u (suc x)) vec | fst , snd | no ¬p with ℕtoF (tyCondFunc (`Vec u x) snd) ≟F zerof
+tyCondFuncIsBoolStrict (`Vec u (suc x)) vec | fst , snd | no ¬p | yes p = isZeroS refl
+tyCondFuncIsBoolStrict (`Vec u (suc x)) vec | fst , snd | no ¬p | no ¬p₁ = isOneS refl
+tyCondFuncIsBoolStrict (`Σ u x) vec with splitAt (tySize u) vec
+... | fst , snd with ℕtoF (tyCondFunc u fst) ≟F zerof
+tyCondFuncIsBoolStrict (`Σ u x) vec | fst , snd | yes p = isZeroS refl
+tyCondFuncIsBoolStrict (`Σ u x) vec | fst , snd | no ¬p with ℕtoF (enumSigmaCondFunc u (enum u) x fst snd) ≟F zerof
+tyCondFuncIsBoolStrict (`Σ u x) vec | fst , snd | no ¬p | yes p = isZeroS refl
+tyCondFuncIsBoolStrict (`Σ u x) vec | fst , snd | no ¬p | no ¬p₁ = isOneS refl
+tyCondFuncIsBoolStrict (`Π u x) vec = enumPiCondFuncIsBoolStrict u (enum u) x vec
+
 enumSigmaCondFunc u [] x val val₁ = 1
 enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
 enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ | fst₁ , snd₁ =
@@ -532,6 +562,11 @@ enumSigmaCondFuncIsBool : ∀ u eu x val₁ val₂ → isBool (enumSigmaCondFunc
 enumSigmaCondFuncIsBool u [] x val₁ val₂ = isOne 1 ℕtoF-1≡1
 enumSigmaCondFuncIsBool u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
 ... | fst₁ , snd₁ = andFuncIsBool (impFunc (varEqLitFunc u v₁ x₁) (andFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁))) (enumSigmaCondFunc u eu x v₁ v₂)
+
+enumSigmaCondFuncIsBoolStrict : ∀ u eu x val₁ val₂ → isBoolStrict (enumSigmaCondFunc u eu x val₁ val₂)
+enumSigmaCondFuncIsBoolStrict u [] x val₁ val₂ = isOneS refl
+enumSigmaCondFuncIsBoolStrict u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
+... | fst₁ , snd₁ = andFuncIsBoolStrict (impFunc (varEqLitFunc u v₁ x₁) (andFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁))) (enumSigmaCondFunc u eu x v₁ v₂)
 
 enumPiCondSound : ∀ r u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
    → (vec : Vec Var (tySumOver eu x))

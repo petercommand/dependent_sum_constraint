@@ -268,12 +268,37 @@ andFunc a b | no ¬p with ℕtoF b ≟F zerof
 andFunc a b | no ¬p | yes p = 0
 andFunc a b | no ¬p | no ¬p₁ = 1
 
+
+
+andFunc⁻₁′ : ∀ {a} {b} → andFunc a b ≡ 1 → a ≈ zero → ⊥′
+andFunc⁻₁′ {a} {b} eq p with ℕtoF a ≟F zerof
+andFunc⁻₁′ {a} {b} eq (sq p) | no ¬p = ⊥→⊥′ (¬p (trans p ℕtoF-0≡0))
+
+andFunc⁻₁ : ∀ {a} {b} → andFunc a b ≡ 1 → a ≈ zero → ⊥
+andFunc⁻₁ eq p = ⊥′→⊥ (andFunc⁻₁′ eq p)
+
+andFunc⁻₂′ : ∀ {a} {b} → andFunc a b ≡ 1 → b ≈ zero → ⊥′
+andFunc⁻₂′ {a} {b} eq p with ℕtoF a ≟F zerof
+andFunc⁻₂′ {a} {b} eq (sq p) | no ¬p with ℕtoF b ≟F zerof
+andFunc⁻₂′ {a} {b} eq (sq p) | no ¬p | no ¬p₁ = ⊥→⊥′ (¬p₁ (trans p ℕtoF-0≡0))
+
+andFunc⁻₂ : ∀ {a} {b} → andFunc a b ≡ 1 → b ≈ zero → ⊥
+andFunc⁻₂ eq p = ⊥′→⊥ (andFunc⁻₂′ eq p)
+
 andFuncIsBool : ∀ a b → isBool (andFunc a b)
 andFuncIsBool a b with ℕtoF a ≟F zerof
 andFuncIsBool a b | yes p = isZero zero ℕtoF-0≡0
 andFuncIsBool a b | no ¬p with ℕtoF b ≟F zerof
 andFuncIsBool a b | no ¬p | yes p = isZero zero ℕtoF-0≡0
 andFuncIsBool a b | no ¬p | no ¬p₁ = isOne 1 ℕtoF-1≡1
+
+andFuncIsBoolStrict : ∀ a b → isBoolStrict (andFunc a b)
+andFuncIsBoolStrict a b with ℕtoF a ≟F zerof
+andFuncIsBoolStrict a b | yes p = isZeroS refl
+andFuncIsBoolStrict a b | no ¬p with ℕtoF b ≟F zerof
+andFuncIsBoolStrict a b | no ¬p | yes p = isZeroS refl
+andFuncIsBoolStrict a b | no ¬p | no ¬p₁ = isOneS refl
+
 
 landSoundLem : ∀ r v v' init →
   let b₁₂ = writerOutput (add (IMul onef v v' onef init) ((r , prime) , suc init))

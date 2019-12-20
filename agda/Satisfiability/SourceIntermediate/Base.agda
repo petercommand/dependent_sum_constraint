@@ -152,6 +152,16 @@ BatchListLookup-MaxTySplit₂ u uval x l vec vec₁ val val₁ eq₁ eq₂ look 
     hyp₁ = subst′ (λ t → BatchListLookup t l (proj₂ (maxTySplit u uval x val))) eq₁ hyp
     hyp₂ = subst′ (λ t → BatchListLookup vec₁ l t) eq₂ hyp₁
   in hyp₂
+
+data ⊥′ : Prop where
+
+
+⊥′→⊥ : ⊥′ → ⊥
+⊥′→⊥ ()
+
+⊥→⊥′ : ⊥ → ⊥′
+⊥→⊥′ ()
+
 ⊥-elim′ : ∀ {w} {Whatever : Prop w} → ⊥ → Whatever
 ⊥-elim′ ()
 
@@ -195,6 +205,9 @@ data isBool : ℕ → Set where
   isZero : ∀ n → ℕtoF n ≡ zerof → isBool n
   isOne : ∀ n → ℕtoF n ≡ onef → isBool n
 
+data isBoolStrict : ℕ → Set where
+  isZeroS : ∀ {n} → n ≡ 0 → isBoolStrict n
+  isOneS : ∀ {n} → n ≡ 1 → isBoolStrict n
 
 BuilderProdSolSubsetImp : ∀ b₁ b₂ b₃ b₄ (b₁₂ : Builder × Builder) (b₃₄ : Builder × Builder) sol
     → (b₁ , b₂) ≡ b₁₂ → (b₃ , b₄) ≡ b₃₄

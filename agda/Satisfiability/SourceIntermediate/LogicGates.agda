@@ -136,6 +136,13 @@ lorFunc a b | yes p | yes p₁ = 0
 lorFunc a b | yes p | no ¬p = 1
 lorFunc a b | no ¬p = 1
 
+orFuncIsBool : ∀ a b → isBool (lorFunc a b)
+orFuncIsBool a b with ℕtoF a ≟F zerof
+orFuncIsBool a b | yes p with ℕtoF b ≟F zerof
+orFuncIsBool a b | yes p | yes p₁ = isZero zero ℕtoF-0≡0
+orFuncIsBool a b | yes p | no ¬p = isOne 1 ℕtoF-1≡1
+orFuncIsBool a b | no ¬p = isOne 1 ℕtoF-1≡1
+
 lorSoundLem₁ : ∀ init sol val val' varVal₃ → isBool val → isBool val' → (hyp : (ℕtoF val +F (ℕtoF val' +F ((-F (ℕtoF val *F ℕtoF val')) +F (-F ℕtoF varVal₃)))) ≡ zerof) → ListLookup (suc init) sol varVal₃ → ListLookup (suc init) sol (lorFunc val val')
 lorSoundLem₁ init sol val val' varVal₃ valBool val'Bool hyp look₁ with ℕtoF val ≟F zerof
 lorSoundLem₁ init sol val val' varVal₃ valBool val'Bool hyp look₁ | yes p with ℕtoF val' ≟F zerof
@@ -319,10 +326,10 @@ notFunc a with ℕtoF a ≟F zerof
 notFunc a | yes p = 1
 notFunc a | no ¬p = 0
 
-notFuncBool : ∀ n → isBool (notFunc n)
-notFuncBool n with ℕtoF n ≟F zerof
-notFuncBool n | yes p = isOne 1 ℕtoF-1≡1
-notFuncBool n | no ¬p = isZero zero ℕtoF-0≡0
+notFuncIsBool : ∀ n → isBool (notFunc n)
+notFuncIsBool n with ℕtoF n ≟F zerof
+notFuncIsBool n | yes p = isOne 1 ℕtoF-1≡1
+notFuncIsBool n | no ¬p = isZero zero ℕtoF-0≡0
 
 lnotSoundLem : ∀ r v init →
   let b₁₂ = writerOutput (add (IAdd onef (((-F onef) , v) ∷ ((-F onef) , init) ∷ [])) ((r , prime) , suc init))
@@ -371,6 +378,9 @@ v varVal[x] val[look₁]
 impFunc : ℕ → ℕ → ℕ
 impFunc a b = lorFunc (notFunc a) b
 
+impFuncIsBool : ∀ a b → isBool (impFunc a b)
+impFuncIsBool a b = orFuncIsBool (notFunc a) b
+
 limpSoundLem₁ : ∀ r init sol v v' → BuilderProdSol (writerOutput (limp v v' ((r , prime) , init))) sol
                   → BuilderProdSol (writerOutput (lnot v ((r , prime) , init))) sol
 limpSoundLem₁ r init sol v v' isSol = BuilderProdSol->>=⁻₁ (lnot v) (λ notV → lor notV v') r init sol isSol  
@@ -388,6 +398,6 @@ limpSound : ∀ (r : WriterMode)
   → ListLookup (output result) solution' (impFunc val val') 
 limpSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol
     with lnotSound r v val sol look₁ valBool init (limpSoundLem₁ r init sol v v' isSol)
-... | sound₁ = lorSound r init v' (notFunc val) val' sol sound₁ look₂ (notFuncBool val) val'Bool
+... | sound₁ = lorSound r init v' (notFunc val) val' sol sound₁ look₂ (notFuncIsBool val) val'Bool
                  (varOut (lnot v ((r , prime) , init)))
                     (BuilderProdSol->>=⁻₂ (lnot v) (λ notV → lor notV v') r init sol isSol)

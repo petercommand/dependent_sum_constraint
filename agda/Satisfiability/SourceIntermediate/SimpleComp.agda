@@ -465,3 +465,301 @@ piVarEqLitSound r u x (x₁ ∷ eu) vec val pi sol look tri init isSol with spli
        sound₃ = landSound r r' s (varEqLitFunc (x x₁) fstv (pi x₁)) (piVarEqLitFunc x eu sndv pi) sol sound₁ sound₂ (varEqLitFuncIsBool (x x₁) fstv (pi x₁)) (piVarEqLitFuncIsBool x eu sndv pi) (varOut (p₁₂ input)) p₃₃IsSol
      in sound₃
 
+tyCondFunc : ∀ u → (vec : Vec ℕ (tySize u)) → ℕ
+enumSigmaCondFunc : ∀ u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
+  → (val₁ : Vec ℕ (tySize u))
+  → (val₂ : Vec ℕ (maxTySizeOver (enum u) x))
+  → ℕ
+
+enumPiCondFunc : ∀ u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U) → Vec ℕ (tySumOver eu x) → ℕ
+enumPiCondFunc u [] x vec = 1
+enumPiCondFunc u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
+enumPiCondFunc u (x₁ ∷ eu) x vec | fst₁ , snd₁ = andFunc (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
+
+enumPiCondFuncIsBool : ∀ u eu x vec → isBool (enumPiCondFunc u eu x vec)
+enumPiCondFuncIsBool u [] x vec = isOne 1 ℕtoF-1≡1
+enumPiCondFuncIsBool u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
+enumPiCondFuncIsBool u (x₁ ∷ eu) x vec | fst₁ , snd₁ = andFuncIsBool (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
+
+tyCondFunc `One (x ∷ vec) with ℕtoF x ≟F zerof
+tyCondFunc `One (x ∷ vec) | yes p = 1
+tyCondFunc `One (x ∷ vec) | no ¬p = 0
+tyCondFunc `Two (x ∷ vec) with ℕtoF x ≟F zerof
+tyCondFunc `Two (x ∷ vec) | yes p = 1
+tyCondFunc `Two (x ∷ vec) | no ¬p with ℕtoF x ≟F onef
+tyCondFunc `Two (x ∷ vec) | no ¬p | yes p = 1
+tyCondFunc `Two (x ∷ vec) | no ¬p | no ¬p₁ = 0
+tyCondFunc `Base vec = 1
+tyCondFunc (`Vec u zero) vec = 1
+tyCondFunc (`Vec u (suc x)) vec with splitAt (tySize u) vec
+... | fst , snd = andFunc (tyCondFunc u fst) (tyCondFunc (`Vec u x) snd)
+tyCondFunc (`Σ u x) vec with splitAt (tySize u) vec
+tyCondFunc (`Σ u x) vec | fst₁ , snd₁ = andFunc (tyCondFunc u fst₁) (enumSigmaCondFunc u (enum u) x fst₁ snd₁)
+tyCondFunc (`Π u x) vec = enumPiCondFunc u (enum u) x vec
+
+tyCondFuncIsBool : ∀ u vec → isBool (tyCondFunc u vec)
+tyCondFuncIsBool `One (x ∷ vec) with ℕtoF x ≟F zerof
+tyCondFuncIsBool `One (x ∷ vec) | yes p = isOne 1 ℕtoF-1≡1
+tyCondFuncIsBool `One (x ∷ vec) | no ¬p = isZero zero ℕtoF-0≡0
+tyCondFuncIsBool `Two (x ∷ vec) with ℕtoF x ≟F zerof
+tyCondFuncIsBool `Two (x ∷ vec) | yes p = isOne 1 ℕtoF-1≡1
+tyCondFuncIsBool `Two (x ∷ vec) | no ¬p with ℕtoF x ≟F onef
+tyCondFuncIsBool `Two (x ∷ vec) | no ¬p | yes p = isOne 1 ℕtoF-1≡1
+tyCondFuncIsBool `Two (x ∷ vec) | no ¬p | no ¬p₁ = isZero zero ℕtoF-0≡0
+tyCondFuncIsBool `Base vec = isOne 1 ℕtoF-1≡1
+tyCondFuncIsBool (`Vec u zero) vec = isOne 1 ℕtoF-1≡1
+tyCondFuncIsBool (`Vec u (suc x)) vec with splitAt (tySize u) vec
+... | fst , snd with ℕtoF (tyCondFunc u fst) ≟F zerof
+tyCondFuncIsBool (`Vec u (suc x)) vec | fst , snd | yes p = isZero zero ℕtoF-0≡0
+tyCondFuncIsBool (`Vec u (suc x)) vec | fst , snd | no ¬p with ℕtoF (tyCondFunc (`Vec u x) snd) ≟F zerof
+tyCondFuncIsBool (`Vec u (suc x)) vec | fst , snd | no ¬p | yes p = isZero zero ℕtoF-0≡0
+tyCondFuncIsBool (`Vec u (suc x)) vec | fst , snd | no ¬p | no ¬p₁ = isOne 1 ℕtoF-1≡1
+tyCondFuncIsBool (`Σ u x) vec with splitAt (tySize u) vec
+... | fst , snd with ℕtoF (tyCondFunc u fst) ≟F zerof
+tyCondFuncIsBool (`Σ u x) vec | fst , snd | yes p = isZero zero ℕtoF-0≡0
+tyCondFuncIsBool (`Σ u x) vec | fst , snd | no ¬p with ℕtoF (enumSigmaCondFunc u (enum u) x fst snd) ≟F zerof
+tyCondFuncIsBool (`Σ u x) vec | fst , snd | no ¬p | yes p = isZero zero ℕtoF-0≡0
+tyCondFuncIsBool (`Σ u x) vec | fst , snd | no ¬p | no ¬p₁ = isOne 1 ℕtoF-1≡1
+tyCondFuncIsBool (`Π u x) vec = enumPiCondFuncIsBool u (enum u) x vec
+
+enumSigmaCondFunc u [] x val val₁ = 1
+enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
+enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ | fst₁ , snd₁ =
+  andFunc (impFunc (varEqLitFunc u v₁ x₁) (andFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁)))
+          (enumSigmaCondFunc u eu x v₁ v₂)
+
+enumSigmaCondFuncIsBool : ∀ u eu x val₁ val₂ → isBool (enumSigmaCondFunc u eu x val₁ val₂)
+enumSigmaCondFuncIsBool u [] x val₁ val₂ = isOne 1 ℕtoF-1≡1
+enumSigmaCondFuncIsBool u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
+... | fst₁ , snd₁ = andFuncIsBool (impFunc (varEqLitFunc u v₁ x₁) (andFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁))) (enumSigmaCondFunc u eu x v₁ v₂)
+
+enumPiCondSound : ∀ r u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
+   → (vec : Vec Var (tySumOver eu x))
+   → (val : Vec ℕ (tySumOver eu x))
+   → (sol : List (Var × ℕ))
+   → BatchListLookup vec sol val
+   → ListLookup 0 sol 1
+   → ∀ init →
+   let result = enumPiCond eu x vec ((r , prime) , init)
+   in BuilderProdSol (writerOutput result) sol
+   → ListLookup (output result) sol (enumPiCondFunc u eu x val)
+
+tyCondSound : ∀ r u
+   → (vec : Vec Var (tySize u))
+   → (val : Vec ℕ (tySize u))
+   → (sol : List (Var × ℕ))
+   → BatchListLookup vec sol val
+   → ListLookup 0 sol 1
+   → ∀ init →
+   let result = tyCond u vec ((r , prime) , init)
+   in BuilderProdSol (writerOutput result) sol
+   → ListLookup (output result) sol (tyCondFunc u val)
+
+enumSigmaCondSound : ∀ r u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
+   → (vec₁ : Vec Var (tySize u))
+   → (vec₂ : Vec Var (maxTySizeOver (enum u) x))
+   → (val₁ : Vec ℕ (tySize u))
+   → (val₂ : Vec ℕ (maxTySizeOver (enum u) x))
+   → (sol : List (Var × ℕ))
+   → BatchListLookup vec₁ sol val₁
+   → BatchListLookup vec₂ sol val₂
+   → ListLookup 0 sol 1
+   → ∀ init →
+   let result = enumSigmaCond eu x vec₁ vec₂ ((r , prime) , init)
+   in BuilderProdSol (writerOutput result) sol
+     → ListLookup (output result) sol (enumSigmaCondFunc u eu x val₁ val₂)
+
+tyCondSound r `One vec val sol look₁ tri init isSol =
+  let sound = allEqzSound r vec val sol look₁ init isSol
+  in ListLookup-Respects-≈ _ _ _ _ (lem val) sound
+ where
+   lem : ∀ val → allEqzFunc val ≈ tyCondFunc `One val
+   lem (x ∷ val) with ℕtoF x ≟F zerof
+   lem (x ∷ []) | yes p = sq refl
+   lem (x ∷ val) | no ¬p = sq refl
+tyCondSound r `Two vec val sol look₁ tri init isSol =
+  let
+    input = ((r , prime) , init)
+    p₁₁ = varEqLit `Two vec false
+    p₁₂ = varEqLit `Two vec false >>= λ isZero -> varEqLit `Two vec true
+    p₂₂ = varEqLit `Two vec true
+    isZero = output (p₁₁ input)
+    isOne = output (p₁₂ input)
+    p₃₃ = λ isOne → lor isZero isOne
+    p₂₃ = λ isZero → varEqLit `Two vec true >>= λ isOne → lor isZero isOne
+    p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r init sol isSol
+    p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r init sol isSol
+    p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    
+    sound₁ = varEqLitSound r `Two vec val false sol look₁ tri init p₁₁IsSol
+    sound₂ = varEqLitSound r `Two vec val true sol look₁ tri _ p₂₂IsSol
+    sound₃ = lorSound r isZero isOne _ _ sol sound₁ sound₂ (varEqLitFuncIsBool `Two val false) (varEqLitFuncIsBool `Two val true) _ p₃₃IsSol
+  in ListLookup-Respects-≈ _ _ _ _ (lem val) sound₃
+ where
+   lem : ∀ val → lorFunc (varEqLitFunc `Two val false) (varEqLitFunc `Two val true) ≈ tyCondFunc `Two val
+   lem val with ℕtoF (varEqLitFunc `Two val false) ≟F zerof
+   lem (x ∷ val) | yes p with ℕtoF x ≟F zerof
+   lem (x ∷ val) | yes p | yes p₁ = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) p))
+   lem (x ∷ val) | yes p | no ¬p with ℕtoF 1 ≟F zerof
+   lem (x ∷ val) | yes p | no ¬p | yes p₁ = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) p₁))
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ with ℕtoF x ≟F onef
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | yes p₁ with ℕtoF 1 ≟F zerof
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | yes p₁ | yes p₂ = sq (sym (trans p₂ (sym p)))
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | yes p₁ | no ¬p₂ = sq refl
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | no ¬p₂ with ℕtoF 0 ≟F zerof
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | no ¬p₂ | yes p₁ = sq refl
+   lem (x ∷ val) | yes p | no ¬p | no ¬p₁ | no ¬p₂ | no ¬p₃ = ⊥-elim′ (¬p₃ p)
+   lem (x ∷ val) | no ¬p with ℕtoF x ≟F zerof
+   lem (x ∷ val) | no ¬p | yes p = sq refl
+   lem (x ∷ val) | no ¬p | no ¬p₁ with ℕtoF x ≟F onef
+   lem (x ∷ val) | no ¬p | no ¬p₁ | yes p = sq refl
+   lem (x ∷ val) | no ¬p | no ¬p₁ | no ¬p₂ = ⊥-elim′ (¬p ℕtoF-0≡0)
+tyCondSound r `Base vec val sol look₁ tri init isSol = tri
+tyCondSound r (`Vec u zero) vec val sol look₁ tri init isSol = tri
+tyCondSound r (`Vec u (suc x)) vec val sol look₁ tri init isSol with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd | [ prf₁ ] with splitAt (tySize u) val | inspect (splitAt (tySize u)) val
+... | fstv , sndv | [ prf₂ ] =
+  let p₁₁ = tyCond u fst
+      p₂₂ = tyCond (`Vec u x) snd
+      r' = output (p₁₁ ((r , prime) , init))
+      p₃₃ = λ s → land r' s
+      p₂₃ = λ r → tyCond (`Vec u x) snd >>= λ s → land r s
+      p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+      p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol      
+      p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol     
+      p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol  
+      lookFst = BatchListLookup-Split₁ (tySize u) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      lookSnd = BatchListLookup-Split₂ (tySize u) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      sound₁ = tyCondSound r u fst fstv sol lookFst tri init p₁₁IsSol
+      sound₂ = tyCondSound r (`Vec u x) snd sndv sol lookSnd tri _ p₂₂IsSol
+      sound₃ = landSound r _ _ _ _ sol sound₁ sound₂ (tyCondFuncIsBool u fstv) (tyCondFuncIsBool (`Vec u x) sndv) _ p₃₃IsSol
+  in sound₃
+tyCondSound r (`Σ u x) vec val sol look₁ tri init isSol with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd | [ prf₁ ] with splitAt (tySize u) val | inspect (splitAt (tySize u)) val
+... | fstv , sndv | [ prf₂ ] =
+  let p₁₁ = tyCond u fst
+      p₂₂ = enumSigmaCond (enum u) x fst snd
+      r' = output (p₁₁ ((r , prime) , init))
+      p₃₃ = λ s → land r' s
+      p₂₃ = λ r → enumSigmaCond (enum u) x fst snd >>= λ s → land r s
+      p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+      p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol      
+      p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol     
+      p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol  
+      lookFst = BatchListLookup-Split₁ (tySize u) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      lookSnd = BatchListLookup-Split₂ (tySize u) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      sound₁ = tyCondSound r u fst fstv sol lookFst tri _ p₁₁IsSol
+      sound₂ = enumSigmaCondSound r u (enum u) x fst snd fstv sndv sol lookFst lookSnd tri _ p₂₂IsSol
+      sound₃ = landSound r _ _ _ _ sol sound₁ sound₂ (tyCondFuncIsBool u fstv) (enumSigmaCondFuncIsBool u (enum u) x fstv sndv) _ p₃₃IsSol
+  in sound₃
+tyCondSound r (`Π u x) vec val sol look₁ tri init isSol = enumPiCondSound r u (enum u) x vec val sol look₁ tri init isSol
+
+
+enumPiCondSound r u [] x vec val sol look₁ tri init isSol = tri
+enumPiCondSound r u (x₁ ∷ eu) x vec val sol look₁ tri init isSol with splitAt (tySize (x x₁)) vec | inspect (splitAt (tySize (x x₁))) vec
+... | fst , snd | [ prf₁ ] with splitAt (tySize (x x₁)) val | inspect (splitAt (tySize (x x₁))) val
+... | fstv , sndv | [ prf₂ ] =
+  let p₁₁ = tyCond (x x₁) fst
+      p₂₂ = enumPiCond eu x snd
+      r' = output (p₁₁ ((r , prime) , init))
+      p₃₃ = λ s → land r' s
+      p₂₃ = λ r → enumPiCond eu x snd >>= λ s → land r s
+      p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+      p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol      
+      p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol     
+      p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol  
+      lookFst = BatchListLookup-Split₁ (tySize (x x₁)) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      lookSnd = BatchListLookup-Split₂ (tySize (x x₁)) _ vec sol val fst snd fstv sndv prf₁ prf₂ look₁
+      sound₁ = tyCondSound r (x x₁) fst fstv sol lookFst tri _ p₁₁IsSol
+      sound₂ = enumPiCondSound r u eu x snd sndv sol lookSnd tri _ p₂₂IsSol
+      sound₃ = landSound r _ _ _ _ _ sound₁ sound₂ (tyCondFuncIsBool (x x₁) fstv) (enumPiCondFuncIsBool u eu x sndv) _ p₃₃IsSol
+  in sound₃
+
+
+enumSigmaCondSound r u [] x vec₁ vec₂ val₁ val₂ sol look₁ look₂ tri init isSol = tri
+enumSigmaCondSound r u (elem₁ ∷ enum₁) x v₁ v₂ val₁ val₂ sol look₁ look₂ tri init isSol with maxTySplit u elem₁ x v₂ | inspect (maxTySplit u elem₁ x) v₂
+... | fst , snd | [ prf₁ ] with maxTySplit u elem₁ x val₂ | inspect (maxTySplit u elem₁ x) val₂
+... | fstv , sndv | [ prf₂ ] =
+  let input = ((r , prime) , init)
+      p₁₁ = varEqLit u v₁ elem₁
+      p₁₂ = do
+        eqElem₁ ← varEqLit u v₁ elem₁
+        tyCond (x elem₁) fst
+      p₁₃ = do
+        eqElem₁ ← varEqLit u v₁ elem₁
+        tyCons ← tyCond (x elem₁) fst
+        allEqz snd
+      p₁₄ = do
+        eqElem₁ ← varEqLit u v₁ elem₁
+        tyCons ← tyCond (x elem₁) fst
+        restZ ← allEqz snd
+        land tyCons restZ
+      p₁₅ = do
+        eqElem₁ ← varEqLit u v₁ elem₁
+        tyCons ← tyCond (x elem₁) fst
+        restZ ← allEqz snd
+        tyCons&restZ ← land tyCons restZ
+        limp eqElem₁ tyCons&restZ
+
+      eqElem₁ = output (p₁₁ input)
+      p₂₂ = tyCond (x elem₁) fst
+      tyCons = output (p₁₂ input)
+      p₃₃ = allEqz snd
+      restZ = output (p₁₃ input)
+      p₄₄ = land tyCons restZ
+      tyCons&restZ = output (p₁₄ input)
+      p₅₅ = limp eqElem₁ tyCons&restZ
+      sat = output (p₁₅ input)
+      p₆₆ = enumSigmaCond enum₁ x v₁ v₂
+      p₇₇ = λ rest → land sat rest
+      p₆₇ = λ sat → do
+        rest ← enumSigmaCond enum₁ x v₁ v₂
+        land sat rest      
+      p₅₇ = λ tyCons&restZ → do
+        sat ← limp eqElem₁ tyCons&restZ
+        rest ← enumSigmaCond enum₁ x v₁ v₂
+        land sat rest
+
+      p₄₇ = λ restZ → do
+              tyCons&restZ ← land tyCons restZ
+              sat ← limp eqElem₁ tyCons&restZ
+              rest ← enumSigmaCond enum₁ x v₁ v₂
+              land sat rest      
+      p₃₇ = λ tyCons → do
+              restZ ← allEqz snd
+              tyCons&restZ ← land tyCons restZ
+              sat ← limp eqElem₁ tyCons&restZ
+              rest ← enumSigmaCond enum₁ x v₁ v₂
+              land sat rest
+      p₂₇ = λ eqElem₁ → do
+              tyCons ← tyCond (x elem₁) fst
+              restZ ← allEqz snd
+              tyCons&restZ ← land tyCons restZ
+              sat ← limp eqElem₁ tyCons&restZ
+              rest ← enumSigmaCond enum₁ x v₁ v₂
+              land sat rest
+      p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₇ r _ sol isSol
+      p₂₇IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₇ r _ sol isSol
+      p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₇ r _ sol p₂₇IsSol
+      p₃₇IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₇ r _ sol p₂₇IsSol
+      p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₇ r _ sol p₃₇IsSol
+      p₄₇IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₇ r _ sol p₃₇IsSol
+      p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₇ r _ sol p₄₇IsSol
+      p₅₇IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₇ r _ sol p₄₇IsSol
+      p₅₅IsSol = BuilderProdSol->>=⁻₁ p₅₅ p₆₇ r _ sol p₅₇IsSol
+      p₆₇IsSol = BuilderProdSol->>=⁻₂ p₅₅ p₆₇ r _ sol p₅₇IsSol
+      p₆₆IsSol = BuilderProdSol->>=⁻₁ p₆₆ p₇₇ r _ sol p₆₇IsSol
+      p₇₇IsSol = BuilderProdSol->>=⁻₂ p₆₆ p₇₇ r _ sol p₆₇IsSol
+      lookFst = BatchListLookup-MaxTySplit₁ u elem₁ x sol v₂ fst val₂ fstv (cong proj₁ prf₁) (cong proj₁ prf₂) look₂
+      lookSnd = BatchListLookup-MaxTySplit₂ u elem₁ x sol v₂ snd val₂ sndv (cong proj₂ prf₁) (cong proj₂ prf₂) look₂
+
+
+      eqElem₁Sound = varEqLitSound r u v₁ val₁ elem₁ sol look₁ tri _ p₁₁IsSol
+      tyConsSound = tyCondSound r (x elem₁) fst fstv sol lookFst tri _ p₂₂IsSol
+      restZSound = allEqzSound r snd sndv sol lookSnd _ p₃₃IsSol
+      tyCons&restZSound = landSound r _ _ _ _ sol tyConsSound restZSound (tyCondFuncIsBool (x elem₁) fstv) (allEqzFuncIsBool sndv) _ p₄₄IsSol
+      satSound = limpSound r _ _ _ _ sol eqElem₁Sound tyCons&restZSound (varEqLitFuncIsBool u val₁ elem₁) (andFuncIsBool (tyCondFunc (x elem₁) fstv) (allEqzFunc sndv)) _ p₅₅IsSol
+      restSound = enumSigmaCondSound r u enum₁ x v₁ v₂ val₁ val₂ sol look₁ look₂ tri _ p₆₆IsSol
+      finalSound = landSound r _ _ _ _ sol satSound restSound (impFuncIsBool (varEqLitFunc u val₁ elem₁) (andFunc (tyCondFunc (x elem₁) fstv) (allEqzFunc sndv))) (enumSigmaCondFuncIsBool u enum₁ x val₁ val₂) _ p₇₇IsSol
+  in finalSound

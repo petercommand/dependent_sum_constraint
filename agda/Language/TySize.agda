@@ -21,6 +21,7 @@ open import Data.Vec.Split
 
 open import Function
 
+open import Relation.Binary
 open import Relation.Binary.PropositionalEquality renaming ([_] to ℝ[_])
 
 
@@ -40,9 +41,42 @@ open import Axiom.Extensionality.Propositional
 postulate
   ext : ∀ {ℓ} {ℓ'} → Axiom.Extensionality.Propositional.Extensionality ℓ ℓ'
 
+occ : ∀ {ℓ} {A : Set ℓ} → (Decidable {A = A} _≡_) → A → List A → ℕ
+occ dec a [] = 0
+occ dec a (x ∷ l) with dec a x
+occ dec a (x ∷ l) | yes p = suc (occ dec a l)
+occ dec a (x ∷ l) | no ¬p = occ dec a l
+
+occPrfIrr : ∀ {ℓ} {A : Set ℓ} → (dec dec' : Decidable {A = A} _≡_) → (v : A) (l : List A) → occ dec v l ≡ occ dec' v l
+occPrfIrr dec dec' v [] = refl
+occPrfIrr dec dec' v (x ∷ l) with dec v x | dec' v x
+occPrfIrr dec dec' v (x ∷ l) | yes p | yes p₁ = cong suc (occPrfIrr dec dec' v l)
+occPrfIrr dec dec' v (x ∷ l) | yes p | no ¬p = ⊥-elim (¬p p)
+occPrfIrr dec dec' v (x ∷ l) | no ¬p | yes p = ⊥-elim (¬p p)
+occPrfIrr dec dec' v (x ∷ l) | no ¬p | no ¬p₁ = occPrfIrr dec dec' v l
+
+occLem : ∀ {ℓ} {A : Set ℓ} → (dec : Decidable {A = A} _≡_) → (x : A) (l l' : List A) → occ dec x (l ++ l') ≡ occ dec x l + occ dec x l'
+occLem dec x [] l' = refl
+occLem dec x (x₁ ∷ l) l' with dec x x₁
+occLem dec x (x₁ ∷ l) l' | yes p = cong suc (occLem dec x l l')
+occLem dec x (x₁ ∷ l) l' | no ¬p = occLem dec x l l'
 ∈->>= : ∀ {a} {A : Set a} {b} {B : Set b} (l : List A) (f : A → List B) → ∀ x → x ∈ l → ∀ y → y ∈ f x → y ∈ l >>= f
 ∈->>= .(x ∷ _) f x (here refl) y mem' = ++⁺ˡ mem'
 ∈->>= .(_ ∷ _) f x (there mem) y mem' = ++⁺ʳ (f _) (∈->>= _ f x mem y mem')
+
+Disjoint : ∀ {a} {A : Set a} → (l l' : List A) → Set a
+Disjoint l l' = ∀ x → x ∈ l → ¬ x ∈ l'
+-- ¬∈→occ≡0 : 
+
+occ->>= : ∀ {a} {A : Set a} {b} {B : Set b} (decA : Decidable {A = A} _≡_) (decB : Decidable {B = B} _≡_) (l : List A) (f : A → List B)
+   → ∀ x y →
+   (prf : ∀ x₁ → ¬ x ≡ x₁ → ¬ y ∈ f x₁) →
+   occ decB y (l >>= f) ≡ (occ decA x l * occ decB y (f x))
+occ->>= decA decB [] f x y prf = refl
+occ->>= decA decB (x₁ ∷ l) f x y prf with decA x x₁
+occ->>= decA decB (x₁ ∷ l) f x y prf | yes refl rewrite occLem decB y (f x₁) (l >>= f) = cong (_+_ (occ decB y (f x₁))) (occ->>= decA decB l f x y prf)
+occ->>= decA decB (x₁ ∷ l) f x y prf | no ¬p rewrite occLem decB y (f x₁) (l >>= f) = {!prf x₁ ¬p!}
+
 
 ∈->>=⁻ : ∀ {a} {A : Set a} {b} {B : Set b} (l : List A) (f : A → List B) → ∀ y → y ∈ l >>= f → ∃ (λ x → x ∈ l × y ∈ f x)
 ∈->>=⁻ (x ∷ l) f y y∈l>>=f with ++⁻ (f x) y∈l>>=f
@@ -62,6 +96,8 @@ postulate
 map-proj₁->>= : ∀ {a} {A : Set a} {b} {B : A → Set b} → (l : List A) (f : (x : A) → B x) → map proj₁ (l >>= (λ r → (r , f r) ∷ [])) ≡ l
 map-proj₁->>= [] f = refl
 map-proj₁->>= (x ∷ l) f = cong (λ l → x ∷ l) (map-proj₁->>= l f)
+
+
 module Enum where
   open import Data.List.Monad
 
@@ -208,6 +244,25 @@ module Enum where
                                                                                                (λ x₂ → enumComplete (x₁ x₂) (f x₂)))))
                                                                          (map-proj₁->>= (enum u) (λ x₂ → enum (x₁ x₂)))) x)
 
+
+  enumUnique : ∀ u → (val : ⟦ u ⟧) → (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) → occ dec val (enum u) ≡ 1
+  enumUnique Language.Universe.`One tt dec with dec tt tt
+  enumUnique Language.Universe.`One tt dec | yes p = refl
+  enumUnique Language.Universe.`One tt dec | no ¬p = ⊥-elim (¬p refl)
+  enumUnique Language.Universe.`Two val dec with dec val false
+  enumUnique Language.Universe.`Two .false dec | yes refl with dec false true
+  enumUnique Language.Universe.`Two .false dec | yes refl | no ¬p = refl
+  enumUnique Language.Universe.`Two val dec | no ¬p with dec val true
+  enumUnique Language.Universe.`Two val dec | no ¬p | yes p = refl
+  enumUnique Language.Universe.`Two false dec | no ¬p | no ¬p₁ = ⊥-elim (¬p refl)
+  enumUnique Language.Universe.`Two true dec | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ refl)
+  enumUnique Language.Universe.`Base val dec = {!!}
+  enumUnique (Language.Universe.`Vec u zero) [] dec with dec {`Vec u zero} [] []
+  enumUnique (Language.Universe.`Vec u zero) [] dec | yes p = refl
+  enumUnique (Language.Universe.`Vec u zero) [] dec | no ¬p = ⊥-elim (¬p refl)
+  enumUnique (Language.Universe.`Vec u (suc x)) (x₁ ∷ val) dec = {!enumUnique u x₁ dec!}
+  enumUnique (Language.Universe.`Σ u x) (fst , snd) dec = {!!}
+  enumUnique (Language.Universe.`Π u x) val dec = {!!}
 
 open Enum public
 

@@ -209,6 +209,10 @@ data isBoolStrict : ℕ → Set where
   isZeroS : ∀ {n} → n ≡ 0 → isBoolStrict n
   isOneS : ∀ {n} → n ≡ 1 → isBoolStrict n
 
+isBoolStrict→isBool : ∀ {n} → isBoolStrict n → isBool n
+isBoolStrict→isBool (isZeroS refl) = isZero 0 ℕtoF-0≡0
+isBoolStrict→isBool (isOneS refl) = isOne 1 ℕtoF-1≡1
+
 BuilderProdSolSubsetImp : ∀ b₁ b₂ b₃ b₄ (b₁₂ : Builder × Builder) (b₃₄ : Builder × Builder) sol
     → (b₁ , b₂) ≡ b₁₂ → (b₃ , b₄) ≡ b₃₄
     → (∀ x → x ∈ (b₁ (b₂ [])) → x ∈ (b₃ (b₄ [])))

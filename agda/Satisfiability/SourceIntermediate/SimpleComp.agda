@@ -30,7 +30,9 @@ open import Relation.Nullary
 module Satisfiability.SourceIntermediate.SimpleComp (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
      (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
         (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field')
-        (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field') (prime : ℕ) (isPrime : Prime prime)
+        (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field')
+        (ℕtoF∘fToℕ≡ : ∀ x → ℕtoF (fToℕ x) ≡ x)
+        (prime : ℕ) (isPrime : Prime prime)
         (onef≠zerof : ¬ Field.one field' ≡ Field.zero field') where
 
 open import Language.Source f finite showf
@@ -52,7 +54,7 @@ open Compile.SourceIntermediate.SI-Monad f field' finite showf fToℕ ℕtoF
 
 
 open import Satisfiability.SourceIntermediate.Base f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime
-open import Satisfiability.SourceIntermediate.LogicGates f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime
+open import Satisfiability.SourceIntermediate.LogicGates f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 ℕtoF∘fToℕ≡ prime isPrime onef≠zerof
 
 varEqBaseLitFunc : ℕ → f → ℕ
 varEqBaseLitFunc v l with ℕtoF v ≟F l

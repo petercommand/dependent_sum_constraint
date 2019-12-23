@@ -7,6 +7,7 @@ open import Data.List hiding (splitAt; take; length)
 open import Data.List.Membership.Propositional
 open import Data.List.Misc
 open import Data.List.Monad
+open import Data.List.Occ
 open import Data.List.Properties
 open import Data.List.Relation.Unary.Any hiding (map)
 open import Data.List.Relation.Unary.Any.Properties
@@ -42,31 +43,6 @@ open import Axiom.Extensionality.Propositional
 postulate
   ext : ∀ {ℓ} {ℓ'} → Axiom.Extensionality.Propositional.Extensionality ℓ ℓ'
 
-occAux : ∀ {ℓ} {A : Set ℓ} {a x : A} → Dec (a ≡ x) → ℕ → ℕ → ℕ
-occAux (yes p) m n = m
-occAux (no ¬p) m n = n
-
-occAux₂ : ∀ {ℓ} {A : Set ℓ} (a x : A) (dec : Dec (a ≡ x)) m n → ¬ a ≡ x → occAux dec m n ≡ n
-occAux₂ a x (yes p) m n neq = ⊥-elim (neq p)
-occAux₂ a x (no ¬p) m n neq = refl
-
-occ : ∀ {ℓ} {A : Set ℓ} → (Decidable {A = A} _≡_) → A → List A → ℕ
-occ dec a [] = 0
-occ dec a (x ∷ l) = occAux (dec a x) (suc (occ dec a l)) (occ dec a l)
-
-occPrfIrr : ∀ {ℓ} {A : Set ℓ} → (dec dec' : Decidable {A = A} _≡_) → (v : A) (l : List A) → occ dec v l ≡ occ dec' v l
-occPrfIrr dec dec' v [] = refl
-occPrfIrr dec dec' v (x ∷ l) with dec v x | dec' v x
-occPrfIrr dec dec' v (x ∷ l) | yes p | yes p₁ = cong suc (occPrfIrr dec dec' v l)
-occPrfIrr dec dec' v (x ∷ l) | yes p | no ¬p = ⊥-elim (¬p p)
-occPrfIrr dec dec' v (x ∷ l) | no ¬p | yes p = ⊥-elim (¬p p)
-occPrfIrr dec dec' v (x ∷ l) | no ¬p | no ¬p₁ = occPrfIrr dec dec' v l
-
-occLem : ∀ {ℓ} {A : Set ℓ} → (dec : Decidable {A = A} _≡_) → (x : A) (l l' : List A) → occ dec x (l ++ l') ≡ occ dec x l + occ dec x l'
-occLem dec x [] l' = refl
-occLem dec x (x₁ ∷ l) l' with dec x x₁
-occLem dec x (x₁ ∷ l) l' | yes p = cong suc (occLem dec x l l')
-occLem dec x (x₁ ∷ l) l' | no ¬p = occLem dec x l l'
 ∈->>= : ∀ {a} {A : Set a} {b} {B : Set b} (l : List A) (f : A → List B) → ∀ x → x ∈ l → ∀ y → y ∈ f x → y ∈ l >>= f
 ∈->>= .(x ∷ _) f x (here refl) y mem' = ++⁺ˡ mem'
 ∈->>= .(_ ∷ _) f x (there mem) y mem' = ++⁺ʳ (f _) (∈->>= _ f x mem y mem')
@@ -389,12 +365,13 @@ module Enum where
 
   
 
-  enumUniqueLem : ∀ u x x₁ x₂ (val : Vec ⟦ u ⟧ x) → ¬ x₁ ≡ x₂ → ¬ x₁ ∷ val ∈ enum (`Vec u x) >>= (λ rs → ann (Vec ⟦ u ⟧ (suc x)) (x₂ ∷ rs) ∷ [])
-  enumUniqueLem u x x₁ x₂ val neq mem with ∈->>=⁻ (enum (`Vec u x)) (λ rs → ann (Vec ⟦ u ⟧ (suc x)) (x₂ ∷ rs) ∷ []) (x₁ ∷ val) mem
-  enumUniqueLem u x .x₂ x₂ .elem neq mem | elem , prf₁ , here refl = ⊥-elim (neq refl)
 
-  enumUniqueLem₂ : ∀ u x x₁ x₂ (val : Vec ⟦ u ⟧ x) → ¬ val ≡ x₂ → ¬ x₁ ∷ val ∈ ann (Vec ⟦ u ⟧ (suc x)) (x₁ ∷ x₂) ∷ []
-  enumUniqueLem₂ u x x₁ x₂ .x₂ neq (here refl) = ⊥-elim (neq refl)
+
+  genFuncUniqueLem : ∀ u (x : ⟦ u ⟧ → U) (eu : List ⟦ u ⟧) (x₂ : ⟦ u ⟧) (ls : List ⟦ x x₂ ⟧) (x₃ : List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))) (f : ⟦ `Π u x ⟧) → ¬ piToList u x eu f ≡ x₃
+      → ¬ ((x₂ , f x₂) ∷ (piToList u x eu f)) ∈ ann (List (List ⟦ `Σ u x ⟧)) (ls >>= (λ choice → ((x₂ , choice) ∷ x₃) ∷ []))
+  genFuncUniqueLem u x eu x₂ ls x₃ f x₄ x₅ with ∈->>=⁻ ls (λ choice → ((x₂ , choice) ∷ x₃) ∷ []) ((x₂ , f x₂) ∷ piToList u x eu f) x₅
+  genFuncUniqueLem u x eu x₂ ls .(piToList u x eu f) f x₄ x₅ | .(f x₂) , p₁ , here refl = x₄ refl
+
 
   genFuncUnique : ∀ u (x : ⟦ u ⟧ → U) dec (dec' : ∀ v → Decidable {A = ⟦ x v ⟧} _≡_)  eu f
     → (l : List (Σ ⟦ u ⟧ (λ v → List ⟦ x v ⟧)))
@@ -407,13 +384,24 @@ module Enum where
   genFuncUnique u x dec dec' [] f [] eq prf inst | no ¬p = ⊥-elim (¬p refl)
   genFuncUnique u x dec dec' (x₂ ∷ eu) f (.(x₂ , ls) ∷ l) eq prf (InstCons .(piToList u x eu f) .l .x₂ .(f x₂) ls x₁ inst)
       with genFuncUnique u x dec dec' eu f l (cong tail' eq) (λ elem x₃ t x₄ → prf elem (there x₃) t x₄) inst
-  ... | ind rewrite occ->>= dec dec (genFunc u x l) (λ ac → ls >>= (λ choice → ((x₂ , choice) ∷ ac) ∷ [])) (piToList u x eu f) ((x₂ , f x₂) ∷ piToList u x eu f) {!!}
+  ... | ind rewrite occ->>= dec dec (genFunc u x l) (λ ac → ls >>= (λ choice → ((x₂ , choice) ∷ ac) ∷ [])) (piToList u x eu f) ((x₂ , f x₂) ∷ piToList u x eu f) (λ x₃ x₄ x₅ → genFuncUniqueLem u x eu x₂ ls x₃ f x₄ x₅)
                   | ind
-                  | occ->>= (dec' x₂) dec ls (λ choice → ((x₂ , choice) ∷ piToList u x eu f) ∷ []) (f x₂) ((x₂ , f x₂) ∷ piToList u x eu f) {!!}
+                  | occ->>= (dec' x₂) dec ls (λ choice → ((x₂ , choice) ∷ piToList u x eu f) ∷ []) (f x₂) ((x₂ , f x₂) ∷ piToList u x eu f) (λ { x₃ x₄ (here refl) → x₄ refl})
                   | prf (x₂ , ls) (here refl) (f x₂) x₁
       with dec ((x₂ , f x₂) ∷ piToList u x eu f) ((x₂ , f x₂) ∷ piToList u x eu f)
   ... | yes p = refl
   ... | no ¬p = ⊥-elim (¬p refl)
+
+  enumUniqueLem : ∀ u x x₁ x₂ (val : Vec ⟦ u ⟧ x) → ¬ x₁ ≡ x₂ → ¬ x₁ ∷ val ∈ enum (`Vec u x) >>= (λ rs → ann (Vec ⟦ u ⟧ (suc x)) (x₂ ∷ rs) ∷ [])
+  enumUniqueLem u x x₁ x₂ val neq mem with ∈->>=⁻ (enum (`Vec u x)) (λ rs → ann (Vec ⟦ u ⟧ (suc x)) (x₂ ∷ rs) ∷ []) (x₁ ∷ val) mem
+  enumUniqueLem u x .x₂ x₂ .elem neq mem | elem , prf₁ , here refl = ⊥-elim (neq refl)
+
+  enumUniqueLem₂ : ∀ u x x₁ x₂ (val : Vec ⟦ u ⟧ x) → ¬ val ≡ x₂ → ¬ x₁ ∷ val ∈ ann (Vec ⟦ u ⟧ (suc x)) (x₁ ∷ x₂) ∷ []
+  enumUniqueLem₂ u x x₁ x₂ .x₂ neq (here refl) = ⊥-elim (neq refl)
+
+  enumUniqueLem₃ : ∀ u x (x₁ : ⟦ u ⟧) fst snd → ¬ fst ≡ x₁ → ¬ (fst , snd) ∈ ann (List ⟦ `Σ u x ⟧) (enum (x x₁) >>= (λ rs → (x₁ , rs) ∷ []))
+  enumUniqueLem₃ u x x₁ fst snd neq mem with ∈->>=⁻ (enum (x x₁)) (λ rs → (x₁ , rs) ∷ []) (fst , snd) mem
+  enumUniqueLem₃ u x x₁ .x₁ .x' neq mem | x' , p₁ , here refl = neq refl
 
   enumUnique : ∀ u → (val : ⟦ u ⟧) → (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) → occ dec val (enum u) ≡ 1
   enumUnique Language.Universe.`One tt dec with dec tt tt
@@ -426,7 +414,7 @@ module Enum where
   enumUnique Language.Universe.`Two val dec | no ¬p | yes p = refl
   enumUnique Language.Universe.`Two false dec | no ¬p | no ¬p₁ = ⊥-elim (¬p refl)
   enumUnique Language.Universe.`Two true dec | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ refl)
-  enumUnique Language.Universe.`Base val dec = {!!}
+  enumUnique Language.Universe.`Base val dec = Finite.occ-1 finite val dec
   enumUnique (Language.Universe.`Vec u zero) [] dec with dec {`Vec u zero} [] []
   enumUnique (Language.Universe.`Vec u zero) [] dec | yes p = refl
   enumUnique (Language.Universe.`Vec u zero) [] dec | no ¬p = ⊥-elim (¬p refl)
@@ -436,9 +424,9 @@ module Enum where
       with dec {`Vec u (suc x)} (x₁ ∷ val) (x₁ ∷ val)
   ... | yes p rewrite enumUnique (`Vec u x) val dec = refl
   ... | no ¬p = ⊥-elim (¬p refl)
-  enumUnique (Language.Universe.`Σ u x) (fst , snd) dec rewrite occ->>= dec dec (enum u) (λ r → enum (x r) >>= (λ rs → (r , rs) ∷ [])) fst (fst , snd) {!!}
+  enumUnique (Language.Universe.`Σ u x) (fst , snd) dec rewrite occ->>= dec dec (enum u) (λ r → enum (x r) >>= (λ rs → (r , rs) ∷ [])) fst (fst , snd) (λ x₁ x₂ x₃ → enumUniqueLem₃ u x x₁ fst snd x₂ x₃)
                                                               | enumUnique u fst dec
-                                                              | occ->>= dec dec (enum (x fst))  (λ rs → ann ⟦ `Σ u x ⟧ (fst , rs) ∷ []) snd (fst , snd) {!!}
+                                                              | occ->>= dec dec (enum (x fst))  (λ rs → ann ⟦ `Σ u x ⟧ (fst , rs) ∷ []) snd (fst , snd) (λ { x₁ x₂ (here refl) → x₂ refl})
       with dec {`Σ u x} (fst , snd) (fst , snd)
   ... | yes p rewrite enumUnique (x fst) snd dec = refl
   ... | no ¬p = ⊥-elim (¬p refl)

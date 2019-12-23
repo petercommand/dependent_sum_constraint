@@ -1,6 +1,6 @@
 open import Agda.Builtin.Nat
 
-open import Data.Bool
+open import Data.Bool hiding (_≤_)
 open import Data.Empty
 open import Data.Finite
 open import Data.List hiding (splitAt; take; length)
@@ -16,7 +16,7 @@ open import Data.Nat.Properties
 open import Data.Nat.Properties2
 open import Data.Product hiding (map)
 open import Data.Sum hiding (map)
-open import Data.Unit
+open import Data.Unit hiding (_≤_)
 open import Data.Vec hiding ([_]; _>>=_; _++_; splitAt; map; take)
 open import Data.Vec.Split
 
@@ -257,16 +257,13 @@ module Enum where
       lem (here refl) = ⊥-elim (¬p refl)
       lem (there mem) = mem
 
-  {-
-    Goal: to . from ≡ id
 
-    Suppose that l ≡ l' ↔ from l ≡ from l'
-
-    to . from ≡ id 
-    ↔ (∀ l → to (from l) ≡ l )
-    ↔ from (to (from l)) ≡ from l
-    ↔ from l ≡ from l
-  -}
+  dec-tuple : ∀ {u} {x : ⟦ u ⟧ → U} → (∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) → Decidable {A = Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧)} _≡_
+  dec-tuple dec (fst , snd) (fst₁ , snd₁) with dec fst fst₁
+  dec-tuple dec (fst , snd) (.fst , snd₁) | yes refl with dec snd snd₁
+  dec-tuple dec (fst , snd) (.fst , .snd) | yes refl | yes refl = yes refl
+  dec-tuple dec (fst , snd) (.fst , snd₁) | yes refl | no ¬p = no (λ { refl → ¬p refl })
+  dec-tuple dec (fst , snd) (fst₁ , snd₁) | no ¬p = no (λ { refl → ¬p refl })
 
   length : ∀ {ℓ} {A : Set ℓ} → List A → ℕ
   length [] = 0
@@ -276,44 +273,58 @@ module Enum where
   map-length f [] = refl
   map-length f (x ∷ l) = cong suc (map-length f l)
 
+  ++-length : ∀ {ℓ} {A : Set ℓ} → (l l' : List A) → length (l ++ l') ≡ length l + length l'
+  ++-length [] l' = refl
+  ++-length (x ∷ l) l' = cong suc (++-length l l')
+
   take : ∀ {ℓ} {A : Set ℓ} → ℕ → List A → List A
   take zero l = []
   take (suc n) [] = []
   take (suc n) (x ∷ l) = x ∷ take n l
 
-  piToList∘piFromList≗idLem : ∀ u x dec x₁ (x₂ : Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧)) (px : proj₁ x₂ ≡ x₁) eu l (uniq : occ dec x₁ eu ≡ 1) p → (prf : x₁ ∈ eu) (prf' : x₂ ∈ l) → (x₁ , piFromList u x eu l p x₁ prf) ≡ x₂
-  piToList∘piFromList≗idLem u x dec .(proj₁ x₂) x₂ px .(proj₁ x₂ ∷ map proj₁ _) .(x₂ ∷ _) uniq refl (here refl) (here refl) = refl
-  piToList∘piFromList≗idLem u x dec x₁ x₂ px ._ .(_ ∷ _) uniq refl (here px₁) (there prf') = {!!}
-  piToList∘piFromList≗idLem u x dec x₁ x₂ px .(_ ∷ _) .(_ ∷ _) uniq p (there prf) (here px₁) = {!!}
-  piToList∘piFromList≗idLem u x dec x₁ x₂ px (_ ∷ .(map proj₁ l)) (_ ∷ l) uniq refl (there prf) (there prf') = piToList∘piFromList≗idLem u x dec x₁ x₂ px (map proj₁ l) l {!!} refl prf prf'
+  piToList∘piFromList≗idLem : ∀ u x dec (dec' : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) x₁ (x₂ : Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧)) (px : proj₁ x₂ ≡ x₁) eu l (uniq : occ dec x₁ eu ≡ 1) p → (prf : x₁ ∈ eu) (prf' : x₂ ∈ l) → (x₁ , piFromList u x eu l p x₁ prf) ≡ x₂
+  piToList∘piFromList≗idLem u x dec dec' .(proj₁ x₂) x₂ px .(proj₁ x₂ ∷ map proj₁ _) .(x₂ ∷ _) uniq refl (here refl) (here refl) = refl
+  piToList∘piFromList≗idLem u x dec dec' x₁ x₂ px ._ .(_ ∷ _) uniq refl (here px₁) m@(there prf') with s≤s (mem-occ {!dec-tuple !} _ _ m)
+  ... | t = {!!}
+  piToList∘piFromList≗idLem u x dec dec' x₁ x₂ px .(_ ∷ _) .(_ ∷ _) uniq p (there prf) (here px₁) = {!!}
+  piToList∘piFromList≗idLem u x dec dec' x₁ x₂ px (_ ∷ .(map proj₁ l)) (_ ∷ l) uniq refl (there prf) (there prf') = piToList∘piFromList≗idLem u x dec dec' x₁ x₂ px (map proj₁ l) l {!!} refl prf prf'
 
-  piToList∘piFromList≗idAux : ∀ u x dec eu (∈eu : ∀ x → x ∈ eu) eu' eu'' (eq : eu'' ++ eu' ≡ eu) l l' l'' (lenEq : length eu' ≡ length l') (eq' : l'' ++ l' ≡ l) (uniq : ∀ v → occ dec v eu ≡ 1) p → piToList u x eu' (λ dom → piFromList u x eu l p dom (∈eu dom)) ≡ l'
+  piToList∘piFromList≗idAux : ∀ u x (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) eu (∈eu : ∀ x → x ∈ eu) eu' eu'' (eq : eu'' ++ eu' ≡ eu) l l' l'' (lenEq : length eu' ≡ length l') (eq' : l'' ++ l' ≡ l) (uniq : ∀ v → occ dec v eu ≡ 1) p → piToList u x eu' (λ dom → piFromList u x eu l p dom (∈eu dom)) ≡ l'
   piToList∘piFromList≗idAux u x dec eu ∈eu [] eu'' eq l [] l'' lenEq eq' uniq p = refl
-  piToList∘piFromList≗idAux u x dec eu ∈eu (x₁ ∷ eu') eu'' eq l (x₂ ∷ l') l'' lenEq refl uniq p
+  piToList∘piFromList≗idAux u x dec eu ∈eu (x₁ ∷ eu') eu'' eq l (x₂ ∷ l') l'' lenEq refl uniq refl
                       rewrite piToList∘piFromList≗idAux u x dec eu ∈eu eu' (eu'' ++ (x₁ ∷ []))
                                     (trans (++-assoc eu'' (x₁ ∷ []) eu') eq) l l' (l'' ++ (x₂ ∷ []))
                                     (cong (λ { (suc x) → x ; zero → zero }) lenEq)
-                                    (++-assoc l'' (x₂ ∷ []) l') uniq p
-                                       = cong (λ x → x ∷ l') (piToList∘piFromList≗idLem u x dec x₁ x₂ {!!} eu l (uniq x₁) p (∈eu x₁) {!!})
+                                    (++-assoc l'' (x₂ ∷ []) l') uniq refl
+                                       = cong (λ x → x ∷ l') (piToList∘piFromList≗idLem u x dec dec x₁ x₂ {!!} eu l (uniq x₁) refl (∈eu x₁) (++⁺ʳ l'' (here refl)))
+      where
+        lem' : ∀ {ℓ} {A : Set ℓ} → (x : A) (l₁ l₂ l₃ : List A) → length l₁ ≤ length l₃ → l₁ ≡ (x ∷ l₂) ++ l₃ → ⊥
+        lem' x (x₁ ∷ l₁) [] l₃ le eq' rewrite cong tail' eq' = 1+n≰n le
+        lem' x (x₁ ∷ l₁) (x₂ ∷ l₂) (x₃ ∷ l₃) (s≤s le) eq' = lem' x₂ l₁ l₂ (x₃ ∷ l₃) (≤-step le) (cong tail' eq')
+        
+        lem : ∀ {ℓ} {A : Set ℓ} → (l₁ l₂ l₃ l₄ : List A) → length (l₁ ++ l₂) ≡ length (l₃ ++ l₄) → length l₂ ≡ length l₄ → length l₁ ≡ length l₃
+        lem [] l₂ [] l₄ eq eq' = refl
+        lem [] l₂ (x ∷ l₃) l₄ eq eq' rewrite ++-length l₃ l₄ | eq' = ⊥-elim (m≢1+n+m (length l₄) eq)
+        lem (x ∷ l₁) l₂ [] l₄ eq eq' rewrite ++-length l₁ l₂ | eq' = ⊥-elim (m≢1+n+m (length l₄) (sym eq))
+        lem (x ∷ l₁) l₂ (x₁ ∷ l₃) l₄ eq eq' = cong suc (lem l₁ l₂ l₃ l₄ (suc-injective eq) eq')
 
-
-  piToList∘piFromList≗id : ∀ u x dec eu (∈eu : ∀ x → x ∈ eu) l (uniq : ∀ v → occ dec v eu ≡ 1) p → piToList u x eu (λ dom → piFromList u x eu l p dom (∈eu dom)) ≡ l
+  piToList∘piFromList≗id : ∀ u x (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_)  eu (∈eu : ∀ x → x ∈ eu) l (uniq : ∀ v → occ dec v eu ≡ 1) p → piToList u x eu (λ dom → piFromList u x eu l p dom (∈eu dom)) ≡ l
   piToList∘piFromList≗id u x dec eu ∈eu l uniq refl = piToList∘piFromList≗idAux u x dec eu ∈eu eu [] refl l l []  (map-length proj₁ l) refl uniq refl
 
   data FuncInst {ℓ} {ℓ'} (A : Set ℓ) (B : A → Set ℓ') : List (Σ A B) → List (Σ A (λ v → List (B v))) → Set (ℓ ⊔ ℓ') where
     InstNil : FuncInst A B [] []
     InstCons : ∀ l l' → (a : A) (b : B a) (ls : List (B a)) → b ∈ ls → (ins : FuncInst A B l l') → FuncInst A B ((a , b) ∷ l) ((a , ls) ∷ l')
 
-  occ-listFuncToPi : ∀ u x eu ∈eu l eq dec dec' val → occ dec val (listFuncToPi u x eu ∈eu l eq) ≡ occ dec' (piToList u x eu val) l
-  occ-listFuncToPi u x eu ∈eu [] eq dec dec' val = refl
-  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' val with dec val (λ dom → piFromList u x eu l (eq l (here refl)) dom (∈eu dom))
-  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' val | yes p with dec' (piToList u x eu val) l
-  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' val | yes p | yes p₁ = cong suc (occ-listFuncToPi u x eu ∈eu l₁ (λ x₁ x₂ → eq x₁ (there x₂)) dec dec' val)
-  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' val | yes p | no ¬p rewrite p = ⊥-elim (¬p {!!})
-  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' val | no ¬p with dec' (piToList u x eu val) l
-  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' val | no ¬p | yes refl = ⊥-elim (¬p (ext (λ t → piFromList∘piToList≗id u x eu ∈eu val
+  occ-listFuncToPi : ∀ u x eu ∈eu l eq dec dec' (dec'' : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) (uniq : (v : ⟦ u ⟧) → occ dec'' v eu ≡ 1) val → occ dec val (listFuncToPi u x eu ∈eu l eq) ≡ occ dec' (piToList u x eu val) l
+  occ-listFuncToPi u x eu ∈eu [] eq dec dec' dec'' uniq val = refl
+  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' dec'' uniq val with dec val (λ dom → piFromList u x eu l (eq l (here refl)) dom (∈eu dom))
+  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' dec'' uniq val | yes p with dec' (piToList u x eu val) l
+  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' dec'' uniq val | yes p | yes p₁ = cong suc (occ-listFuncToPi u x eu ∈eu l₁ (λ x₁ x₂ → eq x₁ (there x₂)) dec dec' dec'' uniq val)
+  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' dec'' uniq val | yes p | no ¬p rewrite p = ⊥-elim (¬p (piToList∘piFromList≗id u x dec'' eu ∈eu l uniq (eq l (here refl)) ))
+  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' dec'' uniq val | no ¬p with dec' (piToList u x eu val) l
+  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' dec'' uniq val | no ¬p | yes refl = ⊥-elim (¬p (ext (λ t → piFromList∘piToList≗id u x eu ∈eu val
                                                                                                      (eq (piToList u x eu val) (here refl)) t)))
-  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' val | no ¬p | no ¬p₁ = occ-listFuncToPi u x eu ∈eu l₁ (λ x₁ x₂ → eq x₁ (there x₂)) dec dec' val
+  occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' dec'' uniq val | no ¬p | no ¬p₁ = occ-listFuncToPi u x eu ∈eu l₁ (λ x₁ x₂ → eq x₁ (there x₂)) dec dec' dec'' uniq val
 
   map-empty : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'} → (m : List A) → (f : A → B) → map f m ≡ [] → m ≡ []
   map-empty [] f eq = refl
@@ -358,6 +369,25 @@ module Enum where
   enumUniqueLem₂ : ∀ u x x₁ x₂ (val : Vec ⟦ u ⟧ x) → ¬ val ≡ x₂ → ¬ x₁ ∷ val ∈ ann (Vec ⟦ u ⟧ (suc x)) (x₁ ∷ x₂) ∷ []
   enumUniqueLem₂ u x x₁ x₂ .x₂ neq (here refl) = ⊥-elim (neq refl)
 
+  genFuncUnique : ∀ u (x : ⟦ u ⟧ → U) dec (dec' : ∀ v → Decidable {A = ⟦ x v ⟧} _≡_)  eu f
+    → (l : List (Σ ⟦ u ⟧ (λ v → List ⟦ x v ⟧)))
+    → map proj₁ l ≡ eu
+    → (∀ elem → elem ∈ l → ∀ (t : ⟦ x (proj₁ elem) ⟧) → t ∈ proj₂ elem → occ (dec' (proj₁ elem)) t (proj₂ elem) ≡ 1)
+    → FuncInst ⟦ u ⟧ (λ v → ⟦ x v ⟧) (piToList u x eu f) l
+    → occ dec (piToList u x eu f) (genFunc u x l) ≡ 1
+  genFuncUnique u x dec dec' [] f [] eq prf inst with dec [] []
+  genFuncUnique u x dec dec' [] f [] eq prf inst | yes p = refl
+  genFuncUnique u x dec dec' [] f [] eq prf inst | no ¬p = ⊥-elim (¬p refl)
+  genFuncUnique u x dec dec' (x₂ ∷ eu) f (.(x₂ , ls) ∷ l) eq prf (InstCons .(piToList u x eu f) .l .x₂ .(f x₂) ls x₁ inst)
+      with genFuncUnique u x dec dec' eu f l (cong tail' eq) (λ elem x₃ t x₄ → prf elem (there x₃) t x₄) inst
+  ... | ind rewrite occ->>= dec dec (genFunc u x l) (λ ac → ls >>= (λ choice → ((x₂ , choice) ∷ ac) ∷ [])) (piToList u x eu f) ((x₂ , f x₂) ∷ piToList u x eu f) {!!}
+                  | ind
+                  | occ->>= (dec' x₂) dec ls (λ choice → ((x₂ , choice) ∷ piToList u x eu f) ∷ []) (f x₂) ((x₂ , f x₂) ∷ piToList u x eu f) {!!}
+                  | prf (x₂ , ls) (here refl) (f x₂) x₁
+      with dec ((x₂ , f x₂) ∷ piToList u x eu f) ((x₂ , f x₂) ∷ piToList u x eu f)
+  ... | yes p = refl
+  ... | no ¬p = ⊥-elim (¬p refl)
+
   enumUnique : ∀ u → (val : ⟦ u ⟧) → (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) → occ dec val (enum u) ≡ 1
   enumUnique Language.Universe.`One tt dec with dec tt tt
   enumUnique Language.Universe.`One tt dec | yes p = refl
@@ -385,8 +415,24 @@ module Enum where
       with dec {`Σ u x} (fst , snd) (fst , snd)
   ... | yes p rewrite enumUnique (x fst) snd dec = refl
   ... | no ¬p = ⊥-elim (¬p refl)
-  enumUnique (Language.Universe.`Π u x) val dec = {!!}
-
+  enumUnique (Language.Universe.`Π u x) val dec = 
+     trans (
+       occ-listFuncToPi u x (enum u) (enumComplete u) (genFunc u x (enum u >>= (λ r → (r , enum (x r)) ∷ []))) (λ x₁ x₁∈genFunc →
+          trans
+          (genFuncProj₁ u x (enum u >>= (λ r → (r , enum (x r)) ∷ [])) x₁
+           x₁∈genFunc)
+          (map-proj₁->>= (enum u) (λ x₂ → enum (x x₂)))) dec {!!} dec (λ v → enumUnique u v dec) val)
+       (genFuncUnique u x {!!} (λ v → dec {x v})
+            (enum u) val (enum u >>= (λ r → (r , enum (x r)) ∷ []))
+            (map-proj₁->>= (enum u) (λ r → enum (x r))) lem (FuncInstLem u x val (enum u) λ v → enumComplete (x v) (val v)))
+    where
+      lem : (elem : Σ ⟦ u ⟧ (λ v → List ⟦ x v ⟧))
+          → elem ∈ (enum u >>= (λ r → (r , enum (x r)) ∷ []))
+          → (t : ⟦ x (proj₁ elem) ⟧)
+          → t ∈ proj₂ elem
+          → occ dec t (proj₂ elem) ≡ 1
+      lem elem me t t∈ with ∈->>=⁻ (enum u) (λ r → (r , enum (x r)) ∷ []) elem me
+      lem .(fst , enum (x fst)) me t t∈ | fst , fst₁ , here refl = enumUnique (x fst) t dec
 open Enum public
 
 maxTySizeOver : ∀ {u} → List ⟦ u ⟧ → (⟦ u ⟧ → U) → ℕ

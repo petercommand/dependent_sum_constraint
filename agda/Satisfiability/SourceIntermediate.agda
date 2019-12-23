@@ -207,9 +207,6 @@ enumSigmaCondFuncRepr u (x₁ ∷ eu) x elem val₁ val₂ isRepr (there mem) eq
 
 postulate
   _≟U_ : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_
-
-enumUniqueness : ∀ u → a b ∈ enum u → a ≡ b
-
 {-
 _≟U_ : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_
 _≟U_ {`One} tt tt = yes refl

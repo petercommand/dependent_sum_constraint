@@ -241,27 +241,27 @@ module Enum where
   dec-tuple dec (fst , snd) (.fst , snd₁) | yes refl | no ¬p = no (λ { refl → ¬p refl })
   dec-tuple dec (fst , snd) (fst₁ , snd₁) | no ¬p = no (λ { refl → ¬p refl })
 
-
-  length : ∀ {ℓ} {A : Set ℓ} → List A → ℕ
-  length [] = 0
-  length (x ∷ l) = suc (length l)
-
-  map-length : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'} → (f : A → B) → (l : List A) → length (map f l) ≡ length l
-  map-length f [] = refl
-  map-length f (x ∷ l) = cong suc (map-length f l)
-
-  map-++ : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'} → (f : A → B) → (l₁ l₂ : List A) → map f (l₁ ++ l₂) ≡ map f l₁ ++ map f l₂
-  map-++ f [] l₂ = refl
-  map-++ f (x ∷ l₁) l₂ = cong (_∷_ (f x)) (map-++ f l₁ l₂)
-
-  ++-length : ∀ {ℓ} {A : Set ℓ} → (l l' : List A) → length (l ++ l') ≡ length l + length l'
-  ++-length [] l' = refl
-  ++-length (x ∷ l) l' = cong suc (++-length l l')
-
-  take : ∀ {ℓ} {A : Set ℓ} → ℕ → List A → List A
-  take zero l = []
-  take (suc n) [] = []
-  take (suc n) (x ∷ l) = x ∷ take n l
+  private
+    length : ∀ {ℓ} {A : Set ℓ} → List A → ℕ
+    length [] = 0
+    length (x ∷ l) = suc (length l)
+  
+    map-length : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'} → (f : A → B) → (l : List A) → length (map f l) ≡ length l
+    map-length f [] = refl
+    map-length f (x ∷ l) = cong suc (map-length f l)
+  
+    map-++ : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'} → (f : A → B) → (l₁ l₂ : List A) → map f (l₁ ++ l₂) ≡ map f l₁ ++ map f l₂
+    map-++ f [] l₂ = refl
+    map-++ f (x ∷ l₁) l₂ = cong (_∷_ (f x)) (map-++ f l₁ l₂)
+  
+    ++-length : ∀ {ℓ} {A : Set ℓ} → (l l' : List A) → length (l ++ l') ≡ length l + length l'
+    ++-length [] l' = refl
+    ++-length (x ∷ l) l' = cong suc (++-length l l')
+  
+    take : ∀ {ℓ} {A : Set ℓ} → ℕ → List A → List A
+    take zero l = []
+    take (suc n) [] = []
+    take (suc n) (x ∷ l) = x ∷ take n l
 
   dec≡0→dec-tuple≡0 : ∀ u (x : ⟦ u ⟧ → U) (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) (fst : ⟦ u ⟧) (snd : ⟦ x fst ⟧) xs → occ dec fst (map proj₁ xs) ≡ 0 → occ (dec-tuple dec) (ann ⟦ `Σ u x ⟧ (fst , snd)) xs ≡ 0
   dec≡0→dec-tuple≡0 u x dec fst snd [] oc = refl

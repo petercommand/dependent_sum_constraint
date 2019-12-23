@@ -5,6 +5,7 @@ open import Data.Field
 open import Data.Finite
 open import Data.List
 open import Data.List.Membership.Propositional
+open import Data.List.Occ
 open import Data.List.Relation.Unary.Any
 open import Data.Nat renaming (_≟_ to _≟ℕ_)
 open import Data.Nat.Mod
@@ -104,6 +105,34 @@ private
   enumComplete' n prf m .(suc _) a p p' (≤′-step prf') ant = there (enumComplete' n prf m _ a p
                                                                 (≤-trans (s≤s (≤-step ≤-refl)) p') prf' ant)
 
+  enumUniq-occ≡0 : ∀ n dec prf m a p p' → m < a → occ dec (record{ elem = a ; nIsPrime = prf ; elem<n = p }) (enumFieldElem n prf m p') ≡ 0
+  enumUniq-occ≡0 n dec prf zero (suc n₁) p p' (s≤s le) with (dec (record { elem = suc n₁ ; nIsPrime = prf ; elem<n = p })
+       (record { elem = zero ; nIsPrime = prf ; elem<n = p' }))
+  enumUniq-occ≡0 n dec prf zero (suc n₁) p p' (s≤s le) | no ¬p = refl
+  enumUniq-occ≡0 n dec prf (suc m) (suc n₁) p p' (s≤s le) with (dec (record { elem = suc n₁ ; nIsPrime = prf ; elem<n = p })
+       (record { elem = suc m ; nIsPrime = prf ; elem<n = p' }))
+  enumUniq-occ≡0 n dec prf (suc m) (suc .m) p p' (s≤s le) | yes refl = ⊥-elim (m+n≮n 0 m le)
+  enumUniq-occ≡0 n dec prf (suc m) (suc n₁) p p' (s≤s le) | no ¬p = enumUniq-occ≡0 n dec prf m (suc n₁) p (≤-trans (s≤s (≤-step ≤-refl)) p') (≤-trans le (≤-step ≤-refl))
+  
+  enumUniq-occ≡1 : ∀ n dec prf m a p p' → a ≤ m → occ dec (record{ elem = a ; nIsPrime = prf ; elem<n = p }) (enumFieldElem n prf m p') ≡ 1
+  enumUniq-occ≡1 n dec prf zero .0 p p' z≤n with (dec (record { elem = zero ; nIsPrime = prf ; elem<n = p })
+       (record { elem = zero ; nIsPrime = prf ; elem<n = p' }))
+  enumUniq-occ≡1 n dec prf zero .zero p p' z≤n | yes p₁ = refl
+  enumUniq-occ≡1 n dec prf zero .zero p p' z≤n | no ¬p = ⊥-elim (¬p refl)
+  enumUniq-occ≡1 n dec prf (suc m) .0 p p' z≤n with (dec (record { elem = 0 ; nIsPrime = prf ; elem<n = p })
+       (record { elem = suc m ; nIsPrime = prf ; elem<n = p' }))
+  enumUniq-occ≡1 n dec prf (suc m) .zero p p' z≤n | no ¬p = enumUniq-occ≡1 n dec prf m 0 p (≤-trans (≤-step ≤-refl) p') z≤n
+  enumUniq-occ≡1 n dec prf (suc m) (suc m₁) p p' (s≤s le) with (dec (record { elem = suc m₁ ; nIsPrime = prf ; elem<n = p })
+       (record { elem = suc m ; nIsPrime = prf ; elem<n = p' }))
+  enumUniq-occ≡1 n dec prf (suc .m₁) (suc m₁) p p' (s≤s le) | yes refl = cong suc (enumUniq-occ≡0 n dec prf m₁ (suc m₁) p' (≤-trans (≤-step ≤-refl) p) ≤-refl)
+  enumUniq-occ≡1 n dec prf (suc m) (suc m₁) p p' (s≤s le) | no ¬p = enumUniq-occ≡1 n dec prf m (suc m₁) p (≤-trans (≤-step ≤-refl) p') (≤∧≢⇒< le λ { refl → ¬p refl })
+
+  enumUniq : ∀ n dec prf a p → occ dec a (enumFieldElem (suc n) prf n p) ≡ 1
+  enumUniq n dec prf record { elem = elem ; nIsPrime = nIsPrime ; elem<n = elem<n } p = enumUniq-occ≡1 (suc n) dec prf n elem (recompute (_ ≤? _) elem<n) ≤-refl (lem (recompute (_ ≤? _) elem<n))
+    where
+      lem : suc elem ≤ suc n → elem ≤ n
+      lem (s≤s t) = t
+  
   enumPrf : ∀ n prf (a : FiniteField (suc n)) p → a ∈ enumFieldElem (suc n) prf n p
   enumPrf n prf record { elem = elem ; elem<n = elem<n } p =
             enumComplete' (suc n) prf elem n (record { elem = elem ; elem<n = elem<n })
@@ -116,7 +145,8 @@ isFinite : ∀ n {≢ : False (n ≟ℕ 0)} → Prime n → Finite (FiniteField 
 isFinite (suc n) prf = record { elems = enumFieldElem (suc n) prf n ≤-refl
                               ; size = suc n
                               ; a∈elems = λ a → enumPrf n prf a ≤-refl
-                              ; size≡len-elems = enumFieldElemSizePrf (suc n) prf n ≤-refl }
+                              ; size≡len-elems = enumFieldElemSizePrf (suc n) prf n ≤-refl
+                              ; occ-1 = λ a dec → enumUniq n dec prf a ≤-refl }
 
 _≟_ : ∀ {n} {≢ : False (n ≟ℕ 0)} → Decidable {A = FiniteField n} _≡_
 record { elem = elem₁ ; elem<n = elem<n₁ } ≟ record { elem = elem ; elem<n = elem<n } with elem ≟ℕ elem₁

@@ -500,3 +500,67 @@ assertVarEqVarSound r (suc n) (x ∷ v) (x₁ ∷ v') sol (x₂ ∷ val) (x₃ �
            p₂₂ = λ _ → assertVarEqVar _ v v'
            p₂₂IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₂ r _ sol isSol
        in ≈-Cons x₂ x₃ (sq (a-b≡zero→a≡b x₇)) (assertVarEqVarSound r n v v' sol val val' look look' tri _ p₂₂IsSol)
+
+data SourceStore (store : List (Var × ℕ)) : ∀ u → Source u → Set where
+  IndStore : ∀ {u} {m} (vec : Vec Var m) (val : Vec ℕ m) elem
+      → (p : m ≡ tySize u)
+      → BatchListLookup vec store val
+      → ValIsRepr u elem (subst (Vec ℕ) p val)
+      → SourceStore store u (Ind p vec)
+  LitStore : ∀ {u} (v : ⟦ u ⟧) → SourceStore store u (Lit v)
+  AddStore : ∀ (s₁ s₂ : Source `Base) → SourceStore store `Base s₁ → SourceStore store `Base s₂ → SourceStore store `Base (Add s₁ s₂)
+  MulStore : ∀ (s₁ s₂ : Source `Base) → SourceStore store `Base s₁ → SourceStore store `Base s₂ → SourceStore store `Base (Mul s₁ s₂)
+
+
+sourceSem : ∀ u → (s : Source u) → (store : List (Var × ℕ)) → SourceStore store u s → ⟦ u ⟧
+sourceSem `One s st ss = tt
+sourceSem `Two .(Ind refl vec) st (IndStore vec val elem refl x x₁) = elem
+sourceSem `Two .(Lit v) st (LitStore v) = v
+sourceSem `Base .(Ind p vec) st (IndStore vec val elem p x x₁) = elem
+sourceSem `Base .(Lit v) st (LitStore v) = v
+sourceSem `Base .(Add s₁ s₂) st (AddStore s₁ s₂ ss ss₁) = sourceSem `Base s₁ st ss +F sourceSem `Base s₂ st ss₁
+sourceSem `Base .(Mul s₁ s₂) st (MulStore s₁ s₂ ss ss₁) = sourceSem `Base s₁ st ss *F sourceSem `Base s₂ st ss₁
+sourceSem (`Vec u x) .(Ind p vec) st (IndStore vec val elem p x₁ x₂) = elem
+sourceSem (`Vec u x) .(Lit v) st (LitStore v) = v
+sourceSem (`Σ u x) .(Ind p vec) st (IndStore vec val elem p x₁ x₂) = elem
+sourceSem (`Σ u x) .(Lit v) st (LitStore v) = v
+sourceSem (`Π u x) .(Ind p vec) st (IndStore vec val elem p x₁ x₂) = elem
+sourceSem (`Π u x) .(Lit v) st (LitStore v) = v
+
+indStore≡ : ∀ u {m} (elem : ⟦ u ⟧) (vec : Vec Var m) (store : List (Var × ℕ)) (val : Vec ℕ m) → (p : m ≡ tySize u)
+  → (look : BatchListLookup vec store val)
+  → (isRepr : ValIsRepr u elem (subst (Vec ℕ) p val))
+  → sourceSem u (Ind p vec) store (IndStore vec val elem p look isRepr) ≡ elem
+indStore≡ `One tt vec store val p look isRepr = refl
+indStore≡ `Two elem vec store val refl look isRepr = refl
+indStore≡ `Base elem vec store val refl look isRepr = refl
+indStore≡ (`Vec u x) elem vec store val refl look isRepr = refl
+indStore≡ (`Σ u x) elem vec store val refl look isRepr = refl
+indStore≡ (`Π u x) elem vec store val refl look isRepr = refl
+
+litStore≡ : ∀ u elem store → sourceSem u (Lit elem) store (LitStore elem) ≡ elem
+litStore≡ `One tt store = refl
+litStore≡ `Two elem store = refl
+litStore≡ `Base elem store = refl
+litStore≡ (`Vec u x) elem store = refl
+litStore≡ (`Σ u x) elem store = refl
+litStore≡ (`Π u x) elem store = refl
+
+sourceToIntermediateSound : ∀ r u
+  → (s : Source u)
+  → (sol : List (Var × ℕ))
+  → (val : Vec ℕ (tySize u))
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = sourceToIntermediate u s ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → BatchListLookup (output result) sol val
+  → Squash (∃ (λ ⟦u⟧ → ValIsRepr u ⟦u⟧ val × ∃ (λ ss → sourceSem u s sol ss ≡ ⟦u⟧)))
+sourceToIntermediateSound r u (Ind refl x₁) sol val tri init isSol look with indToIRSound PostponedMode u x₁ val sol look tri init isSol
+sourceToIntermediateSound r u (Ind refl x₁) sol val tri init isSol look | sq (fst₁ , snd₁)
+    = sq (fst₁ , (snd₁ , ((IndStore x₁ val fst₁ refl look snd₁) , indStore≡ u fst₁ x₁ sol val refl look snd₁)))
+sourceToIntermediateSound r u (Lit x) sol val tri init isSol look with litToIndSound r u x sol val tri init isSol look
+... | sq isRepr = sq (x , (isRepr , ((LitStore x) , litStore≡ u x sol)))
+sourceToIntermediateSound r .`Base (Add s s₁) sol val tri init isSol look = {!!}
+
+sourceToIntermediateSound r .`Base (Mul s s₁) sol val tri init isSol look = {!!}

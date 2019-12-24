@@ -105,9 +105,9 @@ varEqLit (`Σ u x) vec (fstₗ , sndₗ) with splitAt (tySize u) vec
 ... | vecₜ₁ , vecₜ₂ = do
   r ← varEqLit u fst fstₗ
   s ← varEqLit (x fstₗ) vecₜ₁ sndₗ
-  land r s
-
-
+  s' ← allEqz vecₜ₂
+  and₁ ← land r s
+  land and₁ s'
 varEqLit (`Π u x) vec f = piVarEqLit u x (enum u) vec f
 
 enumSigmaCond : ∀ {u} → List ⟦ u ⟧ → (x : ⟦ u ⟧ → U) → Vec Var (tySize u) → Vec Var (maxTySizeOver (enum u) x) → SI-Monad Var

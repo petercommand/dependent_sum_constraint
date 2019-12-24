@@ -79,14 +79,10 @@ sourceToIntermediate : ∀ u → Source u → SI-Monad (Vec Var (tySize u))
 sourceToIntermediate u (Ind refl x) = withMode PostponedMode (indToIR u x)
 sourceToIntermediate u (Lit x) = litToInd u x
 sourceToIntermediate `Base (Add source source₁) = do
-  add (Log ("+ STI: " S++ showSource (Add source source₁)))
-  add (Log ("+1 STI: " S++ showSource source))
   r₁ ← sourceToIntermediate `Base source
-  add (Log ("+2 STI: " S++ showSource source₁))
   r₂ ← sourceToIntermediate `Base source₁
   v ← new
   add (IAdd zero ((one , head r₁) ∷ (one , head r₂) ∷ (- one , v) ∷ []))
-  add (Log ("- STI: " S++ showSource (Add source source₁)))
   return (v ∷ [])
 sourceToIntermediate `Base (Mul source source₁) = do
   r₁ ← sourceToIntermediate `Base source
@@ -100,11 +96,9 @@ module Comp where
   compAssert : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
   compAssert [] = return tt
   compAssert ((u' , s₁ , s₂) ∷ l) = do
-    add (Log ("+ s1: " S++ showSource s₁ S++ " s2: " S++ showSource s₂))
     r₁ ← sourceToIntermediate u' s₁
     r₂ ← sourceToIntermediate u' s₂
     assertVarEqVar _ r₁ r₂
-    add (Log ("- s1: " S++ showSource s₁ S++ " s2: " S++ showSource s₂))    
     compAssert l
 
 

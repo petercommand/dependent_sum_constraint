@@ -13,7 +13,8 @@ open import Data.List.Occ
 open import Data.List.Relation.Unary.Any
 open import Data.Nat
 open import Data.Nat.Primality
-open import Data.Nat.Properties renaming (+-comm to +ℕ-comm)
+import Data.Nat.Properties
+module ℕP = Data.Nat.Properties
 open import Data.Nat.Properties2
 open import Data.Product hiding (map)
 open import Data.ProductPrime
@@ -113,7 +114,7 @@ maxTySplitCorrect : ∀ u val x vec → vec HE.≅ proj₁ (maxTySplit u val x v
 maxTySplitCorrect u val x vec with splitAtCorrect (tySize (x val)) (subst (Vec ℕ)
         (sym
          (trans
-          (+ℕ-comm (tySize (x val))
+          (ℕP.+-comm (tySize (x val))
            (maxTySizeOver (enum u) x ∸ tySize (x val)))
           (a-b+b≡a (maxTySizeOver (enum u) x)
            (tySize (x val)) (∈→≥ (enum u) x val (enumComplete u val)))))
@@ -121,7 +122,7 @@ maxTySplitCorrect u val x vec with splitAtCorrect (tySize (x val)) (subst (Vec �
 ... | eq with splitAt (tySize (x val)) (subst (Vec ℕ)
         (sym
          (trans
-          (+ℕ-comm (tySize (x val))
+          (ℕP.+-comm (tySize (x val))
            (maxTySizeOver (enum u) x ∸ tySize (x val)))
           (a-b+b≡a (maxTySizeOver (enum u) x)
            (tySize (x val)) (∈→≥ (enum u) x val (enumComplete u val)))))
@@ -131,7 +132,7 @@ maxTySplitCorrect u val x vec with splitAtCorrect (tySize (x val)) (subst (Vec �
                      (HE.≡-subst-removable (Vec ℕ)
                       (sym
                        (trans
-                        (+ℕ-comm (tySize (x val))
+                        (ℕP.+-comm (tySize (x val))
                          (maxTySizeOver (enum u) x ∸ tySize (x val)))
                         (a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x val))
                          (∈→≥ (enum u) x val (enumComplete u val)))))
@@ -230,7 +231,7 @@ enumSigmaCondFuncRepr u (elem ∷ eu) x elem val₁ val₂ isRepr (here refl) eq
          (subst (Vec ℕ)
           (sym
            (trans
-            (+ℕ-comm (tySize (x elem))
+            (ℕP.+-comm (tySize (x elem))
              (maxTySizeOver (enum u) x ∸ tySize (x elem)))
             (a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x elem))
              (∈→≥ (enum u) x elem (enumComplete u elem)))))
@@ -466,3 +467,36 @@ litToIndSound r u elem sol val tri init isSol look
     varEqLit≈1 = ListLookup-≈ sound₁ sound₂
   in varEqLitFunc≡1 u val elem varEqLit≈1
 ... | sq varEqLit≡1 = varEqLitFuncRepr u val elem varEqLit≡1
+
+data Vec-≈ : ∀ {n} → Vec ℕ n → Vec ℕ n → Prop where
+  ≈-Nil : Vec-≈ [] []
+  ≈-Cons : ∀ {n} x y {l : Vec ℕ n} {l'} → x ≈ y → Vec-≈ l l' → Vec-≈ (x ∷ l) (y ∷ l')
+
+assertVarEqVarSound : ∀ r n
+  → (v v' : Vec Var n)
+  → (sol : List (Var × ℕ))
+  → (val val' : Vec ℕ n)
+  → BatchListLookup v sol val
+  → BatchListLookup v' sol val'
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = assertVarEqVar n v v' ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → Vec-≈ val val'
+assertVarEqVarSound r zero [] [] sol [] [] look look' tri init isSol = ≈-Nil
+assertVarEqVarSound r (suc n) (x ∷ v) (x₁ ∷ v') sol (x₂ ∷ val) (x₃ ∷ val') (BatchLookupCons .x .x₂ .v .val .sol x₄ look) (BatchLookupCons .x₁ .x₃ .v' .val' .sol x₅ look') tri init isSol
+  with let p₁₁ = add (IAdd zerof ((onef , x) ∷ (-F onef , x₁) ∷ []))
+           p₂₂ = λ _ → assertVarEqVar _ v v'
+           p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₂ r _ sol isSol
+       in addSound r (IAdd zerof ((onef , x) ∷ (-F onef , x₁) ∷ [])) sol _ p₁₁IsSol
+assertVarEqVarSound r (suc n) (x ∷ v) (x₁ ∷ v') sol (x₂ ∷ val) (x₃ ∷ val') (BatchLookupCons .x .x₂ .v .val .sol x₄ look) (BatchLookupCons .x₁ .x₃ .v' .val' .sol x₅ look') tri init isSol | addSol (LinearCombValCons .(Field.one field') .x varVal x₆ (LinearCombValCons .((Field.- field') (Field.one field')) .x₁ varVal₁ x₈ LinearCombValBase)) x₇ with ListLookup-≈ x₈ x₅ | ListLookup-≈ x₆ x₄
+... | sq l₁ | sq l₂ rewrite l₁ | l₂
+                          | *-identityˡ (ℕtoF x₂)
+                          | -one*f≡-f (ℕtoF x₃)
+                          | +-identityʳ (-F (ℕtoF x₃))
+                          | +-identityʳ (ℕtoF x₂ +F (-F ℕtoF x₃))
+                          =
+       let p₁₁ = add (IAdd zerof ((onef , x) ∷ (-F onef , x₁) ∷ []))
+           p₂₂ = λ _ → assertVarEqVar _ v v'
+           p₂₂IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₂ r _ sol isSol
+       in ≈-Cons x₂ x₃ (sq (a-b≡zero→a≡b x₇)) (assertVarEqVarSound r n v v' sol val val' look look' tri _ p₂₂IsSol)

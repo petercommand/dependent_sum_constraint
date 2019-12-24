@@ -9,6 +9,7 @@ open import Data.Finite
 open import Data.List hiding (lookup; head; splitAt)
 open import Data.List.Membership.Propositional
 open import Data.List.Membership.Propositional.Properties
+open import Data.List.Occ
 open import Data.List.Relation.Unary.Any
 open import Data.Nat
 open import Data.Nat.Primality
@@ -96,8 +97,12 @@ data PiPartialRepr u x f where
       → valxu+valel ≡ valxu V++ valel
       → PiPartialRepr u x f (vu ∷ el) valxu+valel
 
-enumSigmaCondRestZ : ∀ u eu x fst snd val → val ∈ eu → enumSigmaCondFunc u eu x fst snd ≡ 1 → All (_≈_ 0) (proj₂ (maxTySplit u val x snd))
-enumSigmaCondRestZ = {!!}
+
+allEqz→All≈0 : ∀ {n} (vec : Vec ℕ n) → allEqzFunc vec ≡ 1 → All (_≈_ 0) vec
+allEqz→All≈0 [] eq = []
+allEqz→All≈0 (x ∷ vec) eq with ℕtoF x ≟F zerof
+allEqz→All≈0 (x ∷ vec) eq | yes p = sq (sym (trans p (sym ℕtoF-0≡0))) ∷ allEqz→All≈0 vec eq
+
 
 maxTySplitCorrect : ∀ u val x vec → vec HE.≅ proj₁ (maxTySplit u val x vec) V++ proj₂ (maxTySplit u val x vec)
 maxTySplitCorrect u val x vec with splitAtCorrect (tySize (x val)) (subst (Vec ℕ)
@@ -144,10 +149,18 @@ PiPartialRepr→piVarEqLit u x (x₁ ∷ eu) ._ ._ f refl (PiRepCons x₂ repr r
 PiPartialRepr→piVarEqLit u x (x₁ ∷ eu) ._ ._ f refl (PiRepCons x₂ repr refl) | split₁ | fst , snd | sq ind₁ | sq ind₂ | no ¬p | yes p = ⊥-elim′ (onef≠zerof (trans (sym (trans (cong ℕtoF ind₂) ℕtoF-1≡1)) p))
 PiPartialRepr→piVarEqLit u x (x₁ ∷ eu) ._ ._ f refl (PiRepCons x₂ repr refl) | split₁ | fst , snd | sq ind₁ | sq ind₂ | no ¬p | no ¬p₁ = sq refl
 
-ValIsRepr→varEqLit .`One .tt .(n ∷ []) .(n ∷ []) refl (`OneValRepr n x) = {!!}
-ValIsRepr→varEqLit .`Two .false .(n ∷ []) .(n ∷ []) refl (`TwoValFalseRepr n x) = {!!}
-ValIsRepr→varEqLit .`Two .true .(n ∷ []) .(n ∷ []) refl (`TwoValTrueRepr n x) = {!!}
-ValIsRepr→varEqLit .`Base elem .(_ ∷ []) .(_ ∷ []) refl (`BaseValRepr x) = {!!}
+ValIsRepr→varEqLit .`One .tt .(n ∷ []) .(n ∷ []) refl (`OneValRepr n x) with ℕtoF n ≟F zerof
+ValIsRepr→varEqLit .`One .tt .(n ∷ []) .(n ∷ []) refl (`OneValRepr n x) | yes p = sq refl
+ValIsRepr→varEqLit .`One .tt .(n ∷ []) .(n ∷ []) refl (`OneValRepr n (sq eq)) | no ¬p = ⊥-elim′ (¬p (trans eq ℕtoF-0≡0))
+ValIsRepr→varEqLit .`Two .false .(n ∷ []) .(n ∷ []) refl (`TwoValFalseRepr n x) with ℕtoF n ≟F zerof
+ValIsRepr→varEqLit .`Two .false .(n ∷ []) .(n ∷ []) refl (`TwoValFalseRepr n x) | yes p = sq refl
+ValIsRepr→varEqLit .`Two .false .(n ∷ []) .(n ∷ []) refl (`TwoValFalseRepr n (sq eq)) | no ¬p = ⊥-elim′ (¬p (trans eq ℕtoF-0≡0))
+ValIsRepr→varEqLit .`Two .true .(n ∷ []) .(n ∷ []) refl (`TwoValTrueRepr n (sq eq)) with ℕtoF n ≟F onef
+ValIsRepr→varEqLit .`Two .true .(n ∷ []) .(n ∷ []) refl (`TwoValTrueRepr n (sq eq)) | yes p = sq refl
+ValIsRepr→varEqLit .`Two .true .(n ∷ []) .(n ∷ []) refl (`TwoValTrueRepr n (sq eq)) | no ¬p = ⊥-elim′ (¬p (trans eq ℕtoF-1≡1))
+ValIsRepr→varEqLit .`Base elem .(v' ∷ []) .(v' ∷ []) refl (`BaseValRepr {v' = v'} x) with ℕtoF v' ≟F elem
+ValIsRepr→varEqLit .`Base elem .(v' ∷ []) .(v' ∷ []) refl (`BaseValRepr {v' = v'} x) | yes p = sq refl
+ValIsRepr→varEqLit .`Base elem .(v' ∷ []) .(v' ∷ []) refl (`BaseValRepr {v' = v'} (sq eq)) | no ¬p = ⊥-elim′ (¬p (trans (sym eq) (ℕtoF∘fToℕ≡ elem)))
 ValIsRepr→varEqLit .(`Vec _ 0) .[] .[] .[] refl `VecValBaseRepr = sq refl
 ValIsRepr→varEqLit (`Vec u (suc x)) (elem₁ ∷ elem) val ._ refl (`VecValConsRepr repr repr₁ refl)
      with splitAtCorrect (tySize u) val
@@ -180,6 +193,15 @@ ValIsRepr→varEqLit (`Σ u x) (fstₗ , sndₗ) .(valu V++ valxu+z) .(valu V++ 
 ValIsRepr→varEqLit (`Σ u x) (fstₗ , sndₗ) .(valu V++ valxu+z) .(valu V++ valxu+z) refl (`ΣValRepr {.u} {fstₗ} x {sndₗ} {valu} {valxu} valxu+z {.(valu V++ valxu+z)} repr repr₁ x₁ x₂ refl) | split₁₁ | fst , snd | split₂ | snd₁ , snd₂ | sq ind₁ | split₁₂ | sq ind₂ | no ¬p | yes p = ⊥-elim′ (onef≠zerof (trans (sym (trans (cong ℕtoF ind₂) ℕtoF-1≡1)) p))
 ValIsRepr→varEqLit (`Σ u x) (fstₗ , sndₗ) .(valu V++ valxu+z) .(valu V++ valxu+z) refl (`ΣValRepr {.u} {fstₗ} x {sndₗ} {valu} {valxu} valxu+z {.(valu V++ valxu+z)} repr repr₁ x₁ x₂ refl) | split₁₁ | fst , snd | split₂ | snd₁ , snd₂ | sq ind₁ | split₁₂ | sq ind₂ | no ¬p | no ¬p₁ = sq refl
 ValIsRepr→varEqLit (`Π u x) elem val .val refl (`ΠValRepr x .val x₁) = PiPartialRepr→piVarEqLit u x (enum u) val val elem refl x₁ 
+
+enumSigmaCondRestZ : ∀ u eu x fst snd val → val ∈ eu → ValIsRepr u val fst → enumSigmaCondFunc u eu x fst snd ≡ 1 → All (_≈_ 0) (proj₂ (maxTySplit u val x snd))
+enumSigmaCondRestZ u .(_ ∷ _) x fst snd val (here refl) isRepr eq with ValIsRepr→varEqLit u val fst fst refl isRepr
+... | sq varEqLit≡1 = allEqz→All≈0 (proj₂ (maxTySplit u val x snd)) (andFunc⁻₂ (allEqzFuncIsBoolStrict (proj₂ (maxTySplit u val x snd))) (impFuncImp varEqLit≡1 (andFuncIsBoolStrict (tyCondFunc (x val) (proj₁ (maxTySplit u val x snd)))
+       (allEqzFunc (proj₂ (maxTySplit u val x snd)))) (andFunc⁻₁ (impFuncIsBoolStrict (varEqLitFunc u fst val)
+       (andFunc (tyCondFunc (x val) (proj₁ (maxTySplit u val x snd)))
+        (allEqzFunc (proj₂ (maxTySplit u val x snd)))) ) eq)))
+enumSigmaCondRestZ u (_ ∷ eu) x fst snd val (there mem) isRepr eq = enumSigmaCondRestZ u eu x fst snd val mem isRepr (andFunc⁻₂ (enumSigmaCondFuncIsBoolStrict u eu x fst snd) eq)
+
 
 tyCondFuncRepr : ∀ u → (vec : Vec ℕ (tySize u)) → tyCondFunc u vec ≡ 1 → Squash (∃ (λ elem → ValIsRepr u elem vec))
 
@@ -246,15 +268,35 @@ updateFunc u x f val val' dom with dom ≟U val
 updateFunc u x f val val' dom | yes refl = val'
 updateFunc u x f val val' dom | no ¬p = f dom
 
-piTyCondFuncPartialRepr : ∀ u (x : ⟦ u ⟧ → U) eu → (vec : Vec ℕ (tySumOver eu x)) → enumPiCondFunc u eu x vec ≡ 1 → Squash (∃ (λ f → PiPartialRepr u x f eu vec))
-piTyCondFuncPartialRepr u x [] [] eq = sq (trivialFunc u x , PiRepNil)
-piTyCondFuncPartialRepr u x (x₁ ∷ eu) vec eq with splitAt (tySize (x x₁)) vec
-... | fst , snd with piTyCondFuncPartialRepr u x eu snd (andFunc⁻₂ (enumPiCondFuncIsBoolStrict u eu x snd) eq)
-... | sq ind′ with ind′
-... | acc , prf with tyCondFuncRepr (x x₁) fst {!!}
-... | sq elem′ with elem′
-... | elem , prf' = sq ((updateFunc u x acc x₁ elem) , (PiRepCons {!!} {!prf!} {!!}))
+updateFuncApp : ∀ u (x : ⟦ u ⟧ → U) → (f : (val : ⟦ u ⟧) → ⟦ x val ⟧) → (val : ⟦ u ⟧) → (val' : ⟦ x val ⟧) → updateFunc u x f val val' val ≡ val'
+updateFuncApp u x f val val' with val ≟U val
+updateFuncApp u x f val val' | yes refl = refl
+updateFuncApp u x f val val' | no ¬p = ⊥-elim (¬p refl)
 
+updateFuncApp' : ∀ u (x : ⟦ u ⟧ → U) → (f : (val : ⟦ u ⟧) → ⟦ x val ⟧) → (val₁ val₂ : ⟦ u ⟧) → (val' : ⟦ x val₁ ⟧) → ¬ val₁ ≡ val₂ → updateFunc u x f val₁ val' val₂ ≡ f val₂
+updateFuncApp' u x f val₁ val₂ val' neq with val₂ ≟U val₁
+updateFuncApp' u x f val₁ .val₁ val' neq | yes refl = ⊥-elim (neq refl)
+updateFuncApp' u x f val₁ val₂ val' neq | no ¬p = refl
+
+PiPartialRepr-¬∈ : ∀ u (x : ⟦ u ⟧ → U) eu vec → (f : (val : ⟦ u ⟧) → ⟦ x val ⟧) → (val : ⟦ u ⟧) → (val' : ⟦ x val ⟧) → ¬ val ∈ eu → PiPartialRepr u x f eu vec → PiPartialRepr u x (updateFunc u x f val val') eu vec
+PiPartialRepr-¬∈ u x .[] .[] f val val' ¬∈ PiRepNil = PiRepNil
+PiPartialRepr-¬∈ u x (x₃ ∷ eu) vec f val val' ¬∈ (PiRepCons {_} {_} {valxu} {valel} x₁ part x₂) =  PiRepCons (subst (λ t → ValIsRepr (x x₃) t valxu)
+                                                                                                        (sym (updateFuncApp' u x f val x₃ val' (lem ¬∈))) x₁) (PiPartialRepr-¬∈ u x eu valel f val val' (λ x₄ → ¬∈ (there x₄)) part) x₂
+    where
+      lem : ¬ val ∈ x₃ ∷ eu → ¬ val ≡ x₃
+      lem neg refl = neg (here refl)
+piTyCondFuncPartialRepr : ∀ u (x : ⟦ u ⟧ → U) eu (prf : ∀ v → v ∈ eu → occ _≟U_ v eu ≡ 1) → (vec : Vec ℕ (tySumOver eu x)) → enumPiCondFunc u eu x vec ≡ 1 → Squash (∃ (λ f → PiPartialRepr u x f eu vec))
+piTyCondFuncPartialRepr u x [] occ-prf [] eq = sq (trivialFunc u x , PiRepNil)
+piTyCondFuncPartialRepr u x (x₁ ∷ eu) occ-prf vec eq with splitAtCorrect (tySize (x x₁)) vec
+... | split with splitAt (tySize (x x₁)) vec
+... | fst , snd with piTyCondFuncPartialRepr u x eu (occ-tail _ _ _ occ-prf) snd (andFunc⁻₂ (enumPiCondFuncIsBoolStrict u eu x snd) eq)
+... | sq ind′ with ind′
+... | acc , prf with tyCondFuncRepr (x x₁) fst (andFunc⁻₁ (tyCondFuncIsBoolStrict (x x₁) fst) eq)
+... | sq elem′ with elem′
+... | elem , prf' = sq ((updateFunc u x acc x₁ elem) , (PiRepCons {_} {_} {_} {_} {_} {fst} fApp (PiPartialRepr-¬∈ u x eu snd acc x₁ elem (occ-0-¬∈ _ _ _ (occ-tail0 _ _ _ occ-prf)) prf) split))
+  where
+    fApp : ValIsRepr (x x₁) (updateFunc u x acc x₁ elem x₁) fst
+    fApp rewrite updateFuncApp u x acc x₁ elem = prf'
 tyCondFuncRepr `One (x ∷ vec) eq with ℕtoF x ≟F zerof
 tyCondFuncRepr `One (x ∷ []) eq | yes p = sq (tt , `OneValRepr x (sq (trans p (sym ℕtoF-0≡0))))
 tyCondFuncRepr `Two (x ∷ []) eq with ℕtoF x ≟F zerof
@@ -282,9 +324,9 @@ tyCondFuncRepr (`Σ u x) vec eq | fst , snd | [ refl ] | no ¬p | no ¬p₁ | is
 ... | elem₁ , ind₁ with enumSigmaCondFuncRepr u (enum u) x elem₁ fst snd ind₁ (enumComplete _ _) x₂
 ... | sq ind₂′ with ind₂′
 ... | elem₂ , ind₂  =  sq ((elem₁ , elem₂) , `ΣValRepr x snd ind₁ ind₂
-                                    (enumSigmaCondRestZ u (enum u) x fst snd elem₁ (enumComplete u elem₁) x₂)
+                                    (enumSigmaCondRestZ u (enum u) x fst snd elem₁ (enumComplete u elem₁) ind₁ x₂)
                                     (maxTySplitCorrect u elem₁ x snd) (sym (splitAtCorrect (tySize u) vec)))
-tyCondFuncRepr (`Π u x) vec eq with piTyCondFuncPartialRepr u x (enum u) vec eq
+tyCondFuncRepr (`Π u x) vec eq with piTyCondFuncPartialRepr u x (enum u) (λ v x₁ → enumUnique u v _≟U_) vec eq
 ... | sq repr with repr
 ... | elem₁ , prf = sq (elem₁ , (`ΠValRepr x vec prf))
 indToIRSound : ∀ r u

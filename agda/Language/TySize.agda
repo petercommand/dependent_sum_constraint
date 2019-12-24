@@ -199,39 +199,7 @@ module Enum where
       ... | t₁ | ℝ[ prf ] with p
       ... | refl = trans (aux u x xs f (cong (map proj₁) prf) t t∈eu) (piFromListProofIrre u x (map proj₁ t₁) _ _ prf (cong (map proj₁) prf) refl t t∈eu)
 
-  mem-occ : ∀ {ℓ} {A : Set ℓ} dec x (l : List A) → x ∈ l → occ dec x l ≥ 1
-  mem-occ dec x .(x ∷ _) (here refl) with dec x x
-  mem-occ dec x .(x ∷ _) (here refl) | yes p = s≤s z≤n
-  mem-occ dec x .(x ∷ _) (here refl) | no ¬p = ⊥-elim (¬p refl)
-  mem-occ dec x (x₁ ∷ xs) (there mem) with dec x x₁
-  mem-occ dec x (x₁ ∷ xs) (there mem) | yes p = s≤s z≤n
-  mem-occ dec x (x₁ ∷ xs) (there mem) | no ¬p = mem-occ dec x xs mem
-
-
-  occ≡1→memUnique : ∀ {ℓ} {A : Set ℓ} → ∀ dec l l' → (uniq : ∀ v → ¬ v ∈ l' → occ dec v l ≡ 1) → ∀ (a : A) → (m₁ m₂ : a ∈ l) → ¬ a ∈ l' → m₁ ≡ m₂
-  occ≡1→memUnique dec .(a ∷ _) l' uniq a (here refl) (here refl) ¬∈ = refl
-  occ≡1→memUnique dec (a ∷ xs) l' uniq a (here refl) (there m₂) ¬∈ with uniq a ¬∈
-  ... | occPrf with dec a a
-  occ≡1→memUnique dec (a ∷ xs) l' uniq a (here refl) (there m₂) ¬∈ | occPrf | yes p with s≤s (mem-occ dec a xs m₂)
-  ... | occ≥2 rewrite occPrf with occ≥2
-  ... | s≤s ()
-  occ≡1→memUnique dec (a ∷ xs) l' uniq a (here refl) (there m₂) ¬∈ | occPrf | no ¬p = ⊥-elim (¬p refl)
-  occ≡1→memUnique dec (a ∷ xs) l' uniq a (there m₁) (here refl) ¬∈ with uniq a ¬∈
-  ... | occPrf with dec a a
-  occ≡1→memUnique dec (a ∷ xs) l' uniq a (there m₁) (here refl) ¬∈ | occPrf | yes p with s≤s (mem-occ dec a xs m₁)
-  ... | occ≥2 rewrite occPrf with occ≥2
-  ... | s≤s ()
-  occ≡1→memUnique dec (a ∷ xs) l' uniq a (there m₁) (here refl) ¬∈ | occPrf | no ¬p = ⊥-elim (¬p refl)
-  occ≡1→memUnique dec (x ∷ xs) l' uniq a (there m₁) (there m₂) ¬∈ with uniq a ¬∈
-  ... | occPrf with dec a x
-  occ≡1→memUnique dec (x ∷ xs) l' uniq a (there m₁) (there m₂) ¬∈ | occPrf | yes p with s≤s (mem-occ dec a xs m₁)
-  ... | occ≥2 rewrite occPrf with occ≥2
-  ... | s≤s () 
-  occ≡1→memUnique dec (x ∷ xs) l' uniq a (there m₁) (there m₂) ¬∈ | occPrf | no ¬p = cong there (occ≡1→memUnique dec xs (x ∷ l') (λ v x₁ → trans (sym (occAux₂ v x (dec v x) _ _ λ x₂ → x₁ (here x₂))) (uniq v λ x₂ → x₁ (there x₂))) a m₁ m₂ λ x₁ → ¬∈ (lem x₁))
-    where
-      lem : ∀ (mem : a ∈ x ∷ l') → a ∈ l'
-      lem (here refl) = ⊥-elim (¬p refl)
-      lem (there mem) = mem
+ 
 
 
   dec-tuple : ∀ {u} {x : ⟦ u ⟧ → U} → (∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) → Decidable {A = Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧)} _≡_

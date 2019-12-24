@@ -253,6 +253,11 @@ allEqzFuncIsBool (x ∷ vec) with ℕtoF x ≟F zerof
 allEqzFuncIsBool (x ∷ vec) | yes p = allEqzFuncIsBool vec
 allEqzFuncIsBool (x ∷ vec) | no ¬p = isZero zero ℕtoF-0≡0
 
+allEqzFuncIsBoolStrict : ∀ {n} (vec : Vec ℕ n) → isBoolStrict (allEqzFunc vec)
+allEqzFuncIsBoolStrict [] = isOneS refl
+allEqzFuncIsBoolStrict (x ∷ vec) with ℕtoF x ≟F zerof
+allEqzFuncIsBoolStrict (x ∷ vec) | yes p = allEqzFuncIsBoolStrict vec
+allEqzFuncIsBoolStrict (x ∷ vec) | no ¬p = isZeroS refl
 
 
 allEqzSoundLem : ∀ {n} (vec : Vec ℕ n) → notFunc (anyNeqzFunc vec) ≈ allEqzFunc vec

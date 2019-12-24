@@ -380,14 +380,30 @@ indToIRSound r u vec val sol look tri init isSol
       tyCond≈1 = ListLookup-≈ sound₁ sound₂
   in tyCondFunc≡1 u val tyCond≈1
 ... | sq tyCond≡1 = tyCondFuncRepr u val tyCond≡1
-
 varEqLitFuncRepr : ∀ u val elem → varEqLitFunc u val elem ≡ 1 → Squash (ValIsRepr u elem val)
+piVarEqLitFuncRepr : ∀ u (x : ⟦ u ⟧ → U) eu vec f → piVarEqLitFunc x eu vec f ≡ 1 → Squash (PiPartialRepr u x f eu vec)
+
+piVarEqLitFuncRepr u x [] [] f eq = sq PiRepNil
+piVarEqLitFuncRepr u x (x₁ ∷ eu) vec f eq with splitAtCorrect (tySize (x x₁)) vec
+... | split with splitAt (tySize (x x₁)) vec
+... | fst , snd with varEqLitFuncRepr (x x₁) fst (f x₁) (andFunc⁻₁ (varEqLitFuncIsBoolStrict (x x₁) fst (f x₁)) eq)
+... | sq prf with piVarEqLitFuncRepr u x eu snd f (andFunc⁻₂ (piVarEqLitFuncIsBoolStrict x eu snd f) eq)
+... | sq prf' = sq (PiRepCons prf prf' split)
+
 varEqLitFuncRepr `One (v ∷ []) elem eq with ℕtoF v ≟F zerof
 varEqLitFuncRepr `One (v ∷ []) tt eq | yes p = sq (`OneValRepr v (sq (trans p (sym ℕtoF-0≡0))))
-varEqLitFuncRepr `Two (v ∷ []) false eq = {!!}
-varEqLitFuncRepr `Two (v ∷ []) true eq = {!!}
-varEqLitFuncRepr `Base val elem eq = {!!}
-varEqLitFuncRepr (`Vec u x) val elem eq = {!!}
+varEqLitFuncRepr `Two (v ∷ []) false eq with ℕtoF v ≟F zerof
+varEqLitFuncRepr `Two (v ∷ []) false eq | yes p = sq (`TwoValFalseRepr v (sq (trans p (sym ℕtoF-0≡0))))
+varEqLitFuncRepr `Two (v ∷ []) true eq with ℕtoF v ≟F onef
+varEqLitFuncRepr `Two (v ∷ []) true eq | yes p = sq (`TwoValTrueRepr v (sq (trans p (sym ℕtoF-1≡1))))
+varEqLitFuncRepr `Base (v ∷ []) elem eq with ℕtoF v ≟F elem
+varEqLitFuncRepr `Base (v ∷ []) elem eq | yes p = sq (`BaseValRepr (sq (trans (ℕtoF∘fToℕ≡ elem) (sym p))))
+varEqLitFuncRepr (`Vec u zero) [] [] eq = sq `VecValBaseRepr
+varEqLitFuncRepr (`Vec u (suc x)) val (e ∷ elem) eq with splitAtCorrect (tySize u) val
+... | split with splitAt (tySize u) val
+... | fst , snd with varEqLitFuncRepr u fst e (andFunc⁻₁ (varEqLitFuncIsBoolStrict u fst e) eq)
+... | sq repr₁ with varEqLitFuncRepr (`Vec u x) snd elem (andFunc⁻₂ (varEqLitFuncIsBoolStrict (`Vec u x) snd elem) eq)
+... | sq repr₂ = sq (`VecValConsRepr repr₁ repr₂ (sym split))
 varEqLitFuncRepr (`Σ u x) val (fstₗ , sndₗ) eq
     with splitAtCorrect (tySize u) val
 ... | split₁
@@ -400,7 +416,8 @@ varEqLitFuncRepr (`Σ u x) val (fstₗ , sndₗ) eq
        (varEqLitFunc (x fstₗ) snd₁ sndₗ)) eq))
 ... | sq repr₁ with varEqLitFuncRepr (x fstₗ) snd₁ sndₗ (andFunc⁻₂ (varEqLitFuncIsBoolStrict (x fstₗ) snd₁ sndₗ) (andFunc⁻₁ (andFuncIsBoolStrict (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) snd₁ sndₗ)) eq))
 ... | sq repr₂ = sq (`ΣValRepr {_} {_} x {sndₗ} {fst} {snd₁} snd {val} {snd₂} repr₁ repr₂ (allEqz→All≈0 _ (andFunc⁻₂ (allEqzFuncIsBoolStrict snd₂) eq)) split₂ (sym split₁))
-varEqLitFuncRepr (`Π u x) val elem eq = {!!}
+varEqLitFuncRepr (`Π u x) val elem eq with piVarEqLitFuncRepr u x (enum u) val elem eq
+... | sq prf = sq (`ΠValRepr x val prf)
 
 litToIndSound : ∀ r u
   → (elem : ⟦ u ⟧)
@@ -448,4 +465,4 @@ litToIndSound r u elem sol val tri init isSol look
     sound₂ = assertTrueSound r r' sol _ p₄₄IsSol
     varEqLit≈1 = ListLookup-≈ sound₁ sound₂
   in varEqLitFunc≡1 u val elem varEqLit≈1
-... | sq varEqLit≡1 = {!!}
+... | sq varEqLit≡1 = varEqLitFuncRepr u val elem varEqLit≡1

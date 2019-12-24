@@ -150,6 +150,14 @@ tyCond (`Σ u x) vec with splitAt (tySize u) vec
   land r s
 tyCond (`Π u x) vec = enumPiCond (enum u) x vec
 
+
+indToIR : ∀ u → Vec Var (tySize u) → SI-Monad (Vec Var (tySize u))
+indToIR u vec = do
+  t ← tyCond u vec
+  assertTrue t
+  return vec
+
+{-
 indToIR : ∀ u → Vec Var (tySize u) → SI-Monad (Vec Var (tySize u))
 indToIR `One vec@(v ∷ []) = do
   add (IAdd zero ((one , v) ∷ []))
@@ -172,3 +180,4 @@ indToIR (`Π u x) vec = do
   t ← tyCond (`Π u x) vec
   assertTrue t
   return vec
+-}

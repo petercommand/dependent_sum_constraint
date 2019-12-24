@@ -329,6 +329,13 @@ tyCondFuncRepr (`Σ u x) vec eq | fst , snd | [ refl ] | no ¬p | no ¬p₁ | is
 tyCondFuncRepr (`Π u x) vec eq with piTyCondFuncPartialRepr u x (enum u) (λ v x₁ → enumUnique u v _≟U_) vec eq
 ... | sq repr with repr
 ... | elem₁ , prf = sq (elem₁ , (`ΠValRepr x vec prf))
+
+
+tyCondFunc≡1 : ∀ u val → tyCondFunc u val ≈ 1 → Squash (tyCondFunc u val ≡ 1)
+tyCondFunc≡1 u val eq with tyCondFuncIsBoolStrict u val
+tyCondFunc≡1 u val (sq x₁) | isZeroS x rewrite x = ⊥-elim′ (onef≠zerof (sym (trans (trans (sym ℕtoF-0≡0) x₁) ℕtoF-1≡1)))
+tyCondFunc≡1 u val eq | isOneS x = sq x
+
 indToIRSound : ∀ r u
   → (vec : Vec Var (tySize u))
   → (val : Vec ℕ (tySize u))
@@ -339,14 +346,20 @@ indToIRSound : ∀ r u
   let result = indToIR u vec ((r , prime) , init)
   in BuilderProdSol (writerOutput result) sol
   → Squash (∃ (λ elem → ValIsRepr u elem val))
-indToIRSound r `One .(v ∷ []) (n ∷ []) sol (BatchLookupCons v .n .[] .[] .sol x (BatchLookupNil .sol)) tri init isSol = {!!}
-indToIRSound r `Two vec val sol look tri init isSol = {!!}
-indToIRSound r `Base .(v ∷ []) (x ∷ []) sol (BatchLookupCons v .x .[] .[] .sol x₁ (BatchLookupNil .sol)) tri init isSol = sq ((ℕtoF x) , (`BaseValRepr (sq (ℕtoF∘fToℕ≡ (ℕtoF x)))))
-indToIRSound r (`Vec u zero) [] [] sol look tri init isSol = sq ([] , `VecValBaseRepr)
-indToIRSound r (`Vec u (suc x)) vec val sol look tri init isSol with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
-... | fst , snd | [ prf₁ ] with splitAt (tySize u) val | inspect (splitAt (tySize u)) val
-... | fstv , sndv | [ refl ] with indToIRSound r u fst fstv sol {!!} tri init {!!}
-... | sq (srep₁ , srep₁Prf)  with indToIRSound r (`Vec u x) snd sndv sol {!!} tri _ {!!}
-... | sq (srep₂ , srep₂Prf) = sq ((srep₁ ∷ srep₂) , (`VecValConsRepr srep₁Prf srep₂Prf (sym (splitAtCorrect (tySize u) val))))
-indToIRSound r (`Σ u x) vec val sol look tri init isSol = {!tyCondSound r (`Σ u x) vec val sol look tri init ?!}
-indToIRSound r (`Π u x) vec val sol look tri init isSol = {!!}
+indToIRSound r u vec val sol look tri init isSol 
+ with
+  let input = ((r , prime) , init)
+      p₁₁ = tyCond u vec
+      t = output (p₁₁ input)
+      p₂₂ = assertTrue t
+      p₃₃ = λ _ → return vec
+      p₂₃ = λ t → assertTrue t >>= λ _ → return vec
+      p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+      p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+      p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+      sound₁ = tyCondSound r u vec val sol look tri _ p₁₁IsSol
+      sound₂ = assertTrueSound r t sol _ p₂₂IsSol
+      tyCond≈1 = ListLookup-≈ sound₁ sound₂
+  in tyCondFunc≡1 u val tyCond≈1
+... | sq tyCond≡1 = tyCondFuncRepr u val tyCond≡1
+

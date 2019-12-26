@@ -380,7 +380,6 @@ varEqLitFuncIsBool (`Σ u x) vec (fstₗ , sndₗ) with splitAt (tySize u) vec
 varEqLitFuncIsBool (`Π u x) vec v = piVarEqLitFuncIsBool x (enum u) vec v
 
 
-
 varEqLitSound : ∀ (r : WriterMode)
   → ∀ u → (vec : Vec Var (tySize u))
   → (val : Vec Var (tySize u))
@@ -421,8 +420,9 @@ varEqLitSound r `Two vec val false sol look tri init isSol
     lem (x ∷ val) with ℕtoF x ≟F zerof
     lem (x ∷ []) | yes p = sq refl
     lem (x ∷ val) | no ¬p = sq refl
-varEqLitSound r `Two (x ∷ vec) (val ∷ []) true sol (BatchLookupCons .x .val .vec .[] .sol x₁ look) tri init isSol =   let sound₁ = varEqBaseLitSound r x val onef sol x₁ init isSol
-  in ListLookup-Respects-≈ _ _ _ _ lem sound₁
+varEqLitSound r `Two (x ∷ vec) (val ∷ []) true sol (BatchLookupCons .x .val .vec .[] .sol x₁ look) tri init isSol
+ =  let sound₁ = varEqBaseLitSound r x val onef sol x₁ init isSol
+    in ListLookup-Respects-≈ _ _ _ _ lem sound₁
   where
     lem : varEqBaseLitFunc val onef ≈ varEqLitFunc `Two (val ∷ []) true
     lem with ℕtoF val ≟F onef

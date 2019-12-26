@@ -2,6 +2,7 @@
 
 open import Agda.Builtin.Nat
 
+open import Data.Bool
 open import Data.Empty
 open import Data.Field
 open import Data.Finite
@@ -15,7 +16,8 @@ open import Data.Nat.Primality
 
 open import Data.Product hiding (map)
 open import Data.ProductPrime
-open import Data.Vec hiding (_>>=_; _++_; splitAt)
+open import Data.Vec hiding (_>>=_; splitAt) renaming (_++_ to _V++_)
+open import Data.Vec.AllProp
 open import Data.Vec.Split
 open import Data.Squash
 open import Data.String hiding (_≈_; _≟_; _++_)
@@ -29,6 +31,10 @@ open import Language.Common
 
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
+
+import Relation.Binary.HeterogeneousEquality
+module HE = Relation.Binary.HeterogeneousEquality
+open import Relation.Binary.HeterogeneousEquality.Core
 open import Relation.Nullary
 module Satisfiability.SourceIntermediate.Base (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
      (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
@@ -408,4 +414,35 @@ assertTrueSound r v sol' init isSol' | addSol (LinearCombValCons .((Field.- fiel
                         | +-invʳ (ℕtoF varVal) | +-identityˡ onef | +-identityʳ (ℕtoF varVal) = sym hyp
 
 
+
+
+data PiPartialRepr (u : U) (x : ⟦ u ⟧ → U) (f : (v : ⟦ u ⟧) → ⟦ x v ⟧) : (eu : List ⟦ u ⟧) → Vec ℕ (tySumOver eu x) → Set
+
+data ValIsRepr : ∀ u → ⟦ u ⟧ → Vec ℕ (tySize u) → Set where
+  `OneValRepr : ∀ n → n ≈ 0 → ValIsRepr `One tt (n ∷ [])
+  `TwoValFalseRepr : ∀ n → n ≈ 0 → ValIsRepr `Two false (n ∷ [])
+  `TwoValTrueRepr : ∀ n → n ≈ 1 → ValIsRepr `Two true (n ∷ [])
+  `BaseValRepr : ∀ {v : f} {v' : ℕ} → (fToℕ v) ≈ v' → ValIsRepr `Base v (v' ∷ [])
+  `VecValBaseRepr : ∀ {u} → ValIsRepr (`Vec u 0) [] []
+  `VecValConsRepr : ∀ {u} {n} {v₁} {vec₂} {val₁} {val₂} {val₃}
+      → ValIsRepr u v₁ val₁
+      → ValIsRepr (`Vec u n) vec₂ val₂
+      → val₁ V++ val₂ ≡ val₃
+      → ValIsRepr (`Vec u (suc n)) (v₁ ∷ vec₂) val₃
+  `ΣValRepr : ∀ {u} {vu} (x : ⟦ u ⟧ → U) {vxu} {valu} {valxu} valxu+z {valu+valxu+z} {allZ}
+      → ValIsRepr u vu valu
+      → ValIsRepr (x vu) vxu valxu
+      → All (_≈_ 0) (ann (Vec ℕ (maxTySizeOver (enum u) x - tySize (x vu))) allZ)
+      → valxu+z ≅ valxu V++ allZ
+      → valu V++ valxu+z ≡ valu+valxu+z
+      → ValIsRepr (`Σ u x) (vu , vxu) valu+valxu+z
+  `ΠValRepr : ∀ {u} (x : ⟦ u ⟧ → U) {f : (v : ⟦ u ⟧) → ⟦ x v ⟧ } val → PiPartialRepr u x f (enum u) val → ValIsRepr (`Π u x) f val
+
+data PiPartialRepr u x f where
+  PiRepNil : PiPartialRepr u x f [] []
+  PiRepCons : ∀ {el} {vu} {valxu} {valel} {valxu+valel}
+      → ValIsRepr (x vu) (f vu) valxu
+      → PiPartialRepr u x f el valel
+      → valxu+valel ≡ valxu V++ valel
+      → PiPartialRepr u x f (vu ∷ el) valxu+valel
 

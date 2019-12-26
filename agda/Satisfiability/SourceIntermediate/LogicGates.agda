@@ -81,7 +81,14 @@ neqzSoundLem₂ : ∀ r v init →
 neqzSoundLem₂ NormalMode v init x (here px) = there (there (here px))
 neqzSoundLem₂ PostponedMode v init x (here px) = there (there (here px))
 
-
+{-
+neqzOutputLook : ∀ (r : WriterMode)
+  → ∀ (v : Var) → (sol : List (Var × ℕ))
+  → ∀ init →
+  let result = neqz v ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → Σ′ ℕ (λ val → ListLookup (output result) solution
+-}
 neqzSound : ∀ (r : WriterMode)
   → ∀ (v : Var) → (val : ℕ) → (solution' : List (Var × ℕ))
   → ListLookup v solution' val

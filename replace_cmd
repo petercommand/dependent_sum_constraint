@@ -3,4 +3,4 @@
          (goto-line 1)
          (replace-string "Satisfiability.SourceIntermediate.Base.IntermediateSolution." "")
          (replace-string "Satisfiability.SourceIntermediate.Base.LinearCombVal." "")))
-(advice-add 'agda2-load :after 'trunc)
+(advice-add 'agda2-load :before 'trunc)

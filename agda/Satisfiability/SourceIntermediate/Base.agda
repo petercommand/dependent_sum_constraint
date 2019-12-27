@@ -9,7 +9,7 @@ open import Data.Finite
 open import Data.List hiding (lookup; head; splitAt)
 open import Data.List.Membership.Propositional
 open import Data.List.Membership.Propositional.Properties
-open import Data.List.Relation.Unary.Any
+open import Data.List.Relation.Unary.Any hiding (head)
 open import Data.Nat
 open import Data.Nat.Primality
 
@@ -93,6 +93,13 @@ data BatchListLookup : {n : ℕ} → Vec Var n → List (Var × ℕ) → Vec ℕ
         → ListLookup v l n
         → BatchListLookup vec₁ l vec₂
         → BatchListLookup (v ∷ vec₁) l (n ∷ vec₂)
+
+BatchListLookup-Head : ∀ {n} {vec : Vec Var (suc n)}
+  → {l : List (Var × ℕ)}
+  → {val : Vec ℕ (suc n)}
+  → BatchListLookup vec l val
+  → ListLookup (head vec) l (head val)
+BatchListLookup-Head (BatchLookupCons v n vec₁ vec₂ l x look) = x
 
 BatchListLookup-Split₁ :
   ∀ a b → (vec : Vec Var (a + b))

@@ -170,6 +170,13 @@ anyNeqzFuncIsBool (x ∷ vec) with ℕtoF x ≟F zerof
 anyNeqzFuncIsBool (x ∷ vec) | yes p = anyNeqzFuncIsBool vec
 anyNeqzFuncIsBool (x ∷ vec) | no ¬p = isOne 1 ℕtoF-1≡1
 
+anyNeqzFuncIsBoolStrict : ∀ {n} (vec : Vec ℕ n) → isBoolStrict (anyNeqzFunc vec)
+anyNeqzFuncIsBoolStrict [] = isZeroS refl
+anyNeqzFuncIsBoolStrict (x ∷ vec) with ℕtoF x ≟F zerof
+anyNeqzFuncIsBoolStrict (x ∷ vec) | yes p = anyNeqzFuncIsBoolStrict vec
+anyNeqzFuncIsBoolStrict (x ∷ vec) | no ¬p = isOneS refl
+
+
 anyNeqzSound : ∀ (r : WriterMode)
   → ∀ {n}
   → (vec : Vec Var n) → (valVec : Vec ℕ n)

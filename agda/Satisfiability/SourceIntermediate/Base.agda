@@ -70,8 +70,18 @@ varOut ((s , _ , _) , _) = s
 
 writerInv : ∀ {a} {b} {c} {d} {S : Set a} {W : Set b} {A : Set c} {P : W → Prop d} → (p : Σ′ (S × W × A) (λ prod → P (proj₁ (proj₂ prod)))) → P (proj₁ (proj₂ (fst p)))
 writerInv ((s , w , a) , inv) = inv
+
 _≈_ : ℕ → ℕ → Prop
 x ≈ y = Squash (ℕtoF x ≡ ℕtoF y)
+
+≈-refl : ∀ {n} → n ≈ n
+≈-refl = sq refl
+
+≈-sym : ∀ {m n} → m ≈ n → n ≈ m
+≈-sym (sq eq) = sq (sym eq)
+
+≈-trans : ∀ {m n o} → m ≈ n → n ≈ o → m ≈ o
+≈-trans (sq eq₁) (sq eq₂) = sq (trans eq₁ eq₂)
 
 data ListLookup : Var → List (Var × ℕ) → ℕ → Prop where
   LookupHere : ∀ v l n n' → n ≈ n' → ListLookup v ((v , n) ∷ l) n'

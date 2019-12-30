@@ -1828,4 +1828,3 @@ sourceToIntermediateSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ 
     semEq : (sourceSem `Base s₁ sol eq₁ *F sourceSem `Base s₂ sol eq₂) ≡
       (⟦s₁⟧ *F ⟦s₂⟧)
     semEq rewrite sem₁ | sem₂ = refl
-

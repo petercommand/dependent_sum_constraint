@@ -93,20 +93,24 @@ sourceToIntermediate `Base (Mul source source₁) = do
 module Comp where
   open import Language.Source.Utils f finite showf using (S-Monad)
 
-  compAssert : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
-  compAssert [] = return tt
-  compAssert ((u' , s₁ , s₂) ∷ l) = do
-    r₁ ← sourceToIntermediate u' s₁
-    r₂ ← sourceToIntermediate u' s₂
+  compAssert : (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
+  compAssert (u , s₁ , s₂) = do
+    r₁ ← sourceToIntermediate u s₁
+    r₂ ← sourceToIntermediate u s₂
     assertVarEqVar _ r₁ r₂
+
+  compAsserts : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
+  compAsserts [] = return tt
+  compAsserts (l ∷ ls) = do
     compAssert l
+    compAsserts ls
 
 
   compileSource : ∀ (n : ℕ) u → (S-Monad (Source u)) → Var × Builder × (Vec Var (tySize u) × List ℕ)
   compileSource n u source = 
     let v , (asserts , input) , output = source (tt , 1)
         ((v' , (bld₁ , bld₂) , outputVars) , inv) = (do
-           compAssert (asserts [])
+           compAsserts (asserts [])
            sourceToIntermediate _ output) ((NormalMode , n) , v)
     in v' , bld₁ ∘′ bld₂ , outputVars , input []
   open import Data.Nat.Show

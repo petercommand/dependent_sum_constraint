@@ -101,6 +101,15 @@ BatchListLookup-Head : ∀ {n} {vec : Vec Var (suc n)}
   → ListLookup (head vec) l (head val)
 BatchListLookup-Head (BatchLookupCons v n vec₁ vec₂ l x look) = x
 
+BatchListLookup-++ : ∀ {m n} (vec : Vec Var m) (val : Vec Var m) {vec' : Vec Var n} {val' : Vec ℕ n}
+  → {l : List (Var × ℕ)}
+  → BatchListLookup vec l val
+  → BatchListLookup vec' l val'
+  → BatchListLookup (vec V++ vec') l (val V++ val')
+BatchListLookup-++ .[] .[] (BatchLookupNil l) look₂ = look₂
+BatchListLookup-++ .(v ∷ vec₁) .(n ∷ vec₂) (BatchLookupCons v n vec₁ vec₂ l x look₁) look₂ = BatchLookupCons v n _ _ l x (BatchListLookup-++ vec₁ vec₂ look₁ look₂)
+
+
 BatchListLookup-Split₁ :
   ∀ a b → (vec : Vec Var (a + b))
      → (l : List (Var × ℕ))
@@ -176,6 +185,17 @@ BatchListLookup-MaxTySplit₂ u uval x l vec vec₁ val val₁ eq₁ eq₂ look 
     hyp₂ = subst′ (λ t → BatchListLookup vec₁ l t) eq₂ hyp₁
   in hyp₂
 
+BatchListLookupLenSubst' : ∀ n {m} {o} → (p : n + m ≡ o) → ∀ sol
+   → (vec : Vec ℕ o)
+   → (vec' : Vec ℕ n)
+   → (vec'' : Vec ℕ m)
+   → (val' : Vec ℕ n)
+   → (val'' : Vec ℕ m)
+   → vec ≅ vec' V++ vec''
+   → BatchListLookup vec' sol val'
+   → BatchListLookup vec'' sol val''
+   → BatchListLookup vec sol (subst (Vec ℕ) p (val' V++ val''))
+BatchListLookupLenSubst' n refl sol .(vec' V++ vec'') vec' vec'' val' val'' refl look₁ look₂ = BatchListLookup-++ vec' val' look₁ look₂
 data ⊥′ : Prop where
 
 

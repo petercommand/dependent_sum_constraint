@@ -156,6 +156,7 @@ printVar : Term → TC ⊤
 printVar (var x args) = print (strErr (Data.Nat.Show.show x) ∷ [] )
 printVar t = typeError (strErr "printVar" ∷ termErr t ∷ [])
 
+
 macro
   findSol : Term → Term → Term → TC ⊤
   findSol fdef@(def qualedFunName args) isSol goal = do
@@ -176,6 +177,7 @@ macro
     writerModeArgs ← getDefArgs (getArg writerMode)
     r ← writerModeArgs !! 4
     m ← args !! 16
+    m' ← getDefName (getArg m)
     f ← args !! 17
 --    normalise (getArg m)
 --    printDef fstTerm
@@ -183,11 +185,13 @@ macro
 --    (m , f) ← get>>=Args fstTerm
 --    print (termErr m ∷ termErr f ∷ [])
     printDef (getArg m)
-    print (termErr (getArg m) ∷ [])
+--    print (termErr (getArg f) ∷ [])
 --    inferType (getArg m)
 --    testTy ← inferType (getArg test)
 --    print (termErr testTy ∷ [])
---    unify goal (def (quote BuilderProdSol->>=⁻₁) (hArg unknown ∷ hArg unknown ∷ hArg unknown ∷ hArg unknown ∷ m ∷ f ∷ vArg unknown ∷ vArg unknown ∷ vArg unknown ∷ vArg isSol ∷ []))
+    let BaseModArgs = quoteTerm f ∷ quoteTerm field' ∷ quoteTerm finite ∷ quoteTerm showf ∷ quoteTerm fToℕ ∷ quoteTerm ℕtoF ∷ []
+    unify goal (def (quote BuilderProdSol->>=⁻₁) (hArg unknown ∷ hArg unknown ∷ hArg unknown ∷ hArg unknown
+        ∷ vArg (def m' (map vArg BaseModArgs)) ∷ vArg unknown ∷ vArg unknown ∷ vArg unknown ∷ vArg unknown ∷ vArg isSol ∷ []))
     return tt
     
   findSol _ _ _ = typeError (strErr "Invalid application of findSol" ∷ [])

@@ -36,6 +36,7 @@ open import Level renaming (zero to lzero; suc to lsuc)
 
 open import Math.Arithmoi
 
+open import Reflection hiding (_>>_; return; _>>=_; lit)
 open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
 open import TypeClass.Ord

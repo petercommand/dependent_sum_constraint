@@ -90,6 +90,8 @@ neqzOutputLook : ∀ (r : WriterMode)
   in BuilderProdSol (writerOutput result) sol
   → Σ′ ℕ (λ val → ListLookup (output result) solution
 -}
+
+
 neqzSound : ∀ (r : WriterMode)
   → ∀ (v : Var) → (val : ℕ) → (solution' : List (Var × ℕ))
   → ListLookup v solution' val
@@ -700,3 +702,5 @@ lnotSound₁ r v val sol init look isBool isSol look₁ | addSol (LinearCombValC
                           | +-identityʳ (-F (ℕtoF 1))
                           | +-assoc (-F (ℕtoF val)) (-F (ℕtoF 1)) onef
                           = ListLookup-Respects-≈  _ _ _ _ (sq (trans (-≡zero→≡zero (subst (λ t → t ≡ zerof) (+-identityʳ (-F ℕtoF val)) (subst (λ t → ((-F ℕtoF val) +F t) ≡ zerof) (+-invˡ (ℕtoF 1)) (subst (λ t → ((-F (ℕtoF val)) +F ((-F (ℕtoF 1)) +F t)) ≡ zerof) (sym ℕtoF-1≡1) x₁)))) (sym ℕtoF-0≡0))) look
+
+

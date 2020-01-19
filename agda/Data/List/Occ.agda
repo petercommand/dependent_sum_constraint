@@ -33,11 +33,11 @@ occPrfIrr dec dec' v (x ∷ l) | yes p | no ¬p = ⊥-elim (¬p p)
 occPrfIrr dec dec' v (x ∷ l) | no ¬p | yes p = ⊥-elim (¬p p)
 occPrfIrr dec dec' v (x ∷ l) | no ¬p | no ¬p₁ = occPrfIrr dec dec' v l
 
-occLem : ∀ {ℓ} {A : Set ℓ} → (dec : Decidable {A = A} _≡_) → (x : A) (l l' : List A) → occ dec x (l ++ l') ≡ occ dec x l + occ dec x l'
-occLem dec x [] l' = refl
-occLem dec x (x₁ ∷ l) l' with dec x x₁
-occLem dec x (x₁ ∷ l) l' | yes p = cong suc (occLem dec x l l')
-occLem dec x (x₁ ∷ l) l' | no ¬p = occLem dec x l l'
+occ++ : ∀ {ℓ} {A : Set ℓ} → (dec : Decidable {A = A} _≡_) → (x : A) (l l' : List A) → occ dec x (l ++ l') ≡ occ dec x l + occ dec x l'
+occ++ dec x [] l' = refl
+occ++ dec x (x₁ ∷ l) l' with dec x x₁
+occ++ dec x (x₁ ∷ l) l' | yes p = cong suc (occ++ dec x l l')
+occ++ dec x (x₁ ∷ l) l' | no ¬p = occ++ dec x l l'
 
 mem-occ : ∀ {ℓ} {A : Set ℓ} dec x (l : List A) → x ∈ l → occ dec x l ≥ 1
 mem-occ dec x .(x ∷ _) (here refl) with dec x x

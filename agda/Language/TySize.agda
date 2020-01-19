@@ -62,8 +62,8 @@ occ->>= : ∀ {a} {A : Set a} {b} {B : Set b} (decA : Decidable {A = A} _≡_) (
    occ decB y (l >>= f) ≡ (occ decA x l * occ decB y (f x))
 occ->>= decA decB [] f x y prf = refl
 occ->>= decA decB (x₁ ∷ l) f x y prf with decA x x₁
-occ->>= decA decB (x₁ ∷ l) f x y prf | yes refl rewrite occLem decB y (f x₁) (l >>= f) = cong (_+_ (occ decB y (f x₁))) (occ->>= decA decB l f x y prf)
-occ->>= decA decB (x₁ ∷ l) f x y prf | no ¬p rewrite occLem decB y (f x₁) (l >>= f) | ¬∈→occ≡0 decB y _ (prf x₁ ¬p) = occ->>= decA decB l f x y prf
+occ->>= decA decB (x₁ ∷ l) f x y prf | yes refl rewrite occ++ decB y (f x₁) (l >>= f) = cong (_+_ (occ decB y (f x₁))) (occ->>= decA decB l f x y prf)
+occ->>= decA decB (x₁ ∷ l) f x y prf | no ¬p rewrite occ++ decB y (f x₁) (l >>= f) | ¬∈→occ≡0 decB y _ (prf x₁ ¬p) = occ->>= decA decB l f x y prf
 
 
 ∈->>=⁻ : ∀ {a} {A : Set a} {b} {B : Set b} (l : List A) (f : A → List B) → ∀ y → y ∈ l >>= f → ∃ (λ x → x ∈ l × y ∈ f x)

@@ -88,31 +88,12 @@ All≈0→allEqz .(x ∷ _) (_∷_ {x = x} (sq px) all₁) | no ¬p = ⊥-elim�
 
 
 maxTySplitCorrect : ∀ u val x vec → vec HE.≅ proj₁ (maxTySplit u val x vec) V++ proj₂ (maxTySplit u val x vec)
-maxTySplitCorrect u val x vec with splitAtCorrect (tySize (x val)) (subst (Vec ℕ)
-        (sym
-         (trans
-          (ℕP.+-comm (tySize (x val))
-           (maxTySizeOver (enum u) x ∸ tySize (x val)))
-          (a-b+b≡a (maxTySizeOver (enum u) x)
-           (tySize (x val)) (∈→≥ (enum u) x val (enumComplete u val)))))
-        vec)
-... | eq with splitAt (tySize (x val)) (subst (Vec ℕ)
-        (sym
-         (trans
-          (ℕP.+-comm (tySize (x val))
-           (maxTySizeOver (enum u) x ∸ tySize (x val)))
-          (a-b+b≡a (maxTySizeOver (enum u) x)
-           (tySize (x val)) (∈→≥ (enum u) x val (enumComplete u val)))))
-        vec)
+maxTySplitCorrect u val x vec with splitAtCorrect (tySize (x val)) (subst (Vec ℕ) (maxTyVecSizeEq u val x) vec)
+... | eq with splitAt (tySize (x val)) (subst (Vec ℕ) (maxTyVecSizeEq u val x) vec)
 ... | fst , snd = HE.trans
                     (HE.sym
                      (HE.≡-subst-removable (Vec ℕ)
-                      (sym
-                       (trans
-                        (ℕP.+-comm (tySize (x val))
-                         (maxTySizeOver (enum u) x ∸ tySize (x val)))
-                        (a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x val))
-                         (∈→≥ (enum u) x val (enumComplete u val)))))
+                      (maxTyVecSizeEq u val x)
                       vec))
                     (HE.trans (≡-to-≅ eq) HE.refl)
 

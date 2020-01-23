@@ -30,7 +30,6 @@ record IsField {a} (f : Set a) (field' : Field f) : Set a where
       *-invʳ : ∀ x → ¬ x ≡ zero → x * (1/ x) ≡ one
       *-distr-+ˡ : _*_ DistributesOverˡ _+_
       *-distr-+ʳ : _*_ DistributesOverʳ _+_
---      -≡zero→≡zero : ∀ {f} → - f ≡ zero → f ≡ zero
     *-zeroˡ : LeftZero zero _*_
     *-zeroˡ f = lem'''
       where

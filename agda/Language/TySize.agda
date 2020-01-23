@@ -332,9 +332,6 @@ module Enum where
                                                                          (map-proj₁->>= (enum u) (λ x₂ → enum (x₁ x₂)))) x)
 
   
-
-
-
   genFuncUniqueLem : ∀ u (x : ⟦ u ⟧ → U) (eu : List ⟦ u ⟧) (x₂ : ⟦ u ⟧) (ls : List ⟦ x x₂ ⟧) (x₃ : List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))) (f : ⟦ `Π u x ⟧) → ¬ piToList u x eu f ≡ x₃
       → ¬ ((x₂ , f x₂) ∷ (piToList u x eu f)) ∈ ann (List (List ⟦ `Σ u x ⟧)) (ls >>= (λ choice → ((x₂ , choice) ∷ x₃) ∷ []))
   genFuncUniqueLem u x eu x₂ ls x₃ f x₄ x₅ with ∈->>=⁻ ls (λ choice → ((x₂ , choice) ∷ x₃) ∷ []) ((x₂ , f x₂) ∷ piToList u x eu f) x₅
@@ -372,33 +369,33 @@ module Enum where
   enumUniqueLem₃ u x x₁ .x₁ .x' neq mem | x' , p₁ , here refl = neq refl
 
   enumUnique : ∀ u → (val : ⟦ u ⟧) → (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) → occ dec val (enum u) ≡ 1
-  enumUnique Language.Universe.`One tt dec with dec tt tt
-  enumUnique Language.Universe.`One tt dec | yes p = refl
-  enumUnique Language.Universe.`One tt dec | no ¬p = ⊥-elim (¬p refl)
-  enumUnique Language.Universe.`Two val dec with dec val false
-  enumUnique Language.Universe.`Two .false dec | yes refl with dec false true
-  enumUnique Language.Universe.`Two .false dec | yes refl | no ¬p = refl
-  enumUnique Language.Universe.`Two val dec | no ¬p with dec val true
-  enumUnique Language.Universe.`Two val dec | no ¬p | yes p = refl
-  enumUnique Language.Universe.`Two false dec | no ¬p | no ¬p₁ = ⊥-elim (¬p refl)
-  enumUnique Language.Universe.`Two true dec | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ refl)
-  enumUnique Language.Universe.`Base val dec = Finite.occ-1 finite val dec
-  enumUnique (Language.Universe.`Vec u zero) [] dec with dec {`Vec u zero} [] []
-  enumUnique (Language.Universe.`Vec u zero) [] dec | yes p = refl
-  enumUnique (Language.Universe.`Vec u zero) [] dec | no ¬p = ⊥-elim (¬p refl)
-  enumUnique (Language.Universe.`Vec u (suc x)) (x₁ ∷ val) dec rewrite occ->>= dec dec (enum u) (λ r → enum (`Vec u x) >>= (λ rs → ann ⟦ `Vec u (suc x) ⟧ (r ∷ rs) ∷ [])) x₁ (x₁ ∷ val) (λ x₂ x₃ x₄ → enumUniqueLem u x x₁ x₂ val x₃ x₄)
+  enumUnique `One tt dec with dec tt tt
+  enumUnique `One tt dec | yes p = refl
+  enumUnique `One tt dec | no ¬p = ⊥-elim (¬p refl)
+  enumUnique `Two val dec with dec val false
+  enumUnique `Two .false dec | yes refl with dec false true
+  enumUnique `Two .false dec | yes refl | no ¬p = refl
+  enumUnique `Two val dec | no ¬p with dec val true
+  enumUnique `Two val dec | no ¬p | yes p = refl
+  enumUnique `Two false dec | no ¬p | no ¬p₁ = ⊥-elim (¬p refl)
+  enumUnique `Two true dec | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ refl)
+  enumUnique `Base val dec = Finite.occ-1 finite val dec
+  enumUnique (`Vec u zero) [] dec with dec {`Vec u zero} [] []
+  enumUnique (`Vec u zero) [] dec | yes p = refl
+  enumUnique (`Vec u zero) [] dec | no ¬p = ⊥-elim (¬p refl)
+  enumUnique (`Vec u (suc x)) (x₁ ∷ val) dec rewrite occ->>= dec dec (enum u) (λ r → enum (`Vec u x) >>= (λ rs → ann ⟦ `Vec u (suc x) ⟧ (r ∷ rs) ∷ [])) x₁ (x₁ ∷ val) (λ x₂ x₃ x₄ → enumUniqueLem u x x₁ x₂ val x₃ x₄)
                                                                      | enumUnique u x₁ dec
                                                                      | occ->>= dec dec (enum (`Vec u x)) (λ rs → ann ⟦ `Vec u (suc x) ⟧ (x₁ ∷ rs) ∷ []) val (x₁ ∷ val) λ x₂ x₃ x₄ → enumUniqueLem₂ u x x₁ x₂ val x₃ x₄
       with dec {`Vec u (suc x)} (x₁ ∷ val) (x₁ ∷ val)
   ... | yes p rewrite enumUnique (`Vec u x) val dec = refl
   ... | no ¬p = ⊥-elim (¬p refl)
-  enumUnique (Language.Universe.`Σ u x) (fst , snd) dec rewrite occ->>= dec dec (enum u) (λ r → enum (x r) >>= (λ rs → (r , rs) ∷ [])) fst (fst , snd) (λ x₁ x₂ x₃ → enumUniqueLem₃ u x x₁ fst snd x₂ x₃)
+  enumUnique (`Σ u x) (fst , snd) dec rewrite occ->>= dec dec (enum u) (λ r → enum (x r) >>= (λ rs → (r , rs) ∷ [])) fst (fst , snd) (λ x₁ x₂ x₃ → enumUniqueLem₃ u x x₁ fst snd x₂ x₃)
                                                               | enumUnique u fst dec
                                                               | occ->>= dec dec (enum (x fst))  (λ rs → ann ⟦ `Σ u x ⟧ (fst , rs) ∷ []) snd (fst , snd) (λ { x₁ x₂ (here refl) → x₂ refl})
       with dec {`Σ u x} (fst , snd) (fst , snd)
   ... | yes p rewrite enumUnique (x fst) snd dec = refl
   ... | no ¬p = ⊥-elim (¬p refl)
-  enumUnique (Language.Universe.`Π u x) val dec = 
+  enumUnique (`Π u x) val dec = 
      trans (
        occ-listFuncToPi u x (enum u) (enumComplete u) (genFunc u x (enum u >>= (λ r → (r , enum (x r)) ∷ []))) (λ x₁ x₁∈genFunc →
           trans

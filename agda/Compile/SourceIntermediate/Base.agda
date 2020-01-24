@@ -40,17 +40,17 @@ open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
 open import TypeClass.Ord
 
-module Compile.SourceIntermediate.Base (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
+module Compile.SourceR1CS.Base (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
 
-open import Language.Intermediate f
-open import Language.Intermediate.Show f showf
+open import Language.R1CS f
+open import Language.R1CS.Show f showf
 open import Language.Source f finite showf
 open import Language.TySize f finite
 open import Language.Universe f
 
 module SI-Monad where
   
-  open Function.Endomorphism.Propositional (List Intermediate) renaming (Endo to Builder) public
+  open Function.Endomorphism.Propositional (List R1CS) renaming (Endo to Builder) public
 
   import Control.RWS-Invariant
 
@@ -94,7 +94,7 @@ f1 (s1 x)
   open Control.RWS-Invariant (WriterMode × ℕ) (Builder × Builder) Var SquashedWriterInvariant (id , id) mempty-WriterInvariant (λ { (f₁ , f₂) (s₁ , s₂) → (f₁ ∘′ s₁ , f₂ ∘′ s₂) }) mappend-WriterInvariant hiding (_>>=_; _>>_; return; RWSInvMonad; ask; asks)
   open Control.RWS-Invariant (WriterMode × ℕ) (Builder × Builder) Var SquashedWriterInvariant (id , id) mempty-WriterInvariant (λ { (f₁ , f₂) (s₁ , s₂) → (f₁ ∘′ s₁ , f₂ ∘′ s₂) }) mappend-WriterInvariant using (_>>=_; _>>_; return; ask; asks) renaming (RWSInvMonad to SI-Monad) public
 
-  addWithMode : Intermediate → WriterMode → SI-Monad ⊤
+  addWithMode : R1CS → WriterMode → SI-Monad ⊤
   addWithMode w NormalMode = tell ((λ x → [ w ] ++ x) , id) (sq (λ x → refl , refl))
   addWithMode w PostponedMode = tell (id , λ x → [ w ] ++ x) (sq (λ x → refl , refl))
 
@@ -105,7 +105,7 @@ f1 (s1 x)
     local (m , prime) act
     
 
-  add : Intermediate → SI-Monad ⊤
+  add : R1CS → SI-Monad ⊤
   add w' = do
     m ← asks proj₁
     addWithMode w' m

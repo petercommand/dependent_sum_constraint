@@ -28,7 +28,7 @@ open import Language.Common
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
-module Satisfiability.SourceIntermediate.SimpleComp (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
+module Satisfiability.SourceR1CS.SimpleComp (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
      (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
         (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field')
         (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field')
@@ -39,7 +39,7 @@ module Satisfiability.SourceIntermediate.SimpleComp (f : Set) (_≟F_ : Decidabl
 open import Language.Source f finite showf
 open import Language.TySize f finite
 open import Language.Universe f
-open import Language.Intermediate f
+open import Language.R1CS f
 
 
 open Field field' renaming ( _+_ to _+F_
@@ -49,13 +49,13 @@ open Field field' renaming ( _+_ to _+F_
                            ; zero to zerof
                            ; one to onef)
 open IsField isField
-open import Compile.SourceIntermediate f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
-import Compile.SourceIntermediate
-open Compile.SourceIntermediate.SI-Monad f field' finite showf fToℕ ℕtoF
+open import Compile.SourceR1CS f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
+import Compile.SourceR1CS
+open Compile.SourceR1CS.SI-Monad f field' finite showf fToℕ ℕtoF
 
 
-open import Satisfiability.SourceIntermediate.Base f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime
-open import Satisfiability.SourceIntermediate.LogicGates f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 ℕtoF∘fToℕ≡ prime isPrime onef≠zerof
+open import Satisfiability.SourceR1CS.Base f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime
+open import Satisfiability.SourceR1CS.LogicGates f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 ℕtoF∘fToℕ≡ prime isPrime onef≠zerof
 
 varEqBaseLitFunc : ℕ → f → ℕ
 varEqBaseLitFunc v l with ℕtoF v ≟F l

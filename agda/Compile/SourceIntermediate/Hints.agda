@@ -40,20 +40,20 @@ open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
 open import TypeClass.Ord
 
-module Compile.SourceIntermediate.Hints (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
+module Compile.SourceR1CS.Hints (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
 
-open import Language.Intermediate f
-open import Language.Intermediate.Show f showf
+open import Language.R1CS f
+open import Language.R1CS.Show f showf
 open import Language.Source f finite showf
 open import Language.TySize f finite
 open import Language.Universe f
 
 open Field field' hiding (_+_)
 
-import Compile.SourceIntermediate.Base
-open import Compile.SourceIntermediate.Base f field' finite showf fToℕ ℕtoF 
+import Compile.SourceR1CS.Base
+open import Compile.SourceR1CS.Base f field' finite showf fToℕ ℕtoF 
 
-open import Compile.SourceIntermediate.LogicGates f field' finite showf fToℕ ℕtoF
+open import Compile.SourceR1CS.LogicGates f field' finite showf fToℕ ℕtoF
 
 
 allZHint : ∀ {n} → Vec Var n → M.Map Var ℕ → M.Map Var ℕ

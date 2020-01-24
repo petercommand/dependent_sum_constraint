@@ -40,23 +40,23 @@ open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
 open import TypeClass.Ord
 
-module Compile.SourceIntermediate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
+module Compile.SourceR1CS (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
 
-open import Language.Intermediate f
-open import Language.Intermediate.Show f showf
+open import Language.R1CS f
+open import Language.R1CS.Show f showf
 open import Language.Source f finite showf
 open import Language.TySize f finite
 open import Language.Universe f
 
 open Field field' hiding (_+_)
 
-import Compile.SourceIntermediate.Base
-open Compile.SourceIntermediate.Base f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
-open Compile.SourceIntermediate.Base f field' finite showf fToℕ ℕtoF using (SI-Monad) public
+import Compile.SourceR1CS.Base
+open Compile.SourceR1CS.Base f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
+open Compile.SourceR1CS.Base f field' finite showf fToℕ ℕtoF using (SI-Monad) public
 
-open import Compile.SourceIntermediate.LogicGates f field' finite showf fToℕ ℕtoF public
-open import Compile.SourceIntermediate.SimpleComp f field' finite showf fToℕ ℕtoF public
-open import Compile.SourceIntermediate.Hints  f field' finite showf fToℕ ℕtoF public
+open import Compile.SourceR1CS.LogicGates f field' finite showf fToℕ ℕtoF public
+open import Compile.SourceR1CS.SimpleComp f field' finite showf fToℕ ℕtoF public
+open import Compile.SourceR1CS.Hints  f field' finite showf fToℕ ℕtoF public
 
 
 
@@ -75,18 +75,18 @@ assertVarEqVar .(suc _) (x ∷ v₁) (x₁ ∷ v₂) = do
   add (IAdd zero ((one , x) ∷ (- one , x₁) ∷ []))
   assertVarEqVar _ v₁ v₂
 
-sourceToIntermediate : ∀ u → Source u → SI-Monad (Vec Var (tySize u))
-sourceToIntermediate u (Ind refl x) = withMode PostponedMode (indToIR u x)
-sourceToIntermediate u (Lit x) = litToInd u x
-sourceToIntermediate `Base (Add source source₁) = do
-  r₁ ← sourceToIntermediate `Base source
-  r₂ ← sourceToIntermediate `Base source₁
+sourceToR1CS : ∀ u → Source u → SI-Monad (Vec Var (tySize u))
+sourceToR1CS u (Ind refl x) = withMode PostponedMode (indToIR u x)
+sourceToR1CS u (Lit x) = litToInd u x
+sourceToR1CS `Base (Add source source₁) = do
+  r₁ ← sourceToR1CS `Base source
+  r₂ ← sourceToR1CS `Base source₁
   v ← new
   add (IAdd zero ((one , head r₁) ∷ (one , head r₂) ∷ (- one , v) ∷ []))
   return (v ∷ [])
-sourceToIntermediate `Base (Mul source source₁) = do
-  r₁ ← sourceToIntermediate `Base source
-  r₂ ← sourceToIntermediate `Base source₁
+sourceToR1CS `Base (Mul source source₁) = do
+  r₁ ← sourceToR1CS `Base source
+  r₂ ← sourceToR1CS `Base source₁
   v ← new
   add (IMul one (head r₁) (head r₂) one v)
   return (v ∷ [])
@@ -95,8 +95,8 @@ module Comp where
 
   compAssert : (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
   compAssert (u , s₁ , s₂) = do
-    r₁ ← sourceToIntermediate u s₁
-    r₂ ← sourceToIntermediate u s₂
+    r₁ ← sourceToR1CS u s₁
+    r₂ ← sourceToR1CS u s₂
     assertVarEqVar _ r₁ r₂
 
   compAsserts : List (∃ (λ u → Source u × Source u)) → SI-Monad ⊤
@@ -111,7 +111,7 @@ module Comp where
     let v , (asserts , input) , output = source (tt , 1)
         ((v' , (bld₁ , bld₂) , outputVars) , inv) = (do
            compAsserts (asserts [])
-           sourceToIntermediate _ output) ((NormalMode , n) , v)
+           sourceToR1CS _ output) ((NormalMode , n) , v)
     in v' , bld₁ ∘′ bld₂ , outputVars , input []
   open import Data.Nat.Show
 

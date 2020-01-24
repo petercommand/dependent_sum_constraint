@@ -36,8 +36,8 @@ module Compile.Solve (f : Set) (field' : Field f) (finite : Finite f) (showf : f
 
 open Field field'
 
-open import Language.Intermediate f
-open import Language.Intermediate.Show f showf
+open import Language.R1CS f
+open import Language.R1CS.Show f showf
 open import Language.Source f finite showf
 open import Language.TySize f finite
 open import Language.Universe f
@@ -51,13 +51,13 @@ numUnknownsList map set (x ∷ l) n | false | nothing = numUnknownsList map (S.i
 numUnknownsList map set (x ∷ l) n | false | just x₁ = numUnknownsList map set l n
 numUnknownsList map set (x ∷ l) n | true = numUnknownsList map set l n
 
-numUnknownsAux : M.Map Var ℕ → S.Sets Var → Intermediate → ℕ
+numUnknownsAux : M.Map Var ℕ → S.Sets Var → R1CS → ℕ
 numUnknownsAux m vars (IAdd x x₁) = numUnknownsList m vars (map proj₂ x₁) 0
 numUnknownsAux m vars (IMul a b c d e) = numUnknownsList m vars (b ∷ c ∷ e ∷ []) 0
 numUnknownsAux m vars (Hint x) = 0
 numUnknownsAux m vars (Log x) = 0
 
-numUnknowns : M.Map Var ℕ → Intermediate → ℕ
+numUnknowns : M.Map Var ℕ → R1CS → ℕ
 numUnknowns map ir = numUnknownsAux map S.empty ir
 
 Error = String
@@ -78,7 +78,7 @@ evalVarsKnown map (x ∷ l) with M.lookup natOrd x map
 evalVarsKnown map (x ∷ l) | nothing = zerof -- shouldn't happen
 evalVarsKnown map (x ∷ l) | just x₁ = (ℕtoF x₁) * evalVarsKnown map l
 
-solveNoUnknown : M.Map Var ℕ → Intermediate → Bool
+solveNoUnknown : M.Map Var ℕ → R1CS → Bool
 solveNoUnknown map (IAdd x x₁) with fToℕ ((evalLinCombKnown map x₁) +f x) ≟ℕ 0
 solveNoUnknown map (IAdd x x₁) | yes p = true
 solveNoUnknown map (IAdd x x₁) | no ¬p = false
@@ -101,28 +101,28 @@ collectCoeff m ((coeff , v) ∷ l) const | const' , coeffMap | just x = fToℕ (
 
 
 
-directSolveAux : M.Map Var ℕ → List Intermediate → (Error × M.Map Var ℕ) ⊎ (M.Map Var ℕ)
+directSolveAux : M.Map Var ℕ → List R1CS → (Error × M.Map Var ℕ) ⊎ (M.Map Var ℕ)
 directSolveAux map [] = inj₂ map
 directSolveAux map (IAdd x x₁ ∷ irs) with collectCoeff map x₁ (fToℕ x)
 directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap with M.size coeffMap
 directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize with mSize ≟ℕ 0
 directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | yes p with const ≟ℕ 0
 directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | yes p | yes p₁ = directSolveAux map irs
-directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | yes p | no ¬p = inj₁ (("Unsatisfiable constraint: " S++ showIntermediate (IAdd x x₁)) , map)
+directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | yes p | no ¬p = inj₁ (("Unsatisfiable constraint: " S++ showR1CS (IAdd x x₁)) , map)
 directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p with mSize ≟ℕ 1
 directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | yes p with M.toList coeffMap
-directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | yes p | [] = inj₁ ("Internal error: the impossible happened @ SourceIntermediate.agda:directSolveAux" , map)
+directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | yes p | [] = inj₁ ("Internal error: the impossible happened @ SourceR1CS.agda:directSolveAux" , map)
 directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | yes p | (v , coeff) ∷ t = directSolveAux (M.insert natOrd v (fToℕ ((-f (ℕtoF const)) *f (1f/ (ℕtoF coeff)))) map) irs
-directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | no ¬p₁ = inj₁ (("Cannot solve constraint " S++ showIntermediate (IAdd x x₁) S++ " without hint") , map)
+directSolveAux map (IAdd x x₁ ∷ irs) | const , coeffMap | mSize | no ¬p | no ¬p₁ = inj₁ (("Cannot solve constraint " S++ showR1CS (IAdd x x₁) S++ " without hint") , map)
 directSolveAux map (IMul a b c d e ∷ irs) with numUnknowns map (IMul a b c d e)
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns with unknowns ≟ℕ 0
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | yes p with solveNoUnknown map (IMul a b c d e)
-directSolveAux map (IMul a b c d e ∷ irs) | unknowns | yes p | false = inj₁ (("Unsatisfiable constraint " S++ showIntermediate (IMul a b c d e)) , map)
+directSolveAux map (IMul a b c d e ∷ irs) | unknowns | yes p | false = inj₁ (("Unsatisfiable constraint " S++ showR1CS (IMul a b c d e)) , map)
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | yes p | true = directSolveAux map irs
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p with unknowns ≟ℕ 1
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p with M.lookup natOrd b map
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing with M.lookup natOrd c map
-directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | nothing = inj₁ (("Cannot solve constraint " S++ showIntermediate (IMul a b c d e)) , map)
+directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | nothing = inj₁ (("Cannot solve constraint " S++ showR1CS (IMul a b c d e)) , map)
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x with M.lookup natOrd e map
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | nothing with fToℕ (a *f (ℕtoF x)) ≟ℕ fToℕ d
    -- a * ⟦ b ⟧ * ⟦ c ⟧ = a * ⟦ b ⟧ * x = (a * x) * ⟦ b ⟧ = d * ⟦ e ⟧, and
@@ -138,7 +138,7 @@ directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothin
  -- check whether or not d * x₁ ≡ 0 holds
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ | yes p₁ with fToℕ (d *f (ℕtoF x₁)) ≟ℕ 0
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ | yes p₁ | yes p₂ = directSolveAux map irs
-directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ | yes p₁ | no ¬p₁ = inj₁ (("Unsatisfiable constraint " S++ showIntermediate (IMul a b c d e)) , map)
+directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ | yes p₁ | no ¬p₁ = inj₁ (("Unsatisfiable constraint " S++ showR1CS (IMul a b c d e)) , map)
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | nothing | just x | just x₁ | no ¬p₁ = directSolveAux (M.insert natOrd b (fToℕ ((d *f (ℕtoF x₁)) *f (1f/ (a *f (ℕtoF x))))) map) irs
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x with M.lookup natOrd c map
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing with M.lookup natOrd e map
@@ -153,7 +153,7 @@ directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x
  -- check whether or not d * x₁ ≡ 0 holds
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ | yes p₁ with fToℕ (d *f (ℕtoF x₁)) ≟ℕ 0
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ | yes p₁ | yes p₂ = directSolveAux map irs
-directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ | yes p₁ | no ¬p₁ = inj₁ (("Unsatisfiable constraint " S++ showIntermediate (IMul a b c d e)) , map)
+directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ | yes p₁ | no ¬p₁ = inj₁ (("Unsatisfiable constraint " S++ showR1CS (IMul a b c d e)) , map)
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | nothing | just x₁ | no ¬p₁ = directSolveAux (M.insert natOrd c (fToℕ ((d *f (ℕtoF x₁)) *f (1f/ (a *f (ℕtoF x))))) map) irs
    -- e must not be known, because there is exactly one unknown
    -- a * x * x₁ = d * ⟦ e ⟧
@@ -161,16 +161,16 @@ directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x
 -- check whether or not a * x * x₁ ≡ 0 holds
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ | yes p₁ with fToℕ ((a *f (ℕtoF x)) *f (ℕtoF x₁)) ≟ℕ 0
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ | yes p₁ | yes p₂ = directSolveAux map irs
-directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ | yes p₁ | no ¬p₁ = inj₁ (("Unsatisfiable constraint " S++ showIntermediate (IMul a b c d e)) , map)
+directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ | yes p₁ | no ¬p₁ = inj₁ (("Unsatisfiable constraint " S++ showR1CS (IMul a b c d e)) , map)
 directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | yes p | just x | just x₁ | no ¬p₁ = directSolveAux (M.insert natOrd e (fToℕ (((a *f (ℕtoF x)) *f (ℕtoF x₁)) *f (1f/ d))) map) irs
-directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | no ¬p₁ = inj₁ (("Cannot solve constraint " S++ showIntermediate (IMul a b c d e)) , map)
+directSolveAux map (IMul a b c d e ∷ irs) | unknowns | no ¬p | no ¬p₁ = inj₁ (("Cannot solve constraint " S++ showR1CS (IMul a b c d e)) , map)
 directSolveAux map (Hint x ∷ irs) = directSolveAux (x map) irs
 directSolveAux map (Log x ∷ irs) = directSolveAux map irs
 
 private
   showMap : M.Map Var ℕ → String
   showMap m = intercalate ", " (map (λ x → "(" S++ show (proj₁ x) S++ ", " S++ show (proj₂ x) S++ ")") (M.toList m))
-directSolve : List (Var × ℕ) → List Intermediate → Error ⊎ (M.Map Var ℕ)
+directSolve : List (Var × ℕ) → List R1CS → Error ⊎ (M.Map Var ℕ)
 directSolve l ir with directSolveAux (M.insert natOrd 0 1 (M.fromList natOrd l)) ir
 directSolve l ir | inj₁ (error , map) = inj₁ (error S++ "\n" S++ showMap map)
 directSolve l ir | inj₂ y = inj₂ y

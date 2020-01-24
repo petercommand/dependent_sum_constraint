@@ -21,10 +21,10 @@ open import Level
 
 module Compile.Generate (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
 
-open import Compile.SourceIntermediate f field' finite showf fToℕ ℕtoF
+open import Compile.SourceR1CS f field' finite showf fToℕ ℕtoF
 open import Compile.Solve f field' finite showf fToℕ ℕtoF
 open import Language.Common
-open import Language.Intermediate.Show f showf
+open import Language.R1CS.Show f showf
 open import Language.Source f finite showf
 open import Language.Source.Utils f finite showf hiding (_>>_)
 open import Language.TySize f finite
@@ -44,10 +44,10 @@ genMain p m i =
      ♯ (♯ writeFile "outvars" "" >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "outvars" ∘′ (λ x → x S++ "\n") ∘′ show) (Data.Vec.toList out))) >>
      ♯ (♯ writeFile "constraints" "" >>
-     ♯ (♯ sequence′ (coFromList (map (appendFile "constraints" ∘′ (λ x → x S++ "\n") ∘′ showIntermediate) (result []))) >>
+     ♯ (♯ sequence′ (coFromList (map (appendFile "constraints" ∘′ (λ x → x S++ "\n") ∘′ showR1CS) (result []))) >>
      ♯ (♯ writeFile "constraints_serialize" "" >>
      ♯ (♯ sequence′ (coFromList (map (appendFile "constraints_serialize" ∘′ (λ x → x S++ "\n")) (show (length input) ∷ show (pred n) ∷ []))) >>
-     ♯ (♯ sequence′ (coFromList (map (appendFile "constraints_serialize" ∘′ (λ x → x S++ "\n") ∘′ serializeIntermediate) (result []))) >>
+     ♯ (♯ sequence′ (coFromList (map (appendFile "constraints_serialize" ∘′ (λ x → x S++ "\n") ∘′ serializeR1CS) (result []))) >>
      ♯ (♯ writeFile "solve.result" "" >>
      ♯ sequence′ (coFromList (map (appendFile "solve.result") (showSolve solveResult))))))))))))
 

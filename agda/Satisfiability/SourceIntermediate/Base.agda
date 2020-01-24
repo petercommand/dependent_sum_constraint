@@ -36,7 +36,7 @@ import Relation.Binary.HeterogeneousEquality
 module HE = Relation.Binary.HeterogeneousEquality
 open import Relation.Binary.HeterogeneousEquality.Core
 open import Relation.Nullary
-module Satisfiability.SourceIntermediate.Base (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
+module Satisfiability.SourceR1CS.Base (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
      (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
         (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field')
         (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field') (prime : ℕ) (isPrime : Prime prime) where
@@ -44,7 +44,7 @@ module Satisfiability.SourceIntermediate.Base (f : Set) (_≟F_ : Decidable {A =
 
 open import Language.TySize f finite
 open import Language.Universe f
-open import Language.Intermediate f
+open import Language.R1CS f
 
 
 open Field field' renaming ( _+_ to _+F_
@@ -54,9 +54,9 @@ open Field field' renaming ( _+_ to _+F_
                            ; zero to zerof
                            ; one to onef)
 open IsField isField
-open import Compile.SourceIntermediate f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
-import Compile.SourceIntermediate
-open Compile.SourceIntermediate.SI-Monad f field' finite showf fToℕ ℕtoF
+open import Compile.SourceR1CS f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
+import Compile.SourceR1CS
+open Compile.SourceR1CS.SI-Monad f field' finite showf fToℕ ℕtoF
 
 
 output : ∀ {a} {b} {c} {d} {S : Set a} {W : Set b} {A : Set c} {P : W → Prop d} → Σ′ (S × W × A) (λ prod → P (proj₁ (proj₂ prod))) → A
@@ -227,22 +227,22 @@ data LinearCombVal (solution : List (Var × ℕ)) : List (f × Var) → f → Pr
       → LinearCombVal solution l acc
       → LinearCombVal solution ((coeff , var) ∷ l) ((coeff *F ℕtoF varVal) +F acc)
 
-data IntermediateSolution (solution : List (Var × ℕ)) : Intermediate → Prop where
+data R1CSSolution (solution : List (Var × ℕ)) : R1CS → Prop where
   addSol : ∀ {coeff} {linComb} {linCombVal}
                  → LinearCombVal solution linComb linCombVal
                  → linCombVal +F coeff ≡ zerof
-                 → IntermediateSolution solution (IAdd coeff linComb)
+                 → R1CSSolution solution (IAdd coeff linComb)
   multSol : ∀ a b bval c cval d e eval
                  → ListLookup b solution bval
                  → ListLookup c solution cval
                  → ListLookup e solution eval
                  → ((a *F (ℕtoF bval)) *F (ℕtoF cval)) ≡ (d *F (ℕtoF eval))
-                 → IntermediateSolution solution (IMul a b c d e)
-  hintSol : ∀ f → IntermediateSolution solution (Hint f) -- Hint does not have to be solved
-  logSol : ∀ s → IntermediateSolution solution (Log s)
+                 → R1CSSolution solution (IMul a b c d e)
+  hintSol : ∀ f → R1CSSolution solution (Hint f) -- Hint does not have to be solved
+  logSol : ∀ s → R1CSSolution solution (Log s)
 
 BuilderProdSol : Builder × Builder → List (Var × ℕ) → Prop
-BuilderProdSol (fst , snd) sol = ∀ x → x ∈ (fst (snd [])) → IntermediateSolution sol x
+BuilderProdSol (fst , snd) sol = ∀ x → x ∈ (fst (snd [])) → R1CSSolution sol x
 
 data isBool : ℕ → Set where
   isZero : ∀ n → ℕtoF n ≡ zerof → isBool n
@@ -406,28 +406,28 @@ linearCombMaxVar : List (f × Var) → ℕ
 linearCombMaxVar [] = 1
 linearCombMaxVar ((fst , snd) ∷ l) = snd ⊔ linearCombMaxVar l
 
-intermediateMaxVar : Intermediate → ℕ
-intermediateMaxVar (IAdd x x₁) = linearCombMaxVar x₁
-intermediateMaxVar (IMul a b c d e) = b ⊔ c ⊔ e
-intermediateMaxVar (Hint x) = 1
-intermediateMaxVar (Log x) = 1
+R1CSMaxVar : R1CS → ℕ
+R1CSMaxVar (IAdd x x₁) = linearCombMaxVar x₁
+R1CSMaxVar (IMul a b c d e) = b ⊔ c ⊔ e
+R1CSMaxVar (Hint x) = 1
+R1CSMaxVar (Log x) = 1
 
-intermediatesMaxVar : List Intermediate → ℕ
-intermediatesMaxVar [] = 1
-intermediatesMaxVar (x ∷ l) = intermediateMaxVar x ⊔ intermediatesMaxVar l
+R1CSsMaxVar : List R1CS → ℕ
+R1CSsMaxVar [] = 1
+R1CSsMaxVar (x ∷ l) = R1CSMaxVar x ⊔ R1CSsMaxVar l
 
 builderMaxVar : (Builder × Builder) → ℕ
-builderMaxVar (fst , snd) = intermediatesMaxVar (fst (snd []))
+builderMaxVar (fst , snd) = R1CSsMaxVar (fst (snd []))
 
 
 
 addSound : ∀ (r : WriterMode)
-   → (ir : Intermediate)
+   → (ir : R1CS)
    → (solution' : List (Var × ℕ))
    → ∀ (init : ℕ) → 
    let result = add ir ((r , prime) , init)
    in BuilderProdSol (writerOutput result) solution'
-   → IntermediateSolution solution' ir
+   → R1CSSolution solution' ir
 addSound NormalMode ir solution' init isSol' = isSol' ir (here refl)
 addSound PostponedMode ir solution' init isSol' = isSol' ir (here refl)
 

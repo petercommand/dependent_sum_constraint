@@ -37,7 +37,7 @@ module HE = Relation.Binary.HeterogeneousEquality
 open import Relation.Binary.HeterogeneousEquality.Core
 open Relation.Binary.HeterogeneousEquality using (_≅_)
 open import Relation.Nullary
-module Satisfiability.SourceIntermediate (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
+module Satisfiability.SourceR1CS (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
      (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
         (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field')
         (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field')
@@ -50,7 +50,7 @@ module Satisfiability.SourceIntermediate (f : Set) (_≟F_ : Decidable {A = f} _
 open import Language.Source f finite showf
 open import Language.TySize f finite
 open import Language.Universe f
-open import Language.Intermediate f
+open import Language.R1CS f
 
 
 open Field field' renaming ( _+_ to _+F_
@@ -60,14 +60,14 @@ open Field field' renaming ( _+_ to _+F_
                            ; zero to zerof
                            ; one to onef)
 open IsField isField
-open import Compile.SourceIntermediate f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
-import Compile.SourceIntermediate
-open Compile.SourceIntermediate.SI-Monad f field' finite showf fToℕ ℕtoF
+open import Compile.SourceR1CS f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
+import Compile.SourceR1CS
+open Compile.SourceR1CS.SI-Monad f field' finite showf fToℕ ℕtoF
 
 
-open import Satisfiability.SourceIntermediate.Base f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime
-open import Satisfiability.SourceIntermediate.LogicGates f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 ℕtoF∘fToℕ≡ prime isPrime onef≠zerof
-open import Satisfiability.SourceIntermediate.SimpleComp f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 ℕtoF∘fToℕ≡ prime isPrime onef≠zerof
+open import Satisfiability.SourceR1CS.Base f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime
+open import Satisfiability.SourceR1CS.LogicGates f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 ℕtoF∘fToℕ≡ prime isPrime onef≠zerof
+open import Satisfiability.SourceR1CS.SimpleComp f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 ℕtoF∘fToℕ≡ prime isPrime onef≠zerof
 
 ¬anyNeqz→All≈0 : ∀ {n} (vec : Vec ℕ n) → anyNeqzFunc vec ≡ 0 → All (_≈_ 0) vec
 ¬anyNeqz→All≈0 [] any = []
@@ -1576,48 +1576,48 @@ litStore≡ (`Π u x) elem store = refl
 
 
 
-sourceToIntermediateSound : ∀ r u
+sourceToR1CSSound : ∀ r u
   → (s : Source u)
   → (sol : List (Var × ℕ))
   → ListLookup 0 sol 1
   → SourceStore sol u s
   → ∀ init →
-  let result = sourceToIntermediate u s ((r , prime) , init)
+  let result = sourceToR1CS u s ((r , prime) , init)
   in BuilderProdSol (writerOutput result) sol
   → Squash (∃ (λ ⟦u⟧ → ∃ (λ val → ValIsRepr u ⟦u⟧ val × ∃ (λ ss → Σ′ (sourceSem u s sol ss ≡ ⟦u⟧) (λ _ → BatchListLookup (output result) sol val)))))
-sourceToIntermediateSound r u .(Ind refl vec) sol tri (IndStore vec val refl x) init isSol with indToIRSound PostponedMode u vec val sol x tri init isSol
+sourceToR1CSSound r u .(Ind refl vec) sol tri (IndStore vec val refl x) init isSol with indToIRSound PostponedMode u vec val sol x tri init isSol
 ... | sq (fst , snd) = sq (fst , (val , (snd , (IndStore′ vec val fst refl x snd , (indStore≡ u fst vec sol val refl x snd , x)))))
-sourceToIntermediateSound r u .(Lit v) sol tri (LitStore v) init isSol with litToIndSound r u v sol tri init isSol
-sourceToIntermediateSound r u .(Lit v) sol tri (LitStore v) init isSol | sq (val , isRepr , look) = sq (v , (val , isRepr , ((LitStore′ v) , ((litStore≡ u v sol) , look))))
-sourceToIntermediateSound r .`Base .(Add s₁ s₂) sol tri (AddStore s₁ s₂ ss ss₁) init isSol
+sourceToR1CSSound r u .(Lit v) sol tri (LitStore v) init isSol with litToIndSound r u v sol tri init isSol
+sourceToR1CSSound r u .(Lit v) sol tri (LitStore v) init isSol | sq (val , isRepr , look) = sq (v , (val , isRepr , ((LitStore′ v) , ((litStore≡ u v sol) , look))))
+sourceToR1CSSound r .`Base .(Add s₁ s₂) sol tri (AddStore s₁ s₂ ss ss₁) init isSol
    with
    let input = ((r , prime) , init)
-       p₁₁ = sourceToIntermediate `Base s₁
+       p₁₁ = sourceToR1CS `Base s₁
        r₁ = output (p₁₁ input)
        p₂₅ = λ _ → do
-         r₂ ← sourceToIntermediate `Base s₂
+         r₂ ← sourceToR1CS `Base s₂
          v ← new
          add (IAdd zerof ((onef , head r₁) ∷ (onef , head r₂) ∷ (-F onef , v) ∷ []))
          return (ann (Vec Var 1) (v ∷ []))
        p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
-   in sourceToIntermediateSound r `Base s₁ sol tri ss init p₁₁IsSol
+   in sourceToR1CSSound r `Base s₁ sol tri ss init p₁₁IsSol
 ... | sq (l₁ , val₁ ∷ [] , isRepr₁ , ss′₁ , eq₁ , look₁)
    with
    let input = ((r , prime) , init)
-       p₁₁ = sourceToIntermediate `Base s₁
+       p₁₁ = sourceToR1CS `Base s₁
        p₁₂ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         sourceToR1CS `Base s₂
        p₁₃ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         r₂ ← sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         r₂ ← sourceToR1CS `Base s₂
          new
-       p₂₂ = sourceToIntermediate `Base s₂
+       p₂₂ = sourceToR1CS `Base s₂
        r₁ = output (p₁₁ input)
        r₂ = output (p₁₂ input)
        v = output (p₁₃ input)
        p₂₅ = λ _ → do
-         r₂ ← sourceToIntermediate `Base s₂
+         r₂ ← sourceToR1CS `Base s₂
          v ← new
          add (IAdd zerof ((onef , head r₁) ∷ (onef , head r₂) ∷ (-F onef , v) ∷ []))
          return (ann (Vec Var 1) (v ∷ []))
@@ -1630,24 +1630,24 @@ sourceToIntermediateSound r .`Base .(Add s₁ s₂) sol tri (AddStore s₁ s₂ 
 
        p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
        p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
-   in sourceToIntermediateSound r `Base s₂ sol tri ss₁ (varOut (p₁₁ input)) p₂₂IsSol
-sourceToIntermediateSound r .`Base .(Add s₁ s₂) sol tri (AddStore s₁ s₂ ss ss₁) init isSol | sq (l₁ , val₁ ∷ [] , `BaseValRepr (sq x) , ss′₁ , eq₁ , look₁) | sq (l₂ , val₂ ∷ [] , `BaseValRepr (sq x₁) , ss′₂ , eq₂ , look₂)
+   in sourceToR1CSSound r `Base s₂ sol tri ss₁ (varOut (p₁₁ input)) p₂₂IsSol
+sourceToR1CSSound r .`Base .(Add s₁ s₂) sol tri (AddStore s₁ s₂ ss ss₁) init isSol | sq (l₁ , val₁ ∷ [] , `BaseValRepr (sq x) , ss′₁ , eq₁ , look₁) | sq (l₂ , val₂ ∷ [] , `BaseValRepr (sq x₁) , ss′₂ , eq₂ , look₂)
    with
    let input = ((r , prime) , init)
-       p₁₁ = sourceToIntermediate `Base s₁
+       p₁₁ = sourceToR1CS `Base s₁
        p₁₂ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         sourceToR1CS `Base s₂
        p₁₃ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         r₂ ← sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         r₂ ← sourceToR1CS `Base s₂
          new
-       p₂₂ = sourceToIntermediate `Base s₂
+       p₂₂ = sourceToR1CS `Base s₂
        r₁ = output (p₁₁ input)
        r₂ = output (p₁₂ input)
        v = output (p₁₃ input)
        p₂₅ = λ _ → do
-         r₂ ← sourceToIntermediate `Base s₂
+         r₂ ← sourceToR1CS `Base s₂
          v ← new
          add (IAdd zerof ((onef , head r₁) ∷ (onef , head r₂) ∷ (-F onef , v) ∷ []))
          return (ann (Vec Var 1) (v ∷ []))
@@ -1666,7 +1666,7 @@ sourceToIntermediateSound r .`Base .(Add s₁ s₂) sol tri (AddStore s₁ s₂ 
        p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
        p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
     in addSound r (IAdd zerof ((onef , head r₁) ∷ (onef , head r₂) ∷ (-F onef , v) ∷ [])) sol _ p₄₄IsSol
-sourceToIntermediateSound r .`Base .(Add s₁ s₂) sol tri (AddStore s₁ s₂ ss ss₁) init isSol | sq (l₁ , val₁ ∷ [] , `BaseValRepr (sq x) , ss′₁ , eq₁ , look₁) | sq (l₂ , val₂ ∷ [] , `BaseValRepr (sq x₁) , ss′₂ , eq₂ , look₂) | addSol (LinearCombValCons ._ ._ varVal x₂ (LinearCombValCons ._ ._ varVal₁ x₄ (LinearCombValCons ._ ._ varVal₂ x₅ LinearCombValBase))) x₃
+sourceToR1CSSound r .`Base .(Add s₁ s₂) sol tri (AddStore s₁ s₂ ss ss₁) init isSol | sq (l₁ , val₁ ∷ [] , `BaseValRepr (sq x) , ss′₁ , eq₁ , look₁) | sq (l₂ , val₂ ∷ [] , `BaseValRepr (sq x₁) , ss′₂ , eq₂ , look₂) | addSol (LinearCombValCons ._ ._ varVal x₂ (LinearCombValCons ._ ._ varVal₁ x₄ (LinearCombValCons ._ ._ varVal₂ x₅ LinearCombValBase))) x₃
     with ListLookup-≈ x₄ (BatchListLookup-Head look₂) | ListLookup-≈ x₂ (BatchListLookup-Head look₁)
 ... | sq p₁ | sq p₂ rewrite p₁ | p₂
                           | *-identityˡ (ℕtoF val₁)
@@ -1684,22 +1684,22 @@ sourceToIntermediateSound r .`Base .(Add s₁ s₂) sol tri (AddStore s₁ s₂ 
                | sym x | sym x₁
                | ℕtoF∘fToℕ≡ l₁
                | ℕtoF∘fToℕ≡ l₂ = refl
-sourceToIntermediateSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ ss ss₁) init isSol with
+sourceToR1CSSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ ss ss₁) init isSol with
    let input = ((r , prime) , init)
-       p₁₁ = sourceToIntermediate `Base s₁
+       p₁₁ = sourceToR1CS `Base s₁
        p₁₂ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         sourceToR1CS `Base s₂
        p₁₃ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         r₂ ← sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         r₂ ← sourceToR1CS `Base s₂
          new
-       p₂₂ = sourceToIntermediate `Base s₂
+       p₂₂ = sourceToR1CS `Base s₂
        r₁ = output (p₁₁ input)
        r₂ = output (p₁₂ input)
        v = output (p₁₃ input)
        p₂₅ = λ _ → do
-         r₂ ← sourceToIntermediate `Base s₂
+         r₂ ← sourceToR1CS `Base s₂
          v ← new
          add (IMul onef (head r₁) (head r₂) onef v)
          return (ann (Vec Var 1) (v ∷ []))
@@ -1719,23 +1719,23 @@ sourceToIntermediateSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ 
        p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
        p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
        p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
-    in sourceToIntermediateSound r `Base s₁ sol tri ss _ p₁₁IsSol
+    in sourceToR1CSSound r `Base s₁ sol tri ss _ p₁₁IsSol
 ... | sq (⟦s₁⟧ , ⟦s₁⟧Val , isRepr₁ , eq₁ , look₁) with
    let input = ((r , prime) , init)
-       p₁₁ = sourceToIntermediate `Base s₁
+       p₁₁ = sourceToR1CS `Base s₁
        p₁₂ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         sourceToR1CS `Base s₂
        p₁₃ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         r₂ ← sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         r₂ ← sourceToR1CS `Base s₂
          new
-       p₂₂ = sourceToIntermediate `Base s₂
+       p₂₂ = sourceToR1CS `Base s₂
        r₁ = output (p₁₁ input)
        r₂ = output (p₁₂ input)
        v = output (p₁₃ input)
        p₂₅ = λ _ → do
-         r₂ ← sourceToIntermediate `Base s₂
+         r₂ ← sourceToR1CS `Base s₂
          v ← new
          add (IMul onef (head r₁) (head r₂) onef v)
          return (ann (Vec Var 1) (v ∷ []))
@@ -1755,23 +1755,23 @@ sourceToIntermediateSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ 
        p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
        p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
        p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
-    in sourceToIntermediateSound r `Base s₂ sol tri ss₁ _ p₂₂IsSol
+    in sourceToR1CSSound r `Base s₂ sol tri ss₁ _ p₂₂IsSol
 ... | sq (⟦s₂⟧ , ⟦s₂⟧Val , isRepr₂ , eq₂ , look₂) with
    let input = ((r , prime) , init)
-       p₁₁ = sourceToIntermediate `Base s₁
+       p₁₁ = sourceToR1CS `Base s₁
        p₁₂ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         sourceToR1CS `Base s₂
        p₁₃ = do
-         r₁ ← sourceToIntermediate `Base s₁
-         r₂ ← sourceToIntermediate `Base s₂
+         r₁ ← sourceToR1CS `Base s₁
+         r₂ ← sourceToR1CS `Base s₂
          new
-       p₂₂ = sourceToIntermediate `Base s₂
+       p₂₂ = sourceToR1CS `Base s₂
        r₁ = output (p₁₁ input)
        r₂ = output (p₁₂ input)
        v = output (p₁₃ input)
        p₂₅ = λ _ → do
-         r₂ ← sourceToIntermediate `Base s₂
+         r₂ ← sourceToR1CS `Base s₂
          v ← new
          add (IMul onef (head r₁) (head r₂) onef v)
          return (ann (Vec Var 1) (v ∷ []))
@@ -1792,7 +1792,7 @@ sourceToIntermediateSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ 
        p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
        p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
     in addSound r (IMul onef (head r₁) (head r₂) onef v) sol _ p₄₄IsSol
-sourceToIntermediateSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ ss ss₁) init isSol | sq (⟦s₁⟧ , ⟦s₁⟧Val ∷ [] , `BaseValRepr (sq x₄) , eq₁ , sem₁ , look₁) | sq (⟦s₂⟧ , ⟦s₂⟧Val ∷ [] , `BaseValRepr (sq x₅) , eq₂ , sem₂ , look₂) | multSol .(Field.one field') ._ bval ._ cval .(Field.one field') ._ eval x x₁ x₂ x₃ rewrite *-identityˡ (ℕtoF bval)
+sourceToR1CSSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ ss ss₁) init isSol | sq (⟦s₁⟧ , ⟦s₁⟧Val ∷ [] , `BaseValRepr (sq x₄) , eq₁ , sem₁ , look₁) | sq (⟦s₂⟧ , ⟦s₂⟧Val ∷ [] , `BaseValRepr (sq x₅) , eq₂ , sem₂ , look₂) | multSol .(Field.one field') ._ bval ._ cval .(Field.one field') ._ eval x x₁ x₂ x₃ rewrite *-identityˡ (ℕtoF bval)
                                     | *-identityˡ (ℕtoF eval) 
                                     = sq ((⟦s₁⟧ *F ⟦s₂⟧) , (⟦s₁⟧Val * ⟦s₂⟧Val ∷ [] , (`BaseValRepr (sq (trans lem (sym (ℕtoF-*hom ⟦s₁⟧Val ⟦s₂⟧Val))))) , (MulStore′ s₁ s₂ eq₁ eq₂) , (semEq , BatchLookupCons _ _ _ _ _ (ListLookup-Respects-≈ _ _ _ _ lem' x₂) (BatchLookupNil sol))))
   where

@@ -174,7 +174,8 @@ module Enum where
     r ← enum u
     rs ← enum (x r)
     return (r , rs)
-  enum (`Π u x) = let pairs = do
+  enum (`Π u x) =
+                  let pairs = do
                         r ← enum u
                         return (r , enum (x r))
                       funcs = genFunc _ _ pairs

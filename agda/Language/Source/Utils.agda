@@ -80,7 +80,7 @@ iterM : ∀ {ℓ} {A : Set ℓ} (n : ℕ) → (Fin n → S-Monad A) → S-Monad 
 iterM 0F act = return []
 iterM (suc n) act = do
   r ← act (#_ n {suc n} {fromWitness ≤-refl})
-  rs ← iterM n λ m → act (castF (inject+ 1 m))
+  rs ← iterM n (λ m → act (castF (inject+ 1 m)))
   return (r ∷ rs)
  where
   castF : Fin (n + 1) → Fin (1 + n)

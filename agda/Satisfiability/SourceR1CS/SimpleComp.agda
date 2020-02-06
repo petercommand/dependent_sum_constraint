@@ -359,7 +359,7 @@ anyNeqzIsBool r (x ∷ vec) sol init isSol
              p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
              p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
          in lorSound r _ _ _ _ _ look₁ look₂ isBool₁ isBool₂ _ p₃₃IsSol
-... | sound₁ = sq ((lorFunc val₁ val₂) , ((orFuncIsBool val₁ val₂) , sound₁))
+... | sound₁ = sq ((lorFunc val₁ val₂) , ((lorFuncIsBool val₁ val₂) , sound₁))
 
 anyNeqzSound₀ : ∀ (r : WriterMode)
   → ∀ {n} → (vec : Vec Var n)

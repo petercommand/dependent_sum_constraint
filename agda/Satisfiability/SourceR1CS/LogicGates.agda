@@ -346,6 +346,29 @@ landFuncIsBoolStrict a b | no ¬p | no ¬p₁ = isOneS refl
 landFuncIsBool : ∀ a b → isBool (landFunc a b)
 landFuncIsBool a b = isBoolStrict→isBool (landFuncIsBoolStrict a b)
 
+landIsBool : ∀ r v v' sol val val'
+  → ListLookup v sol val
+  → ListLookup v' sol val'
+  → isBool val
+  → isBool val'
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = land v v' ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → Squash (∃ (λ val'' → Σ′ (isBool val'') (λ _ → ListLookup (output result) sol val'')))
+landIsBool r v v' sol val val' look₁ look₂ isBool₁ isBool₂ tri init isSol with addSound r (IMul onef v v' onef init) sol _ isSol
+landIsBool r v v' sol val val' look₁ look₂ isBool₁ isBool₂ tri init isSol | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃
+    with ListLookup-≈ x look₁ | ListLookup-≈ x₁ look₂
+... | sq t₁ | sq t₂ rewrite t₁ | t₂
+                          | *-identityˡ (ℕtoF val)
+                          | *-identityˡ (ℕtoF eval) = sq (eval , (lem isBool₁ isBool₂ , x₂))
+    where
+      lem : isBool val → isBool val' → isBool eval
+      lem (isZero n x) b₂ rewrite x | *-zeroˡ (ℕtoF val') = isZero eval (sym x₃)
+      lem (isOne val x) (isZero n x₁) rewrite x₁ | *-zeroʳ (ℕtoF val) = isZero eval (sym x₃)
+      lem (isOne val x) (isOne n x₁) rewrite x | x₁ | *-identityˡ onef = isOne eval (sym x₃)
+
+
 landSoundLem : ∀ r v v' init →
   let b₁₂ = writerOutput (add (IMul onef v v' onef init) ((r , prime) , suc init))
       b₃₄ = writerOutput (land v v' ((r , prime) , init))
@@ -391,6 +414,44 @@ v bval[x] val[look₁]
 v' cval[x₁] val'[look₂]
 init eval[x₂]
 -}
+
+landSound₁ : ∀ (r : WriterMode)
+  → (v v' : Var) (val val' : ℕ)
+  → (sol : List (Var × ℕ))
+  → ∀ init
+  → ListLookup v sol val
+  → ListLookup v' sol val'
+  → isBool val
+  → isBool val' →
+  let result = land v v' ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → ListLookup (output result) sol 1
+  → Squash (Σ′′ (ListLookup v sol 1) (λ _ → ListLookup v' sol 1))
+landSound₁ r v v' val val' sol init look₁ look₂ isBool₁ isBool₂ isSol look with addSound r (IMul onef v v' onef init) sol _ isSol
+landSound₁ r v v' val val' sol init look₁ look₂ isBool₁ isBool₂ isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ with landSound r v v' val val' sol look₁ look₂ isBool₁ isBool₂ init isSol
+landSound₁ r v v' val val' sol init look₁ look₂ (isZero .val x₄) (isZero .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ with ℕtoF val ≟F zerof
+landSound₁ r v v' val val' sol init look₁ look₂ (isZero .val x₄) (isZero .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | yes p with ListLookup-≈ sound₁ look
+... | sq eq = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) (trans (sym eq) ℕtoF-0≡0)))
+landSound₁ r v v' val val' sol init look₁ look₂ (isZero .val x₄) (isZero .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p = ⊥-elim′ (¬p x₄)
+landSound₁ r v v' val val' sol init look₁ look₂ (isZero .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ with ℕtoF val ≟F zerof
+landSound₁ r v v' val val' sol init look₁ look₂ (isZero .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | yes p with ListLookup-≈ sound₁ look
+... | sq eq = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) (trans (sym eq) ℕtoF-0≡0)))
+landSound₁ r v v' val val' sol init look₁ look₂ (isZero .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p = ⊥-elim′ (¬p x₄) 
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isZero .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ with ℕtoF val ≟F zerof
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isZero .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | yes p with ListLookup-≈ look sound₁
+... | sq eq = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) (trans eq ℕtoF-0≡0)))
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isZero .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p with ℕtoF val' ≟F zerof
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isZero .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p | yes p with ListLookup-≈ sound₁ look
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isZero .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p | yes p | sq x₆ = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) (trans (sym x₆) ℕtoF-0≡0)))
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isZero .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p | no ¬p₁ = ⊥-elim′ (¬p₁ x₅)
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ with ℕtoF val ≟F zerof
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | yes p with ListLookup-≈ sound₁ look
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | yes p | sq x₆ = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) (trans (sym x₆) ℕtoF-0≡0)))
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p with ℕtoF val' ≟F zerof
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p | yes p with ListLookup-≈ sound₁ look
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p | yes p | sq x₆ = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) (trans (sym x₆) ℕtoF-0≡0)))
+landSound₁ r v v' val val' sol init look₁ look₂ (isOne .val x₄) (isOne .val' x₅) isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | sound₁ | no ¬p | no ¬p₁ = sq ((ListLookup-Respects-≈ _ _ _ _ (sq (trans x₄ (sym ℕtoF-1≡1))) look₁) , (ListLookup-Respects-≈ _ _ _ _ (sq (trans x₅ (sym ℕtoF-1≡1))) look₂))
+
 
 lnotFunc : ℕ → ℕ
 lnotFunc a with ℕtoF a ≟F zerof
@@ -537,49 +598,6 @@ neqzIsBool r v sol init isSol | multSol .(Field.one field') .init bval .v cval .
                | *-invʳ _ ¬p
                | *-identityʳ (ℕtoF eval) = sq (eval , ((isOne _ eq) , x₂))
 
-anyNeqzIsBool : ∀ r {n} (vec : Vec Var n) sol init
-  → let result = anyNeqz vec ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
-  → Squash (∃ (λ val → Σ′ (isBool val) (λ _ → ListLookup (output result) sol val)))
-anyNeqzIsBool r [] sol init isSol with addSound r (IAdd zerof ((onef , init) ∷ [])) sol _ isSol
-anyNeqzIsBool r [] sol init isSol | addSol (LinearCombValCons .(Field.one field') .init varVal x LinearCombValBase) x₁
-    rewrite *-identityˡ (ℕtoF varVal)
-          | +-identityʳ (ℕtoF varVal)
-          | +-identityʳ (ℕtoF varVal) = sq (varVal , ((isZero _ x₁) , x))
-anyNeqzIsBool r (x ∷ vec) sol init isSol
-    with let p₁₁ = neqz x
-             p₂₃ = λ r → do
-               rs ← anyNeqz vec
-               lor r rs
-             p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
-         in neqzIsBool r x sol init p₁₁IsSol
-... | sq (val₁ , isBool₁ , look₁)
-    with let input = ((r , prime) , init)
-             p₁₁ = neqz x
-             p₂₂ = anyNeqz vec
-             p₂₃ = λ r → do
-               rs ← anyNeqz vec
-               lor r rs
-             r' = output (p₁₁ input)
-             p₃₃ = λ rs → do
-               lor r' rs
-             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
-             p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
-         in anyNeqzIsBool r vec sol _ p₂₂IsSol
-... | sq (val₂ , isBool₂ , look₂)
-    with let input = ((r , prime) , init)
-             p₁₁ = neqz x
-             p₂₂ = anyNeqz vec
-             p₂₃ = λ r → do
-               rs ← anyNeqz vec
-               lor r rs
-             r' = output (p₁₁ input)
-             p₃₃ = λ rs → do
-               lor r' rs
-             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
-             p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
-         in lorSound r _ _ _ _ _ look₁ look₂ isBool₁ isBool₂ _ p₃₃IsSol
-... | sound₁ = sq ((lorFunc val₁ val₂) , ((orFuncIsBool val₁ val₂) , sound₁))
 
 
 neqzSound₀ : ∀ (r : WriterMode)
@@ -628,65 +646,6 @@ neqzSound₀ r v sol tri init isSol look | multSol .(Field.one field') .init bva
 
 
 
-anyNeqzSound₀ : ∀ (r : WriterMode)
-  → ∀ {n} → (vec : Vec Var n)
-  → (sol : List (Var × ℕ))
-  → ListLookup 0 sol 1
-  → ∀ init →
-  let result = anyNeqz vec ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
-  → ListLookup (output result) sol 0
-  → Squash (∃ (λ val → (Σ′′ (BatchListLookup vec sol val) (λ _ → All (_≈_ 0) val))))
-anyNeqzSound₀ r [] sol tri init isSol look = sq ([] , BatchLookupNil sol , [])
-anyNeqzSound₀ r (x ∷ vec) sol tri init isSol look
-    with let p₁₁ = neqz x
-             p₂₃ = λ r → do
-               rs ← anyNeqz vec
-               lor r rs
-             p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
-         in neqzIsBool r x sol init p₁₁IsSol
-... | sq (val₁ , isBool₁ , look₁)
-    with let p₁₁ = neqz x
-             p₂₂ = anyNeqz vec
-             p₂₃ = λ r → do
-               rs ← anyNeqz vec
-               lor r rs
-             r' = output (p₁₁ ((r , prime) , init))
-             p₃₃ = λ rs → lor r' rs
-             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
-             p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
-         in anyNeqzIsBool r vec sol _ p₂₂IsSol
-... | sq (val₂ , isBool₂ , look₂)
-    with let p₁₁ = neqz x
-             p₂₂ = anyNeqz vec
-             p₂₃ = λ r → do
-               rs ← anyNeqz vec
-               lor r rs
-             r' = output (p₁₁ ((r , prime) , init))
-             p₃₃ = λ rs → lor r' rs
-             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
-             p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
-         in lorSound₀ r _ _ _ _ sol _ look₁ look₂ isBool₁ isBool₂ p₃₃IsSol look
-... | sq (isZ₁ , isZ₂)
-    with let p₁₁ = neqz x
-             p₂₃ = λ r → do
-               rs ← anyNeqz vec
-               lor r rs
-             p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
-         in neqzSound₀ r x sol tri init p₁₁IsSol isZ₁
-... | sq (val₁' , look₁' , eq₀)
-    with let p₁₁ = neqz x
-             p₂₂ = anyNeqz vec
-             p₂₃ = λ r → do
-               rs ← anyNeqz vec
-               lor r rs
-             r' = output (p₁₁ ((r , prime) , init))
-             p₃₃ = λ rs → lor r' rs
-             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
-             p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
-         in anyNeqzSound₀ r vec sol tri _ p₂₂IsSol isZ₂
-... | sq (val₂' , look₂' , eq₁)
-    =  sq ((val₁' ∷ val₂') , (BatchLookupCons _ _ _ _ _ look₁' look₂' , eq₀ ∷ eq₁))
 lnotSound₁ : ∀ (r : WriterMode) v val sol init
   → ListLookup v sol val
   → isBool val →

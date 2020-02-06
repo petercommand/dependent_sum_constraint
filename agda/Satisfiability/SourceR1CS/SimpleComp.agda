@@ -62,6 +62,53 @@ varEqBaseLitFunc v l with ℕtoF v ≟F l
 varEqBaseLitFunc v l | yes p = 1
 varEqBaseLitFunc v l | no ¬p = 0
 
+varEqBaseLitIsBool : ∀ r (v : Var) (l : f)
+   → ∀ sol init →
+   let result = varEqBaseLit v l ((r , prime) , init)
+   in BuilderProdSol (writerOutput result) sol
+   → Squash (∃ (λ val → Σ′ (isBool val) (λ _ → ListLookup (output result) sol val)))
+varEqBaseLitIsBool r v l sol init isSol
+   with let
+             n-l = output (new ((r , prime) , init))
+             p₁₂ = new >>= λ n-l → add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+             p₁₃ = new >>= λ n-l → add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ [])) >>= λ _ → neqz n-l
+             ¬r = output (p₁₃ ((r , prime) , init))
+             p₂₂ = add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+
+             p₂₅ = λ n-l → add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ [])) >>= λ _ → neqz n-l >>= λ ¬r → lnot ¬r >>= λ r → return r
+             p₃₃ = neqz n-l
+             p₃₅ : ⊤ → SI-Monad Var
+             p₃₅ = λ _ → let n-l = output (new ((r , prime) , init))
+                         in neqz n-l >>= λ ¬r → lnot ¬r >>= λ r → return r
+             p₄₅ = λ ¬r → lnot ¬r >>= λ r → return r
+             p₂₅IsSol = BuilderProdSol->>=⁻₂ new p₂₅ r init sol isSol
+             p₃₅IsSol = BuilderProdSol->>=⁻₂
+                          p₂₂ p₃₅ r _ sol p₂₅IsSol
+             p₃₃IsSol = BuilderProdSol->>=⁻₁
+                          p₃₃ p₄₅ r _ sol p₃₅IsSol
+         in neqzIsBool r _ _ _ p₃₃IsSol
+... | sq (¬rVal , ¬rValIsBool , ¬rValLook) =
+         let
+             n-l = output (new ((r , prime) , init))
+             p₁₂ = new >>= λ n-l → add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+             p₁₃ = new >>= λ n-l → add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ [])) >>= λ _ → neqz n-l
+             ¬r = output (p₁₃ ((r , prime) , init))
+             p₂₂ = add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+
+             p₂₅ = λ n-l → add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ [])) >>= λ _ → neqz n-l >>= λ ¬r → lnot ¬r >>= λ r → return r
+             p₃₃ = neqz n-l
+             p₃₅ : ⊤ → SI-Monad Var
+             p₃₅ = λ _ → let n-l = output (new ((r , prime) , init))
+                         in neqz n-l >>= λ ¬r → lnot ¬r >>= λ r → return r
+             p₄₅ = λ ¬r → lnot ¬r >>= λ r → return r
+             p₂₅IsSol = BuilderProdSol->>=⁻₂ new p₂₅ r init sol isSol
+             p₃₅IsSol = BuilderProdSol->>=⁻₂
+                          p₂₂ p₃₅ r _ sol p₂₅IsSol
+             p₄₅IsSol = BuilderProdSol->>=⁻₂
+                          p₃₃ p₄₅ r _ sol p₃₅IsSol
+         in sq (_ , lnotFuncIsBool ¬rVal , lnotSound r _ _ _ ¬rValLook ¬rValIsBool _ p₄₅IsSol)
+
+
 varEqBaseLitSound : ∀ (r : WriterMode)
   → (v : Var) → (val : ℕ) → (l : f)
   → (sol : List (Var × ℕ))
@@ -178,6 +225,111 @@ anyNeqzFuncIsBoolStrict (x ∷ vec) | yes p = anyNeqzFuncIsBoolStrict vec
 anyNeqzFuncIsBoolStrict (x ∷ vec) | no ¬p = isOneS refl
 
 
+anyNeqzIsBool : ∀ r {n} (vec : Vec Var n) sol init
+  → let result = anyNeqz vec ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → Squash (∃ (λ val → Σ′ (isBool val) (λ _ → ListLookup (output result) sol val)))
+anyNeqzIsBool r [] sol init isSol with addSound r (IAdd zerof ((onef , init) ∷ [])) sol _ isSol
+anyNeqzIsBool r [] sol init isSol | addSol (LinearCombValCons .(Field.one field') .init varVal x LinearCombValBase) x₁
+    rewrite *-identityˡ (ℕtoF varVal)
+          | +-identityʳ (ℕtoF varVal)
+          | +-identityʳ (ℕtoF varVal) = sq (varVal , ((isZero _ x₁) , x))
+anyNeqzIsBool r (x ∷ vec) sol init isSol
+    with let p₁₁ = neqz x
+             p₂₃ = λ r → do
+               rs ← anyNeqz vec
+               lor r rs
+             p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+         in neqzIsBool r x sol init p₁₁IsSol
+... | sq (val₁ , isBool₁ , look₁)
+    with let input = ((r , prime) , init)
+             p₁₁ = neqz x
+             p₂₂ = anyNeqz vec
+             p₂₃ = λ r → do
+               rs ← anyNeqz vec
+               lor r rs
+             r' = output (p₁₁ input)
+             p₃₃ = λ rs → do
+               lor r' rs
+             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+             p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+         in anyNeqzIsBool r vec sol _ p₂₂IsSol
+... | sq (val₂ , isBool₂ , look₂)
+    with let input = ((r , prime) , init)
+             p₁₁ = neqz x
+             p₂₂ = anyNeqz vec
+             p₂₃ = λ r → do
+               rs ← anyNeqz vec
+               lor r rs
+             r' = output (p₁₁ input)
+             p₃₃ = λ rs → do
+               lor r' rs
+             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+             p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+         in lorSound r _ _ _ _ _ look₁ look₂ isBool₁ isBool₂ _ p₃₃IsSol
+... | sound₁ = sq ((lorFunc val₁ val₂) , ((orFuncIsBool val₁ val₂) , sound₁))
+
+anyNeqzSound₀ : ∀ (r : WriterMode)
+  → ∀ {n} → (vec : Vec Var n)
+  → (sol : List (Var × ℕ))
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = anyNeqz vec ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → ListLookup (output result) sol 0
+  → Squash (∃ (λ val → (Σ′′ (BatchListLookup vec sol val) (λ _ → All (_≈_ 0) val))))
+anyNeqzSound₀ r [] sol tri init isSol look = sq ([] , BatchLookupNil sol , [])
+anyNeqzSound₀ r (x ∷ vec) sol tri init isSol look
+    with let p₁₁ = neqz x
+             p₂₃ = λ r → do
+               rs ← anyNeqz vec
+               lor r rs
+             p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+         in neqzIsBool r x sol init p₁₁IsSol
+... | sq (val₁ , isBool₁ , look₁)
+    with let p₁₁ = neqz x
+             p₂₂ = anyNeqz vec
+             p₂₃ = λ r → do
+               rs ← anyNeqz vec
+               lor r rs
+             r' = output (p₁₁ ((r , prime) , init))
+             p₃₃ = λ rs → lor r' rs
+             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+             p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+         in anyNeqzIsBool r vec sol _ p₂₂IsSol
+... | sq (val₂ , isBool₂ , look₂)
+    with let p₁₁ = neqz x
+             p₂₂ = anyNeqz vec
+             p₂₃ = λ r → do
+               rs ← anyNeqz vec
+               lor r rs
+             r' = output (p₁₁ ((r , prime) , init))
+             p₃₃ = λ rs → lor r' rs
+             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+             p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+         in lorSound₀ r _ _ _ _ sol _ look₁ look₂ isBool₁ isBool₂ p₃₃IsSol look
+... | sq (isZ₁ , isZ₂)
+    with let p₁₁ = neqz x
+             p₂₃ = λ r → do
+               rs ← anyNeqz vec
+               lor r rs
+             p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+         in neqzSound₀ r x sol tri init p₁₁IsSol isZ₁
+... | sq (val₁' , look₁' , eq₀)
+    with let p₁₁ = neqz x
+             p₂₂ = anyNeqz vec
+             p₂₃ = λ r → do
+               rs ← anyNeqz vec
+               lor r rs
+             r' = output (p₁₁ ((r , prime) , init))
+             p₃₃ = λ rs → lor r' rs
+             p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+             p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+         in anyNeqzSound₀ r vec sol tri _ p₂₂IsSol isZ₂
+... | sq (val₂' , look₂' , eq₁)
+    =  sq ((val₁' ∷ val₂') , (BatchLookupCons _ _ _ _ _ look₁' look₂' , eq₀ ∷ eq₁))
+
+
 anyNeqzSound : ∀ (r : WriterMode)
   → ∀ {n}
   → (vec : Vec Var n) → (valVec : Vec ℕ n)
@@ -244,6 +396,33 @@ anyNeqzSound r .(v ∷ vec₁) .(n ∷ vec₂) sol (BatchLookupCons v n vec₁ v
      lem | no ¬p with ℕtoF 1 ≟F zerof
      lem | no ¬p | yes p = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) p))
      lem | no ¬p | no ¬p₁ = sq refl
+
+allEqzIsBool : ∀ (r : WriterMode)
+  → ∀ {n} → (vec : Vec Var n)
+  → (sol : List (Var × ℕ))
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = allEqz vec ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → Squash (∃ (λ val → Σ′ (isBool val) (λ _ → ListLookup (output result) sol val)))
+allEqzIsBool r vec sol tri init isSol
+    with
+  let
+    p₁₁ = anyNeqz vec
+    p₂₃ = λ ¬r → lnot ¬r >>= λ r → return r
+    p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+    p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+  in anyNeqzIsBool r vec sol init p₁₁IsSol
+... | sq (¬rVal , ¬rValIsBool , ¬rValLook)
+    with
+  let
+    p₁₁ = anyNeqz vec
+    p₂₃ = λ ¬r → lnot ¬r >>= λ r → return r
+    p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+    p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+  in lnotSound r _ _ _ ¬rValLook ¬rValIsBool _ p₂₃IsSol
+... | look = sq (_ , ((lnotFuncIsBool ¬rVal) , look))
+
 
 allEqzFunc : ∀ {n} → Vec ℕ n → ℕ
 allEqzFunc [] = 1

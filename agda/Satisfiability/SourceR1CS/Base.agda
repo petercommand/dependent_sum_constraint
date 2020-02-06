@@ -423,23 +423,23 @@ builderMaxVar (fst , snd) = R1CSsMaxVar (fst (snd []))
 
 addSound : ∀ (r : WriterMode)
    → (ir : R1CS)
-   → (solution' : List (Var × ℕ))
+   → (sol : List (Var × ℕ))
    → ∀ (init : ℕ) → 
    let result = add ir ((r , prime) , init)
-   in BuilderProdSol (writerOutput result) solution'
-   → R1CSSolution solution' ir
-addSound NormalMode ir solution' init isSol' = isSol' ir (here refl)
-addSound PostponedMode ir solution' init isSol' = isSol' ir (here refl)
+   in BuilderProdSol (writerOutput result) sol
+   → R1CSSolution sol ir
+addSound NormalMode ir sol init isSol' = isSol' ir (here refl)
+addSound PostponedMode ir sol init isSol' = isSol' ir (here refl)
 
 
 
 assertTrueSound : ∀ (r : WriterMode)
-   → ∀ (v : Var) → (solution' : List (Var × ℕ))
+   → ∀ (v : Var) → (sol : List (Var × ℕ))
    → ∀ (init : ℕ) → {- (init > builderMaxVar builderProd) → -}
    let result = assertTrue v ((r , prime) , init)
    in
-     BuilderProdSol (writerOutput result) solution'
-   → ListLookup v solution' 1
+     BuilderProdSol (writerOutput result) sol
+   → ListLookup v sol 1
 assertTrueSound r v sol' init isSol' with addSound r (IAdd onef ((-F onef , v) ∷ []))  sol' init isSol'
 assertTrueSound r v sol' init isSol' | addSol (LinearCombValCons .((Field.- field') (Field.one field')) .v varVal x LinearCombValBase) x₁
   rewrite +-identityʳ ((-F onef) *F ℕtoF varVal)

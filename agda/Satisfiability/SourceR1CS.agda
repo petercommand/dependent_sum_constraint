@@ -1793,7 +1793,7 @@ sourceToR1CSSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ ss ss₁
        p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
     in addSound r (IMul onef (head r₁) (head r₂) onef v) sol _ p₄₄IsSol
 sourceToR1CSSound r .`Base .(Mul s₁ s₂) sol tri (MulStore s₁ s₂ ss ss₁) init isSol | sq (⟦s₁⟧ , ⟦s₁⟧Val ∷ [] , `BaseValRepr (sq x₄) , eq₁ , sem₁ , look₁) | sq (⟦s₂⟧ , ⟦s₂⟧Val ∷ [] , `BaseValRepr (sq x₅) , eq₂ , sem₂ , look₂) | multSol .(Field.one field') ._ bval ._ cval .(Field.one field') ._ eval x x₁ x₂ x₃ rewrite *-identityˡ (ℕtoF bval)
-                                    | *-identityˡ (ℕtoF eval) 
+                                    | *-identityˡ (ℕtoF eval)
                                     = sq ((⟦s₁⟧ *F ⟦s₂⟧) , (⟦s₁⟧Val * ⟦s₂⟧Val ∷ [] , (`BaseValRepr (sq (trans lem (sym (ℕtoF-*hom ⟦s₁⟧Val ⟦s₂⟧Val))))) , (MulStore′ s₁ s₂ eq₁ eq₂) , (semEq , BatchLookupCons _ _ _ _ _ (ListLookup-Respects-≈ _ _ _ _ lem' x₂) (BatchLookupNil sol))))
   where
     lem : ℕtoF (fToℕ (⟦s₁⟧ *F ⟦s₂⟧)) ≡ (ℕtoF ⟦s₁⟧Val *F ℕtoF ⟦s₂⟧Val)

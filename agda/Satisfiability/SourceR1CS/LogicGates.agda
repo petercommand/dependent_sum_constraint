@@ -392,19 +392,19 @@ v' cval[x₁] val'[look₂]
 init eval[x₂]
 -}
 
-notFunc : ℕ → ℕ
-notFunc a with ℕtoF a ≟F zerof
-notFunc a | yes p = 1
-notFunc a | no ¬p = 0
+lnotFunc : ℕ → ℕ
+lnotFunc a with ℕtoF a ≟F zerof
+lnotFunc a | yes p = 1
+lnotFunc a | no ¬p = 0
 
 
-notFuncIsBoolStrict : ∀ n → isBoolStrict (notFunc n)
-notFuncIsBoolStrict n with ℕtoF n ≟F zerof
-notFuncIsBoolStrict n | yes p = isOneS refl
-notFuncIsBoolStrict n | no ¬p = isZeroS refl
+lnotFuncIsBoolStrict : ∀ n → isBoolStrict (lnotFunc n)
+lnotFuncIsBoolStrict n with ℕtoF n ≟F zerof
+lnotFuncIsBoolStrict n | yes p = isOneS refl
+lnotFuncIsBoolStrict n | no ¬p = isZeroS refl
 
-notFuncIsBool : ∀ n → isBool (notFunc n)
-notFuncIsBool n = isBoolStrict→isBool (notFuncIsBoolStrict n)
+lnotFuncIsBool : ∀ n → isBool (lnotFunc n)
+lnotFuncIsBool n = isBoolStrict→isBool (lnotFuncIsBoolStrict n)
 
 lnotSoundLem : ∀ r v init →
   let b₁₂ = writerOutput (add (IAdd onef (((-F onef) , v) ∷ ((-F onef) , init) ∷ [])) ((r , prime) , suc init))
@@ -421,7 +421,7 @@ lnotSound : ∀ (r : WriterMode)
   → ∀ (init : ℕ) →
   let result = lnot v ((r , prime) , init)
   in BuilderProdSol (writerOutput result) sol
-  → ListLookup (output result) sol (notFunc val) 
+  → ListLookup (output result) sol (lnotFunc val) 
 lnotSound r v val sol look₁ valBool init isSol
   with addSound r (IAdd onef ((-F onef , v) ∷ (-F onef , init) ∷ [])) sol (suc init)
         (let b₁₂ = writerOutput (add (IAdd onef (((-F onef) , v) ∷ ((-F onef) , init) ∷ [])) ((r , prime) , suc init))
@@ -434,7 +434,7 @@ lnotSound r v val sol look₁ valBool init isSol | addSol (LinearCombValCons .((
 ... | sq eq₁
     rewrite eq₁ = lem valBool
           where
-             lem : isBool val → ListLookup init sol (notFunc val)
+             lem : isBool val → ListLookup init sol (lnotFunc val)
              lem valBool with ℕtoF val ≟F zerof
              lem valBool | yes p rewrite p | -zero≡zero
                                        | +-identityˡ (-F (ℕtoF varVal₁))
@@ -451,7 +451,7 @@ v varVal[x] val[look₁]
 -}
 
 limpFunc : ℕ → ℕ → ℕ
-limpFunc a b = lorFunc (notFunc a) b
+limpFunc a b = lorFunc (lnotFunc a) b
 
 limpFuncImp : ∀ {a} {b} → a ≡ 1 → isBoolStrict b → limpFunc a b ≡ 1 → b ≡ 1
 limpFuncImp refl (isZeroS refl) eq₂ with ℕtoF 1 ≟F zerof
@@ -463,10 +463,10 @@ limpFuncImp refl (isZeroS refl) eq₂ | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ �
 limpFuncImp {b = b} refl (isOneS refl) eq₂ = refl
 
 limpFuncIsBool : ∀ a b → isBool (limpFunc a b)
-limpFuncIsBool a b = orFuncIsBool (notFunc a) b
+limpFuncIsBool a b = orFuncIsBool (lnotFunc a) b
 
 limpFuncIsBoolStrict : ∀ a b → isBoolStrict (limpFunc a b)
-limpFuncIsBoolStrict a b = orFuncIsBoolStrict (notFunc a) b
+limpFuncIsBoolStrict a b = orFuncIsBoolStrict (lnotFunc a) b
 
 limpSoundLem₁ : ∀ r init sol v v' → BuilderProdSol (writerOutput (limp v v' ((r , prime) , init))) sol
                   → BuilderProdSol (writerOutput (lnot v ((r , prime) , init))) sol
@@ -485,7 +485,7 @@ limpSound : ∀ (r : WriterMode)
   → ListLookup (output result) sol (limpFunc val val') 
 limpSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol
     with lnotSound r v val sol look₁ valBool init (limpSoundLem₁ r init sol v v' isSol)
-... | sound₁ = lorSound r init v' (notFunc val) val' sol sound₁ look₂ (notFuncIsBool val) val'Bool
+... | sound₁ = lorSound r init v' (lnotFunc val) val' sol sound₁ look₂ (lnotFuncIsBool val) val'Bool
                  (varOut (lnot v ((r , prime) , init)))
                     (BuilderProdSol->>=⁻₂ (lnot v) (λ notV → lor notV v') r init sol isSol)
 

@@ -472,7 +472,7 @@ allEqzIsBool r vec sol tri init isSol
     p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
     p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
   in lnotSound r _ _ _ ¬rValLook ¬rValIsBool _ p₂₃IsSol
-... | look = sq (_ , ((notFuncIsBool ¬rVal) , look))
+... | look = sq (_ , ((lnotFuncIsBool ¬rVal) , look))
 
 varEqBaseLitIsBool : ∀ r (v : Var) (l : f)
    → ∀ sol init →
@@ -518,7 +518,7 @@ varEqBaseLitIsBool r v l sol init isSol
                           p₂₂ p₃₅ r _ sol p₂₅IsSol
              p₄₅IsSol = BuilderProdSol->>=⁻₂
                           p₃₃ p₄₅ r _ sol p₃₅IsSol
-         in sq (_ , notFuncIsBool ¬rVal , lnotSound r _ _ _ ¬rValLook ¬rValIsBool _ p₄₅IsSol)
+         in sq (_ , lnotFuncIsBool ¬rVal , lnotSound r _ _ _ ¬rValLook ¬rValIsBool _ p₄₅IsSol)
 
 piVarEqLitIsBool : ∀ (r : WriterMode)
   → ∀ u x eu vec f sol

@@ -142,7 +142,7 @@ varEqBaseLitSound r v val l sol look₁ init isSol | addSol (LinearCombValCons .
                    | -one*f≡-f (ℕtoF varVal₁)
                    | +-identityʳ (-F ℕtoF varVal₁) = ListLookup-Respects-≈ _ _ _ _ lem sound₃
         where
-          lem : notFunc (neqzFunc varVal₁) ≈ varEqBaseLitFunc val l
+          lem : lnotFunc (neqzFunc varVal₁) ≈ varEqBaseLitFunc val l
           lem with ℕtoF varVal₁ ≟F zerof
           lem | yes p with ℕtoF 0 ≟F zerof
           lem | yes p | yes p₁ with ℕtoF val ≟F l
@@ -265,7 +265,7 @@ allEqzFuncIsBoolStrict (x ∷ vec) | yes p = allEqzFuncIsBoolStrict vec
 allEqzFuncIsBoolStrict (x ∷ vec) | no ¬p = isZeroS refl
 
 
-allEqzSoundLem : ∀ {n} (vec : Vec ℕ n) → notFunc (anyNeqzFunc vec) ≈ allEqzFunc vec
+allEqzSoundLem : ∀ {n} (vec : Vec ℕ n) → lnotFunc (anyNeqzFunc vec) ≈ allEqzFunc vec
 allEqzSoundLem [] with ℕtoF 0 ≟F zerof
 allEqzSoundLem [] | yes p = sq refl
 allEqzSoundLem [] | no ¬p = ⊥-elim′ (¬p ℕtoF-0≡0)

@@ -14,7 +14,7 @@ open import Data.Nat.Primality
 
 open import Data.Product hiding (map)
 open import Data.ProductPrime
-open import Data.Vec hiding (_>>=_; _++_; splitAt)
+open import Data.Vec hiding (_>>=_; splitAt) renaming (_++_ to _V++_)
 open import Data.Vec.AllProp
 open import Data.Vec.Split
 open import Data.Squash
@@ -27,6 +27,8 @@ open import Language.Common
 
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
+import Relation.Binary.HeterogeneousEquality
+module HE = Relation.Binary.HeterogeneousEquality
 open import Relation.Nullary
 module Satisfiability.SourceR1CS.SimpleComp (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
      (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
@@ -205,6 +207,96 @@ varEqBaseLitSound r v val l sol look₁ init isSol | addSol (LinearCombValCons .
                                              | +-invʳ l | +-identityʳ (-F ℕtoF varVal₁)
                                              = ⊥-elim′ (¬p (-≡zero→≡zero x₁))
           lem | no ¬p | no ¬p₁ | no ¬p₂ = sq refl
+
+varEqBaseLitSound₁ : ∀ (r : WriterMode)
+  → (v : Var) (l : f)
+  → (sol : List (Var × ℕ))
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = varEqBaseLit v l ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → ListLookup (output result) sol 1
+  → Squash (∃ (λ val → Σ′ (ℕtoF val ≡ l) (λ _ → ListLookup v sol val)))  
+varEqBaseLitSound₁ r v l sol tri init isSol look
+    with
+    let
+      input = ((r , prime) , init)
+      p₁₂ = do
+        n-l ← new
+        add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+      p₁₃ = do
+        n-l ← new
+        add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+        neqz n-l
+      n-l = init
+      p₃₃ = neqz n-l
+      p₃₅ = λ _ → do
+        ¬r ← neqz n-l
+        r ← lnot ¬r
+        return r
+      ¬r = output (p₁₃ input)
+      p₄₅ = λ _ → do
+        r ← lnot ¬r
+        return r
+      p₃₅IsSol = BuilderProdSol->>=⁻₂ p₁₂ p₃₅ r _ _ isSol
+      p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ _ p₃₅IsSol
+    in neqzIsBool r _ _ _ p₃₃IsSol
+... | sq (neqzOutVal , isBool₁ , look₁) with
+    let
+       input = ((r , prime) , init)
+       p₁₂ = do
+         n-l ← new
+         add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+       p₁₃ = do
+         n-l ← new
+         add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+         neqz n-l
+       n-l = init
+       p₃₃ = neqz n-l
+       p₃₅ = λ _ → do
+         ¬r ← neqz n-l
+         r ← lnot ¬r
+         return r
+       ¬r = output (p₁₃ input)
+       p₄₄ = lnot ¬r
+       p₄₅ = λ _ → do
+         r ← lnot ¬r
+         return r
+       p₅₅ = λ r →
+         return r
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₁₂ p₃₅ r _ _ isSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ _ p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ _ p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ _ p₄₅IsSol
+       notSound₁ = lnotSound₁ r _ _ _ _ look₁ isBool₁ p₄₄IsSol look
+    in neqzSound₀ r init _ tri _ p₃₃IsSol notSound₁
+... | sq (neqzInVal , look₂ , sq eq₀)
+    with
+    let
+       p₁₂ = do
+         n-l ← new
+         add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+       p₁₃ = do
+         n-l ← new
+         add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
+         neqz n-l
+       n-l = init
+       p₃₅ = λ _ → do
+         ¬r ← neqz n-l
+         r ← lnot ¬r
+         return r
+       p₁₂IsSol = BuilderProdSol->>=⁻₁ p₁₂ p₃₅ r _ _ isSol
+
+    in addSound r (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ [])) sol (suc init) p₁₂IsSol
+varEqBaseLitSound₁ r v l sol tri init isSol look | sq (neqzOutVal , isBool₁ , look₁) | sq (neqzInVal , look₂ , sq eq₀) | addSol (LinearCombValCons .(Field.one field') .v varVal x (LinearCombValCons .((Field.- field') (Field.one field')) .init varVal₁ x₂ LinearCombValBase)) x₁ rewrite *-identityˡ (ℕtoF varVal)
+                   | -one*f≡-f (ℕtoF varVal₁)
+                   | +-identityʳ (-F (ℕtoF varVal₁))
+                   with ListLookup-≈ x₂ look₂
+... | sq p rewrite p | sym eq₀
+                 = sq (varVal , ((trans (sym (subst (λ t → (ℕtoF varVal +F (-F t)) ≡ ℕtoF varVal) (sym ℕtoF-0≡0)
+                                                (subst (λ t → (ℕtoF varVal +F t) ≡ ℕtoF varVal) (sym -zero≡zero)
+                                                  (+-identityʳ (ℕtoF varVal))))) (a-b≡zero→a≡b x₁)) , x))
+
 
 anyNeqzFunc : ∀ {n} → Vec ℕ n → ℕ
 anyNeqzFunc [] = 0
@@ -475,6 +567,30 @@ allEqzSound r vec val sol look init isSol =
   in ListLookup-Respects-≈ _ _ _ _ (allEqzSoundLem val) sound₂
 
 
+allEqzSound₁ : ∀ (r : WriterMode)
+  → ∀ {n} → (vec : Vec Var n)
+  → (sol : List (Var × ℕ))
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = allEqz vec ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → ListLookup (output result) sol 1
+  → Squash (∃ (λ val → (Σ′′ (BatchListLookup vec sol val) (λ _ → All (_≈_ 0) val))))
+allEqzSound₁ r vec sol tri init isSol look
+    with let p₁₁ = anyNeqz vec
+             p₂₃ = λ ¬r → do
+               r ← lnot ¬r
+               return r
+             p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+         in anyNeqzIsBool r vec sol init p₁₁IsSol
+... | sq (val , isBool , look₁)
+    = let p₁₁ = anyNeqz vec
+          p₂₃ = λ ¬r → do
+               r ← lnot ¬r
+               return r
+          p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+          p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+      in anyNeqzSound₀ r vec sol tri init p₁₁IsSol (lnotSound₁ r _ _ sol _ look₁ isBool p₂₃IsSol look)
 
 
 piVarEqLitFunc : ∀ {u} (x : ⟦ u ⟧ → U) → (eu : List ⟦ u ⟧)
@@ -724,6 +840,926 @@ piVarEqLitSound r u x (x₁ ∷ eu) vec val pi sol look tri init isSol with spli
        sound₂ = piVarEqLitSound r u x eu snd sndv pi sol lookSnd tri (varOut (p₁₁ input)) p₂₂IsSol
        sound₃ = landSound r r' s (varEqLitFunc (x x₁) fstv (pi x₁)) (piVarEqLitFunc x eu sndv pi) sol sound₁ sound₂ (varEqLitFuncIsBool (x x₁) fstv (pi x₁)) (piVarEqLitFuncIsBool x eu sndv pi) (varOut (p₁₂ input)) p₃₃IsSol
      in sound₃
+piVarEqLitIsBool : ∀ (r : WriterMode)
+  → ∀ u x eu vec f sol
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = piVarEqLit u x eu vec f ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → Squash (∃ (λ val → Σ′ (isBool val) (λ _ → ListLookup (output result) sol val)))
+
+varEqLitIsBool : ∀ (r : WriterMode)
+  → ∀ u → (vec : Vec Var (tySize u))
+  → (l : ⟦ u ⟧)
+  → (sol : List (Var × ℕ))
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = varEqLit u vec l ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → Squash (∃ (λ val → Σ′ (isBool val) (λ _ → ListLookup (output result) sol val)))
+
+piVarEqLitIsBool r u x [] [] f sol tri init isSol = sq (1 , isOne 1 ℕtoF-1≡1 , tri)
+piVarEqLitIsBool r u x (x₁ ∷ eu) vec f sol tri init isSol with splitAt (tySize (x x₁)) vec | inspect (splitAt (tySize (x x₁))) vec
+... | fst , snd | [ prf ] with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit (x x₁) fst (f x₁)
+       p₁₂ = varEqLit (x x₁) fst (f x₁) >>= λ r → piVarEqLit u x eu snd f
+       p₂₂ = piVarEqLit u x eu snd f
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = λ s → land r' s 
+       p₂₃ = λ r → piVarEqLit u x eu snd f >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    in varEqLitIsBool r (x x₁) fst (f x₁) sol tri _ p₁₁IsSol
+... | sq (rVal , rIsBool , rLook) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit (x x₁) fst (f x₁)
+       p₁₂ = varEqLit (x x₁) fst (f x₁) >>= λ r → piVarEqLit u x eu snd f
+       p₂₂ = piVarEqLit u x eu snd f
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = λ s → land r' s 
+       p₂₃ = λ r → piVarEqLit u x eu snd f >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    in piVarEqLitIsBool r u x eu snd f sol tri _ p₂₂IsSol
+... | sq (sVal , sIsBool , sLook) =
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit (x x₁) fst (f x₁)
+       p₁₂ = varEqLit (x x₁) fst (f x₁) >>= λ r → piVarEqLit u x eu snd f
+       p₂₂ = piVarEqLit u x eu snd f
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = λ s → land r' s 
+       p₂₃ = λ r → piVarEqLit u x eu snd f >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    in landIsBool r _ _ _ _ _ rLook sLook rIsBool sIsBool tri _ p₃₃IsSol
+
+
+
+varEqLitIsBool r `One vec l sol tri init isSol = allEqzIsBool r vec sol tri init isSol
+varEqLitIsBool r `Two vec false sol tri init isSol = allEqzIsBool r vec sol tri init isSol
+varEqLitIsBool r `Two (v ∷ vec) true sol tri init isSol = varEqBaseLitIsBool r v onef sol init isSol
+varEqLitIsBool r `Base (v ∷ vec) l sol tri init isSol = varEqBaseLitIsBool r v l sol init isSol
+varEqLitIsBool r (`Vec u zero) vec l sol tri init isSol = sq (1 , isOne 1 ℕtoF-1≡1 , tri)
+varEqLitIsBool r (`Vec u (suc x)) vec (l ∷ ls) sol tri init isSol with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd | [ prf ] with let
+                                   input = ((r , prime) , init)
+                                   p₁₁ = varEqLit u fst l
+                                   p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   p₂₂ = varEqLit (`Vec u x) snd ls
+                                   r' = output (p₁₁ input)
+                                   p₃₃ = λ s → land r' s
+                                   p₂₃ = λ r → varEqLit (`Vec u x) snd ls >>= λ s → land r s
+                                   p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                             in varEqLitIsBool r u fst l sol tri init p₁₁IsSol
+... | sq (val₁ , isBool₁ , look₁)
+                         with let
+                                   input = ((r , prime) , init)
+                                   p₁₁ = varEqLit u fst l
+                                   p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   p₂₂ = varEqLit (`Vec u x) snd ls
+                                   r' = output (p₁₁ input)
+                                   p₃₃ = λ s → land r' s
+                                   p₂₃ = λ r → varEqLit (`Vec u x) snd ls >>= λ s → land r s
+                                   p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                              in varEqLitIsBool r (`Vec u x) snd ls sol tri _ p₂₂IsSol
+... | sq (val₂ , isBool₂ , look₂) =
+                              let
+                                   input = ((r , prime) , init)
+                                   p₁₁ = varEqLit u fst l
+                                   p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   p₂₂ = varEqLit (`Vec u x) snd ls
+                                   r' = output (p₁₁ input)
+                                   p₃₃ = λ s → land r' s
+                                   p₂₃ = λ r → varEqLit (`Vec u x) snd ls >>= λ s → land r s
+                                   p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                              in landIsBool r _ _ _ _ _ look₁ look₂ isBool₁ isBool₂ tri _ p₃₃IsSol
+varEqLitIsBool r (`Σ u x) vec (fstₗ , sndₗ) sol tri init isSol  with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd | [ prf ] with maxTySplit u fstₗ x snd | inspect (maxTySplit u fstₗ x) snd
+... | snd₁ , snd₂ | [ prf₂ ]
+    with
+     let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+     in varEqLitIsBool r u fst fstₗ sol tri init p₁₁IsSol
+... | sq (rval₁ , isBool₁ , rlook₁)
+    with
+     let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in varEqLitIsBool r (x fstₗ) snd₁ sndₗ sol tri _ p₂₂IsSol
+... | sq (sval₁ , isBool₂ , slook₂ )
+    with
+     let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in allEqzIsBool r snd₂ sol tri _ p₃₃IsSol
+... | sq (s'Val , isBool₃ , s'look) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in landIsBool r _ _ sol _ _ rlook₁ slook₂ isBool₁ isBool₂ tri _ p₄₄IsSol
+... | sq (and₁Val , and₁IsBool , and₁Look) =
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in landIsBool r _ _ _ _ _ and₁Look s'look and₁IsBool isBool₃ tri _ p₅₅IsSol
+varEqLitIsBool r (`Π u x) vec l sol tri init isSol = piVarEqLitIsBool r u x (enum u) vec l sol tri init isSol
+
+varEqLitSound₁ : ∀ (r : WriterMode)
+  → ∀ u → (vec : Vec Var (tySize u))
+  → (l : ⟦ u ⟧)
+  → (sol : List (Var × ℕ))
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = varEqLit u vec l ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → ListLookup (output result) sol 1
+  → Squash (∃ (λ val → Σ′ (ValIsRepr u l val) (λ _ → BatchListLookup vec sol val)))
+
+piVarEqLitSound₁ : ∀ (r : WriterMode)
+  → ∀ u x eu vec f sol
+  → ListLookup 0 sol 1
+  → ∀ init →
+  let result = piVarEqLit u x eu vec f ((r , prime) , init)
+  in BuilderProdSol (writerOutput result) sol
+  → ListLookup (output result) sol 1
+  → Squash (∃ (λ val → Σ′ (PiPartialRepr u x f eu val) (λ _ → BatchListLookup vec sol val)))
+piVarEqLitSound₁ r u x [] [] f sol tri init isSol look = sq ([] , PiRepNil , BatchLookupNil sol)
+piVarEqLitSound₁ r u x (x₁ ∷ eu) vec f sol tri init isSol look with splitAt (tySize (x x₁)) vec | inspect (splitAt (tySize (x x₁))) vec
+... | fst , snd | [ prf ] with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit (x x₁) fst (f x₁)
+       p₁₂ = varEqLit (x x₁) fst (f x₁) >>= λ r → piVarEqLit u x eu snd f
+       p₂₂ = piVarEqLit u x eu snd f
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = λ s → land r' s 
+       p₂₃ = λ r → piVarEqLit u x eu snd f >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    in varEqLitIsBool r (x x₁) fst (f x₁) sol tri init p₁₁IsSol
+... | sq (rVal , rIsBool , rLookup) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit (x x₁) fst (f x₁)
+       p₁₂ = varEqLit (x x₁) fst (f x₁) >>= λ r → piVarEqLit u x eu snd f
+       p₂₂ = piVarEqLit u x eu snd f
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = λ s → land r' s 
+       p₂₃ = λ r → piVarEqLit u x eu snd f >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    in piVarEqLitIsBool r u x eu snd f sol  tri _ p₂₂IsSol
+... | sq (sVal , sIsBool , sLookup) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit (x x₁) fst (f x₁)
+       p₁₂ = varEqLit (x x₁) fst (f x₁) >>= λ r → piVarEqLit u x eu snd f
+       p₂₂ = piVarEqLit u x eu snd f
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = λ s → land r' s 
+       p₂₃ = λ r → piVarEqLit u x eu snd f >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    in landSound₁ r _ _ _ _ sol _ rLookup sLookup rIsBool sIsBool p₃₃IsSol look
+... | sq (r≈1 , s≈1) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit (x x₁) fst (f x₁)
+       p₁₂ = varEqLit (x x₁) fst (f x₁) >>= λ r → piVarEqLit u x eu snd f
+       p₂₂ = piVarEqLit u x eu snd f
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = λ s → land r' s 
+       p₂₃ = λ r → piVarEqLit u x eu snd f >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    in varEqLitSound₁ r (x x₁) fst (f x₁) sol tri init p₁₁IsSol r≈1
+... | sq (fstVal , fstRepr , fstLookup) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit (x x₁) fst (f x₁)
+       p₁₂ = varEqLit (x x₁) fst (f x₁) >>= λ r → piVarEqLit u x eu snd f
+       p₂₂ = piVarEqLit u x eu snd f
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = λ s → land r' s 
+       p₂₃ = λ r → piVarEqLit u x eu snd f >>= λ s → land r s
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+       p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+    in piVarEqLitSound₁ r u x eu snd f sol tri _ p₂₂IsSol s≈1
+... | sq (sndVal , sndRepr , sndLookup) = sq ((fstVal V++ sndVal) , ((PiRepCons fstRepr sndRepr refl) , lem))
+  where
+    lem : BatchListLookup vec sol (fstVal V++ sndVal)
+    lem with splitAtCorrect (tySize (x x₁)) vec
+    ... | correct = subst′ (λ t → BatchListLookup t sol (fstVal V++ sndVal))
+                      (sym correct) (subst′
+                                       (λ t →
+                                          BatchListLookup (proj₁ t V++ proj₂ t) sol (fstVal V++ sndVal))
+                                       (sym prf) (BatchListLookup-++ fst fstVal fstLookup sndLookup))
+
+varEqLitSound₁ r `One vec l sol tri init isSol look with allEqzSound₁ r  vec sol tri init isSol look
+varEqLitSound₁ r `One vec l sol tri init isSol look | sq (val , look₁ , all≈0 ∷ []) = sq (val , `OneValRepr _ (≈-sym all≈0) , look₁)
+varEqLitSound₁ r `Two (x ∷ vec) false sol tri init isSol look with allEqzSound₁ r (x ∷ vec) sol tri init isSol look
+varEqLitSound₁ r `Two (x ∷ vec) false sol tri init isSol look | sq (val , look₁ , all≈0 ∷ []) = sq (val , `TwoValFalseRepr _ (≈-sym all≈0) , look₁)
+varEqLitSound₁ r `Two (x ∷ []) true sol tri init isSol look with varEqBaseLitSound₁ r x onef sol tri init isSol look
+... | sq (val , eq₁ , look₁) = sq ((val ∷ []) , ((`TwoValTrueRepr val (sq (trans eq₁ (sym ℕtoF-1≡1)))) , BatchLookupCons x val [] [] sol look₁ (BatchLookupNil sol)))
+varEqLitSound₁ r `Base (x ∷ []) l sol tri init isSol look with varEqBaseLitSound₁ r x l sol tri init isSol look
+... | sq (val , eq₁ , look₁) = sq ((val ∷ []) , ((`BaseValRepr (sq (sym (trans eq₁ (sym (ℕtoF∘fToℕ≡ l)))))) , (BatchLookupCons x val [] [] sol look₁ (BatchLookupNil sol))))
+varEqLitSound₁ r (`Vec u zero) [] [] sol tri init isSol look = sq ([] , (`VecValBaseRepr , BatchLookupNil sol))
+varEqLitSound₁ r (`Vec u (suc x)) vec (l ∷ ls) sol tri init isSol look with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd | [ prf ] with let
+                                   input = ((r , prime) , init)
+                                   p₁₁ = varEqLit u fst l
+                                   p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   p₂₂ = varEqLit (`Vec u x) snd ls
+                                   r' = output (p₁₁ input)
+                                   p₃₃ = λ s → land r' s
+                                   p₂₃ = λ r → varEqLit (`Vec u x) snd ls >>= λ s → land r s
+                                   p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                             in varEqLitIsBool r u fst l sol tri init p₁₁IsSol
+... | sq (val₁ , isBool₁ , look₁)
+                         with let
+                                   input = ((r , prime) , init)
+                                   p₁₁ = varEqLit u fst l
+                                   p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   p₂₂ = varEqLit (`Vec u x) snd ls
+                                   r' = output (p₁₁ input)
+                                   p₃₃ = λ s → land r' s
+                                   p₂₃ = λ r → varEqLit (`Vec u x) snd ls >>= λ s → land r s
+                                   p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                              in varEqLitIsBool r (`Vec u x) snd ls sol tri _ p₂₂IsSol
+... | sq (val₂ , isBool₂ , look₂)
+                         with let
+                                   input = ((r , prime) , init)
+                                   p₁₁ = varEqLit u fst l
+                                   p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   p₂₂ = varEqLit (`Vec u x) snd ls
+                                   r' = output (p₁₁ input)
+                                   p₃₃ = λ s → land r' s
+                                   p₂₃ = λ r → varEqLit (`Vec u x) snd ls >>= λ s → land r s
+                                   p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                              in landSound₁ r _ _ _ _ _ _ look₁ look₂ isBool₁ isBool₂ p₃₃IsSol look
+... | sq (look₃ , look₄)
+                         with let
+                                   input = ((r , prime) , init)
+                                   p₁₁ = varEqLit u fst l
+                                   p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   p₂₂ = varEqLit (`Vec u x) snd ls
+                                   r' = output (p₁₁ input)
+                                   p₃₃ = λ s → land r' s
+                                   p₂₃ = λ r → varEqLit (`Vec u x) snd ls >>= λ s → land r s
+                                   p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                              in varEqLitSound₁ r u fst l sol tri _ p₁₁IsSol look₃
+... | sq (valIn₁ , isRepr₁ , lookIn₁)
+                          with let
+                                   input = ((r , prime) , init)
+                                   p₁₁ = varEqLit u fst l
+                                   p₁₂ = varEqLit u fst l >>= λ r → varEqLit (`Vec u x) snd ls
+                                   p₂₂ = varEqLit (`Vec u x) snd ls
+                                   r' = output (p₁₁ input)
+                                   p₃₃ = λ s → land r' s
+                                   p₂₃ = λ r → varEqLit (`Vec u x) snd ls >>= λ s → land r s
+                                   p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
+                                   p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                                   p₃₃IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₃ r _ sol p₂₃IsSol
+                               in varEqLitSound₁ r (`Vec u x) snd ls sol tri _ p₂₂IsSol look₄
+... | sq (valIn₂ , isRepr₂ , lookIn₂) = sq ((valIn₁ V++ valIn₂) , ((`VecValConsRepr isRepr₁ isRepr₂ refl) , subst′ (λ t → BatchListLookup t sol (valIn₁ V++ valIn₂)) (trans (subst (λ t → fst V++ snd ≡ proj₁ t V++ proj₂ t) (sym prf) refl) (sym (splitAtCorrect (tySize u) vec))) (BatchListLookup-++ _ _ lookIn₁ lookIn₂)))
+varEqLitSound₁ r (`Σ u x) vec (fstₗ , sndₗ) sol tri init isSol look with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
+... | fst , snd | [ prf ] with maxTySplit u fstₗ x snd | inspect (maxTySplit u fstₗ x) snd
+... | snd₁ , snd₂ | [ prf₂ ]
+    with
+     let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+     in varEqLitIsBool r u fst fstₗ sol tri init p₁₁IsSol
+... | sq (rval₁ , isBool₁ , rlook₁)
+    with
+     let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in varEqLitIsBool r (x fstₗ) snd₁ sndₗ sol tri _ p₂₂IsSol
+... | sq (sval₁ , isBool₂ , slook₂ )
+    with
+     let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in allEqzIsBool r snd₂ sol tri _ p₃₃IsSol
+... | sq (s'Val , isBool₃ , s'look) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in landIsBool r _ _ sol _ _ rlook₁ slook₂ isBool₁ isBool₂ tri _ p₄₄IsSol
+... | sq (and₁Val , and₁IsBool , and₁Look)
+    with
+        let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in landSound₁ r _ _ _ _ sol _ and₁Look s'look and₁IsBool isBool₃ p₅₅IsSol look
+... | sq (lookand₁≈1 , looks'≈1)
+    with
+        let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in landSound₁ r _ _ _ _ sol _ rlook₁ slook₂ isBool₁ isBool₂ p₄₄IsSol lookand₁≈1
+... | sq (lookr≈1 , looks≈1) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in varEqLitSound₁ r u fst fstₗ sol tri _ p₁₁IsSol lookr≈1
+... | sq (rval₂ , rIsRepr , rval₂Look) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in varEqLitSound₁ r (x fstₗ) snd₁ sndₗ sol tri _ p₂₂IsSol looks≈1
+... | sq (sval₂ , sIsRepr , sval₂Look) with
+    let
+       input = ((r , prime) , init)
+       p₁₁ = varEqLit u fst fstₗ
+       p₁₂ = varEqLit u fst fstₗ >>= λ r → varEqLit (x fstₗ) snd₁ sndₗ
+       p₁₃ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         allEqz snd₂
+       p₁₄ = do
+         r ← varEqLit u fst fstₗ
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         land r s
+       p₂₂ = varEqLit (x fstₗ) snd₁ sndₗ
+       p₂₅ = λ r → do
+         s ← varEqLit (x fstₗ) snd₁ sndₗ
+         s' ← allEqz snd₂
+         and₁ ← land r s
+         land and₁ s'
+       r' = output (p₁₁ input)
+       s = output (p₁₂ input)
+       p₃₃ = allEqz snd₂
+       p₃₅ = λ s → do
+         s' ← allEqz snd₂
+         and₁ ← land r' s
+         land and₁ s'
+       p₄₄ = land r' s
+       p₄₅ = λ s' → do
+         and₁ ← land r' s
+         land and₁ s'
+       s' = output (p₁₃ input)
+       and₁ = output (p₁₄ input)
+       p₅₅ = λ and₁ → land and₁ s'
+       p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₅ r _ sol isSol
+       p₂₅IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₅ r _ sol isSol
+       p₂₂IsSol = BuilderProdSol->>=⁻₁ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₂₂ p₃₅ r _ sol p₂₅IsSol
+       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ sol p₃₅IsSol
+       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ sol p₄₅IsSol
+       p₅₅IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₅ r _ sol p₄₅IsSol
+    in allEqzSound₁ r snd₂ sol tri _ p₃₃IsSol looks'≈1
+... | sq (snd₂Val , snd₂ValLook , snd₂Val≈0) = sq (rval₂ V++ (subst (λ x → Vec ℕ x) (sym (maxTyVecSizeEq u fstₗ x)) (sval₂ V++ snd₂Val)) , ((`ΣValRepr x (subst (λ x → Vec ℕ x) (sym (maxTyVecSizeEq u fstₗ x)) (sval₂ V++ snd₂Val)) rIsRepr sIsRepr snd₂Val≈0 (HE.≡-subst-removable (λ x → Vec ℕ x) (sym (maxTyVecSizeEq u fstₗ x)) (sval₂ V++ snd₂Val)) refl) , subst′  (λ t →
+                                                                                          BatchListLookup t sol
+                                                                                          (rval₂ V++
+                                                                                           subst (λ x₁ → Vec ℕ x₁) (sym (maxTyVecSizeEq u fstₗ x))
+                                                                                           (sval₂ V++ snd₂Val)))
+                                                                                       (sym (splitAtCorrect (tySize u) vec))
+                                                                                         (subst′
+                                                                                            (λ t →
+                                                                                               BatchListLookup (proj₁ t V++ proj₂ t) sol
+                                                                                               (rval₂ V++
+                                                                                                subst (λ x₁ → Vec ℕ x₁) (sym (maxTyVecSizeEq u fstₗ x))
+                                                                                                (sval₂ V++ snd₂Val)))
+                                                                                            (sym prf) (BatchListLookup-++ fst rval₂ rval₂Look (BatchListLookupLenSubst' (tySize (x fstₗ)) (sym (maxTyVecSizeEq u fstₗ x)) sol snd
+                                                                                                                                                 (proj₁ (maxTySplit u fstₗ x snd)) _ sval₂ snd₂Val
+                                                                                                                                                 (maxTySplitCorrect u fstₗ x snd) (subst′ (λ t → BatchListLookup (proj₁ t) sol sval₂) (sym prf₂) sval₂Look) (subst′ (λ t → BatchListLookup (proj₂ t) sol snd₂Val) (sym prf₂) snd₂ValLook))))))
+varEqLitSound₁ r (`Π u x) vec l sol tri init isSol look with piVarEqLitSound₁ r u x (enum u) vec l sol tri init isSol look
+... | sq (val , isRepr , look₁) = sq (val , ((`ΠValRepr x val isRepr) , look₁))
 
 tyCondFunc : ∀ u → (vec : Vec ℕ (tySize u)) → ℕ
 enumSigmaCondFunc : ∀ u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
@@ -1059,115 +2095,3 @@ enumSigmaCondSound r u (elem₁ ∷ enum₁) x v₁ v₂ val₁ val₂ sol look�
       finalSound = landSound r _ _ _ _ sol satSound restSound (limpFuncIsBool (varEqLitFunc u val₁ elem₁) (landFunc (tyCondFunc (x elem₁) fstv) (allEqzFunc sndv))) (enumSigmaCondFuncIsBool u enum₁ x val₁ val₂) _ p₇₇IsSol
   in finalSound
 
-varEqBaseLitSound₁ : ∀ (r : WriterMode)
-  → (v : Var) (l : f)
-  → (sol : List (Var × ℕ))
-  → ListLookup 0 sol 1
-  → ∀ init →
-  let result = varEqBaseLit v l ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
-  → ListLookup (output result) sol 1
-  → Squash (∃ (λ val → Σ′ (ℕtoF val ≡ l) (λ _ → ListLookup v sol val)))  
-varEqBaseLitSound₁ r v l sol tri init isSol look
-    with
-    let
-      input = ((r , prime) , init)
-      p₁₂ = do
-        n-l ← new
-        add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
-      p₁₃ = do
-        n-l ← new
-        add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
-        neqz n-l
-      n-l = init
-      p₃₃ = neqz n-l
-      p₃₅ = λ _ → do
-        ¬r ← neqz n-l
-        r ← lnot ¬r
-        return r
-      ¬r = output (p₁₃ input)
-      p₄₅ = λ _ → do
-        r ← lnot ¬r
-        return r
-      p₃₅IsSol = BuilderProdSol->>=⁻₂ p₁₂ p₃₅ r _ _ isSol
-      p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ _ p₃₅IsSol
-    in neqzIsBool r _ _ _ p₃₃IsSol
-... | sq (neqzOutVal , isBool₁ , look₁) with
-    let
-       input = ((r , prime) , init)
-       p₁₂ = do
-         n-l ← new
-         add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
-       p₁₃ = do
-         n-l ← new
-         add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
-         neqz n-l
-       n-l = init
-       p₃₃ = neqz n-l
-       p₃₅ = λ _ → do
-         ¬r ← neqz n-l
-         r ← lnot ¬r
-         return r
-       ¬r = output (p₁₃ input)
-       p₄₄ = lnot ¬r
-       p₄₅ = λ _ → do
-         r ← lnot ¬r
-         return r
-       p₅₅ = λ r →
-         return r
-       p₃₅IsSol = BuilderProdSol->>=⁻₂ p₁₂ p₃₅ r _ _ isSol
-       p₃₃IsSol = BuilderProdSol->>=⁻₁ p₃₃ p₄₅ r _ _ p₃₅IsSol
-       p₄₅IsSol = BuilderProdSol->>=⁻₂ p₃₃ p₄₅ r _ _ p₃₅IsSol
-       p₄₄IsSol = BuilderProdSol->>=⁻₁ p₄₄ p₅₅ r _ _ p₄₅IsSol
-       notSound₁ = lnotSound₁ r _ _ _ _ look₁ isBool₁ p₄₄IsSol look
-    in neqzSound₀ r init _ tri _ p₃₃IsSol notSound₁
-... | sq (neqzInVal , look₂ , sq eq₀)
-    with
-    let
-       p₁₂ = do
-         n-l ← new
-         add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
-       p₁₃ = do
-         n-l ← new
-         add (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ []))
-         neqz n-l
-       n-l = init
-       p₃₅ = λ _ → do
-         ¬r ← neqz n-l
-         r ← lnot ¬r
-         return r
-       p₁₂IsSol = BuilderProdSol->>=⁻₁ p₁₂ p₃₅ r _ _ isSol
-
-    in addSound r (IAdd (-F l) ((onef , v) ∷ (-F onef , n-l) ∷ [])) sol (suc init) p₁₂IsSol
-varEqBaseLitSound₁ r v l sol tri init isSol look | sq (neqzOutVal , isBool₁ , look₁) | sq (neqzInVal , look₂ , sq eq₀) | addSol (LinearCombValCons .(Field.one field') .v varVal x (LinearCombValCons .((Field.- field') (Field.one field')) .init varVal₁ x₂ LinearCombValBase)) x₁ rewrite *-identityˡ (ℕtoF varVal)
-                   | -one*f≡-f (ℕtoF varVal₁)
-                   | +-identityʳ (-F (ℕtoF varVal₁))
-                   with ListLookup-≈ x₂ look₂
-... | sq p rewrite p | sym eq₀
-                 = sq (varVal , ((trans (sym (subst (λ t → (ℕtoF varVal +F (-F t)) ≡ ℕtoF varVal) (sym ℕtoF-0≡0)
-                                                (subst (λ t → (ℕtoF varVal +F t) ≡ ℕtoF varVal) (sym -zero≡zero)
-                                                  (+-identityʳ (ℕtoF varVal))))) (a-b≡zero→a≡b x₁)) , x))
-allEqzSound₁ : ∀ (r : WriterMode)
-  → ∀ {n} → (vec : Vec Var n)
-  → (sol : List (Var × ℕ))
-  → ListLookup 0 sol 1
-  → ∀ init →
-  let result = allEqz vec ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
-  → ListLookup (output result) sol 1
-  → Squash (∃ (λ val → (Σ′′ (BatchListLookup vec sol val) (λ _ → All (_≈_ 0) val))))
-allEqzSound₁ r vec sol tri init isSol look
-    with let p₁₁ = anyNeqz vec
-             p₂₃ = λ ¬r → do
-               r ← lnot ¬r
-               return r
-             p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
-         in anyNeqzIsBool r vec sol init p₁₁IsSol
-... | sq (val , isBool , look₁)
-    = let p₁₁ = anyNeqz vec
-          p₂₃ = λ ¬r → do
-               r ← lnot ¬r
-               return r
-          p₁₁IsSol = BuilderProdSol->>=⁻₁ p₁₁ p₂₃ r _ sol isSol
-          p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
-      in anyNeqzSound₀ r vec sol tri init p₁₁IsSol (lnotSound₁ r _ _ sol _ look₁ isBool p₂₃IsSol look)

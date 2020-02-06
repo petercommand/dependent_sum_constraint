@@ -18,13 +18,16 @@ open import Data.Nat.Properties2
 open import Data.Product hiding (map)
 open import Data.Sum hiding (map)
 open import Data.Unit hiding (_≤_)
-open import Data.Vec hiding ([_]; _>>=_; _++_; splitAt; map; take)
+open import Data.Vec hiding ([_]; _>>=_; splitAt; map; take) renaming (_++_ to _V++_)
 open import Data.Vec.Split
 
 open import Function
 
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality renaming ([_] to ℝ[_])
+import Relation.Binary.HeterogeneousEquality
+module HE = Relation.Binary.HeterogeneousEquality
+open import Relation.Binary.HeterogeneousEquality.Core
 
 
 open import Relation.Nullary
@@ -456,3 +459,12 @@ maxTySplitAux u val x vec = splitAt (tySize (x val)) vec
 maxTySplit : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec Var (maxTySizeOver (enum u) x) → Vec Var (tySize (x val)) × Vec Var (maxTySizeOver (enum u) x - tySize (x val))
 maxTySplit u val x vec = maxTySplitAux u val x (subst (Vec ℕ) (maxTyVecSizeEq u val x) vec)
 
+maxTySplitCorrect : ∀ u val x vec → vec HE.≅ proj₁ (maxTySplit u val x vec) V++ proj₂ (maxTySplit u val x vec)
+maxTySplitCorrect u val x vec with splitAtCorrect (tySize (x val)) (subst (Vec ℕ) (maxTyVecSizeEq u val x) vec)
+... | eq with splitAt (tySize (x val)) (subst (Vec ℕ) (maxTyVecSizeEq u val x) vec)
+... | fst , snd = HE.trans
+                    (HE.sym
+                     (HE.≡-subst-removable (Vec ℕ)
+                      (maxTyVecSizeEq u val x)
+                      vec))
+                    (HE.trans (≡-to-≅ eq) HE.refl)

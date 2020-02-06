@@ -316,15 +316,15 @@ varEqLitFunc `Base (x ∷ vec) lit | yes p = 1
 varEqLitFunc `Base (x ∷ vec) lit | no ¬p = 0
 varEqLitFunc (`Vec u zero) vec lit = 1
 varEqLitFunc (`Vec u (suc x)) vec (l ∷ lit) with splitAt (tySize u) vec
-... | fst , snd = andFunc (varEqLitFunc u fst l) (varEqLitFunc (`Vec u x) snd lit)
+... | fst , snd = landFunc (varEqLitFunc u fst l) (varEqLitFunc (`Vec u x) snd lit)
 varEqLitFunc (`Σ u x) vec (fstₗ , sndₗ) with splitAt (tySize u) vec
 ... | fst , snd with maxTySplit u fstₗ x snd
-... | vecₜ₁ , vecₜ₂ = andFunc (andFunc (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) vecₜ₁ sndₗ)) (allEqzFunc vecₜ₂)
+... | vecₜ₁ , vecₜ₂ = landFunc (landFunc (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) vecₜ₁ sndₗ)) (allEqzFunc vecₜ₂)
 varEqLitFunc (`Π u x) vec lit = piVarEqLitFunc x (enum u) vec lit 
 
 piVarEqLitFunc x [] vec pi = 1
 piVarEqLitFunc x (x₁ ∷ eu) vec pi with splitAt (tySize (x x₁)) vec
-... | fst , snd = andFunc (varEqLitFunc (x x₁) fst (pi x₁)) (piVarEqLitFunc x eu snd pi)
+... | fst , snd = landFunc (varEqLitFunc (x x₁) fst (pi x₁)) (piVarEqLitFunc x eu snd pi)
 
 
 varEqLitFuncIsBoolStrict : ∀ u vec v → isBoolStrict (varEqLitFunc u vec v)
@@ -345,16 +345,16 @@ varEqLitFuncIsBoolStrict `Base (x ∷ vec) v | yes p = isOneS refl
 varEqLitFuncIsBoolStrict `Base (x ∷ vec) v | no ¬p = isZeroS refl
 varEqLitFuncIsBoolStrict (`Vec u zero) vec v = isOneS refl
 varEqLitFuncIsBoolStrict (`Vec u (suc x)) vec (l ∷ lit) with splitAt (tySize u) vec
-... | fst , snd = andFuncIsBoolStrict (varEqLitFunc u fst l) (varEqLitFunc (`Vec u x) snd lit)
+... | fst , snd = landFuncIsBoolStrict (varEqLitFunc u fst l) (varEqLitFunc (`Vec u x) snd lit)
 varEqLitFuncIsBoolStrict (`Σ u x) vec (fstₗ , sndₗ) with splitAt (tySize u) vec
 ... | fst , snd with maxTySplit u fstₗ x snd
-... | vecₜ₁ , vecₜ₂ = andFuncIsBoolStrict (andFunc (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) vecₜ₁ sndₗ)) (allEqzFunc vecₜ₂)
+... | vecₜ₁ , vecₜ₂ = landFuncIsBoolStrict (landFunc (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) vecₜ₁ sndₗ)) (allEqzFunc vecₜ₂)
 varEqLitFuncIsBoolStrict (`Π u x) vec v = piVarEqLitFuncIsBoolStrict x (enum u) vec v
 
 
 piVarEqLitFuncIsBoolStrict x [] vec pi = isOneS refl
 piVarEqLitFuncIsBoolStrict x (x₁ ∷ eu) vec pi with splitAt (tySize (x x₁)) vec
-... | fst , snd = andFuncIsBoolStrict (varEqLitFunc (x x₁) fst (pi x₁)) (piVarEqLitFunc x eu snd pi)
+... | fst , snd = landFuncIsBoolStrict (varEqLitFunc (x x₁) fst (pi x₁)) (piVarEqLitFunc x eu snd pi)
 
 
 varEqLitFuncIsBool : ∀ u vec v → isBool (varEqLitFunc u vec v)
@@ -364,7 +364,7 @@ piVarEqLitFuncIsBool : ∀ {u} (x : ⟦ u ⟧ → U) eu vec pi → isBool (piVar
 
 piVarEqLitFuncIsBool x [] vec pi = isOne 1 ℕtoF-1≡1
 piVarEqLitFuncIsBool x (x₁ ∷ eu) vec pi with splitAt (tySize (x x₁)) vec
-... | fst , snd = andFuncIsBool (varEqLitFunc (x x₁) fst (pi x₁)) (piVarEqLitFunc x eu snd pi)
+... | fst , snd = landFuncIsBool (varEqLitFunc (x x₁) fst (pi x₁)) (piVarEqLitFunc x eu snd pi)
 
 
 varEqLitFuncIsBool `One (x ∷ vec) v with ℕtoF x ≟F zerof
@@ -381,10 +381,10 @@ varEqLitFuncIsBool `Base (x ∷ vec) v | yes p = isOne 1 ℕtoF-1≡1
 varEqLitFuncIsBool `Base (x ∷ vec) v | no ¬p = isZero zero ℕtoF-0≡0
 varEqLitFuncIsBool (`Vec u zero) vec v = isOne 1 ℕtoF-1≡1
 varEqLitFuncIsBool (`Vec u (suc x)) vec (l ∷ lit) with splitAt (tySize u) vec
-... | fst , snd = andFuncIsBool (varEqLitFunc u fst l) (varEqLitFunc (`Vec u x) snd lit)
+... | fst , snd = landFuncIsBool (varEqLitFunc u fst l) (varEqLitFunc (`Vec u x) snd lit)
 varEqLitFuncIsBool (`Σ u x) vec (fstₗ , sndₗ) with splitAt (tySize u) vec
 ... | fst , snd with maxTySplit u fstₗ x snd
-... | vecₜ₁ , vecₜ₂ = andFuncIsBool (andFunc (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) vecₜ₁ sndₗ)) (allEqzFunc vecₜ₂)
+... | vecₜ₁ , vecₜ₂ = landFuncIsBool (landFunc (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) vecₜ₁ sndₗ)) (allEqzFunc vecₜ₂)
 varEqLitFuncIsBool (`Π u x) vec v = piVarEqLitFuncIsBool x (enum u) vec v
 
 
@@ -517,7 +517,7 @@ varEqLitSound r (`Σ u x) vec val (fstₗ , sndₗ) sol look tri init isSol with
        sound₂ = varEqLitSound r (x fstₗ) snd₁ sndv₁ sndₗ sol lookSnd₁ tri (varOut (p₁₁ input)) p₂₂IsSol
        sound₃ = allEqzSound r snd₂ sndv₂ sol lookSnd₂ _ p₃₃IsSol
        sound₄ = landSound r _ _ _ _ sol sound₁ sound₂ (varEqLitFuncIsBool u fstv fstₗ) (varEqLitFuncIsBool (x fstₗ) sndv₁ sndₗ) _ p₄₄IsSol
-       sound₅ = landSound r _ _ _ _ sol sound₄ sound₃ (andFuncIsBool (varEqLitFunc u fstv fstₗ) (varEqLitFunc (x fstₗ) sndv₁ sndₗ)) (allEqzFuncIsBool sndv₂) _ p₅₅IsSol
+       sound₅ = landSound r _ _ _ _ sol sound₄ sound₃ (landFuncIsBool (varEqLitFunc u fstv fstₗ) (varEqLitFunc (x fstₗ) sndv₁ sndₗ)) (allEqzFuncIsBool sndv₂) _ p₅₅IsSol
     in sound₅
 
 varEqLitSound r (`Π u x) vec val l sol look tri init isSol = piVarEqLitSound r u x (enum u) vec val l sol look tri init isSol
@@ -555,17 +555,17 @@ enumSigmaCondFunc : ∀ u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
 enumPiCondFunc : ∀ u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U) → Vec ℕ (tySumOver eu x) → ℕ
 enumPiCondFunc u [] x vec = 1
 enumPiCondFunc u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
-enumPiCondFunc u (x₁ ∷ eu) x vec | fst₁ , snd₁ = andFunc (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
+enumPiCondFunc u (x₁ ∷ eu) x vec | fst₁ , snd₁ = landFunc (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
 
 enumPiCondFuncIsBool : ∀ u eu x vec → isBool (enumPiCondFunc u eu x vec)
 enumPiCondFuncIsBool u [] x vec = isOne 1 ℕtoF-1≡1
 enumPiCondFuncIsBool u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
-enumPiCondFuncIsBool u (x₁ ∷ eu) x vec | fst₁ , snd₁ = andFuncIsBool (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
+enumPiCondFuncIsBool u (x₁ ∷ eu) x vec | fst₁ , snd₁ = landFuncIsBool (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
 
 enumPiCondFuncIsBoolStrict : ∀ u eu x vec → isBoolStrict (enumPiCondFunc u eu x vec)
 enumPiCondFuncIsBoolStrict u [] x vec = isOneS refl
 enumPiCondFuncIsBoolStrict u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
-enumPiCondFuncIsBoolStrict u (x₁ ∷ eu) x vec | fst₁ , snd₁ = andFuncIsBoolStrict (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
+enumPiCondFuncIsBoolStrict u (x₁ ∷ eu) x vec | fst₁ , snd₁ = landFuncIsBoolStrict (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
 
 tyCondFunc `One (x ∷ vec) with ℕtoF x ≟F zerof
 tyCondFunc `One (x ∷ vec) | yes p = 1
@@ -578,9 +578,9 @@ tyCondFunc `Two (x ∷ vec) | no ¬p | no ¬p₁ = 0
 tyCondFunc `Base vec = 1
 tyCondFunc (`Vec u zero) vec = 1
 tyCondFunc (`Vec u (suc x)) vec with splitAt (tySize u) vec
-... | fst , snd = andFunc (tyCondFunc u fst) (tyCondFunc (`Vec u x) snd)
+... | fst , snd = landFunc (tyCondFunc u fst) (tyCondFunc (`Vec u x) snd)
 tyCondFunc (`Σ u x) vec with splitAt (tySize u) vec
-tyCondFunc (`Σ u x) vec | fst₁ , snd₁ = andFunc (tyCondFunc u fst₁) (enumSigmaCondFunc u (enum u) x fst₁ snd₁)
+tyCondFunc (`Σ u x) vec | fst₁ , snd₁ = landFunc (tyCondFunc u fst₁) (enumSigmaCondFunc u (enum u) x fst₁ snd₁)
 tyCondFunc (`Π u x) vec = enumPiCondFunc u (enum u) x vec
 
 tyCondFuncIsBool : ∀ u vec → isBool (tyCondFunc u vec)
@@ -636,18 +636,18 @@ tyCondFuncIsBoolStrict (`Π u x) vec = enumPiCondFuncIsBoolStrict u (enum u) x v
 enumSigmaCondFunc u [] x val val₁ = 1
 enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
 enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ | fst₁ , snd₁ =
-  andFunc (impFunc (varEqLitFunc u v₁ x₁) (andFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁)))
+  landFunc (limpFunc (varEqLitFunc u v₁ x₁) (landFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁)))
           (enumSigmaCondFunc u eu x v₁ v₂)
 
 enumSigmaCondFuncIsBool : ∀ u eu x val₁ val₂ → isBool (enumSigmaCondFunc u eu x val₁ val₂)
 enumSigmaCondFuncIsBool u [] x val₁ val₂ = isOne 1 ℕtoF-1≡1
 enumSigmaCondFuncIsBool u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
-... | fst₁ , snd₁ = andFuncIsBool (impFunc (varEqLitFunc u v₁ x₁) (andFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁))) (enumSigmaCondFunc u eu x v₁ v₂)
+... | fst₁ , snd₁ = landFuncIsBool (limpFunc (varEqLitFunc u v₁ x₁) (landFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁))) (enumSigmaCondFunc u eu x v₁ v₂)
 
 enumSigmaCondFuncIsBoolStrict : ∀ u eu x val₁ val₂ → isBoolStrict (enumSigmaCondFunc u eu x val₁ val₂)
 enumSigmaCondFuncIsBoolStrict u [] x val₁ val₂ = isOneS refl
 enumSigmaCondFuncIsBoolStrict u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
-... | fst₁ , snd₁ = andFuncIsBoolStrict (impFunc (varEqLitFunc u v₁ x₁) (andFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁))) (enumSigmaCondFunc u eu x v₁ v₂)
+... | fst₁ , snd₁ = landFuncIsBoolStrict (limpFunc (varEqLitFunc u v₁ x₁) (landFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁))) (enumSigmaCondFunc u eu x v₁ v₂)
 
 enumPiCondSound : ∀ r u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
    → (vec : Vec Var (tySumOver eu x))
@@ -875,9 +875,9 @@ enumSigmaCondSound r u (elem₁ ∷ enum₁) x v₁ v₂ val₁ val₂ sol look�
       tyConsSound = tyCondSound r (x elem₁) fst fstv sol lookFst tri _ p₂₂IsSol
       restZSound = allEqzSound r snd sndv sol lookSnd _ p₃₃IsSol
       tyCons&restZSound = landSound r _ _ _ _ sol tyConsSound restZSound (tyCondFuncIsBool (x elem₁) fstv) (allEqzFuncIsBool sndv) _ p₄₄IsSol
-      satSound = limpSound r _ _ _ _ sol eqElem₁Sound tyCons&restZSound (varEqLitFuncIsBool u val₁ elem₁) (andFuncIsBool (tyCondFunc (x elem₁) fstv) (allEqzFunc sndv)) _ p₅₅IsSol
+      satSound = limpSound r _ _ _ _ sol eqElem₁Sound tyCons&restZSound (varEqLitFuncIsBool u val₁ elem₁) (landFuncIsBool (tyCondFunc (x elem₁) fstv) (allEqzFunc sndv)) _ p₅₅IsSol
       restSound = enumSigmaCondSound r u enum₁ x v₁ v₂ val₁ val₂ sol look₁ look₂ tri _ p₆₆IsSol
-      finalSound = landSound r _ _ _ _ sol satSound restSound (impFuncIsBool (varEqLitFunc u val₁ elem₁) (andFunc (tyCondFunc (x elem₁) fstv) (allEqzFunc sndv))) (enumSigmaCondFuncIsBool u enum₁ x val₁ val₂) _ p₇₇IsSol
+      finalSound = landSound r _ _ _ _ sol satSound restSound (limpFuncIsBool (varEqLitFunc u val₁ elem₁) (landFunc (tyCondFunc (x elem₁) fstv) (allEqzFunc sndv))) (enumSigmaCondFuncIsBool u enum₁ x val₁ val₂) _ p₇₇IsSol
   in finalSound
 
 varEqBaseLitSound₁ : ∀ (r : WriterMode)

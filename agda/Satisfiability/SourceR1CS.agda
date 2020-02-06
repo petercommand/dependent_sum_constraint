@@ -167,11 +167,11 @@ ValIsRepr→varEqLit (`Π u x) elem val .val refl (`ΠValRepr x .val x₁) = PiP
 
 enumSigmaCondRestZ : ∀ u eu x fst snd val → val ∈ eu → ValIsRepr u val fst → enumSigmaCondFunc u eu x fst snd ≡ 1 → All (_≈_ 0) (proj₂ (maxTySplit u val x snd))
 enumSigmaCondRestZ u .(_ ∷ _) x fst snd val (here refl) isRepr eq with ValIsRepr→varEqLit u val fst fst refl isRepr
-... | sq varEqLit≡1 = allEqz→All≈0 (proj₂ (maxTySplit u val x snd)) (andFunc⁻₂ (allEqzFuncIsBoolStrict (proj₂ (maxTySplit u val x snd))) (impFuncImp varEqLit≡1 (andFuncIsBoolStrict (tyCondFunc (x val) (proj₁ (maxTySplit u val x snd)))
-       (allEqzFunc (proj₂ (maxTySplit u val x snd)))) (andFunc⁻₁ (impFuncIsBoolStrict (varEqLitFunc u fst val)
-       (andFunc (tyCondFunc (x val) (proj₁ (maxTySplit u val x snd)))
+... | sq varEqLit≡1 = allEqz→All≈0 (proj₂ (maxTySplit u val x snd)) (landFunc⁻₂ (allEqzFuncIsBoolStrict (proj₂ (maxTySplit u val x snd))) (limpFuncImp varEqLit≡1 (landFuncIsBoolStrict (tyCondFunc (x val) (proj₁ (maxTySplit u val x snd)))
+       (allEqzFunc (proj₂ (maxTySplit u val x snd)))) (landFunc⁻₁ (limpFuncIsBoolStrict (varEqLitFunc u fst val)
+       (landFunc (tyCondFunc (x val) (proj₁ (maxTySplit u val x snd)))
         (allEqzFunc (proj₂ (maxTySplit u val x snd)))) ) eq)))
-enumSigmaCondRestZ u (_ ∷ eu) x fst snd val (there mem) isRepr eq = enumSigmaCondRestZ u eu x fst snd val mem isRepr (andFunc⁻₂ (enumSigmaCondFuncIsBoolStrict u eu x fst snd) eq)
+enumSigmaCondRestZ u (_ ∷ eu) x fst snd val (there mem) isRepr eq = enumSigmaCondRestZ u eu x fst snd val mem isRepr (landFunc⁻₂ (enumSigmaCondFuncIsBoolStrict u eu x fst snd) eq)
 
 
 tyCondFuncRepr : ∀ u → (vec : Vec ℕ (tySize u)) → tyCondFunc u vec ≡ 1 → Squash (∃ (λ elem → ValIsRepr u elem vec))
@@ -184,7 +184,7 @@ enumSigmaCondFuncRepr : ∀ u eu x elem val₁ val₂
 enumSigmaCondFuncRepr u [] x elem val₁ val₂ isRepr ()
 enumSigmaCondFuncRepr u (elem ∷ eu) x elem val₁ val₂ isRepr (here refl) eq with ValIsRepr→varEqLit u elem val₁ val₁ refl isRepr
 ... | sq repr = tyCondFuncRepr (x elem) (proj₁ (maxTySplit u elem x val₂))
-  (andFunc⁻₁ (tyCondFuncIsBoolStrict (x elem) (proj₁
+  (landFunc⁻₁ (tyCondFuncIsBoolStrict (x elem) (proj₁
         (splitAt (tySize (x elem))
          (subst (Vec ℕ)
           (sym
@@ -193,9 +193,9 @@ enumSigmaCondFuncRepr u (elem ∷ eu) x elem val₁ val₂ isRepr (here refl) eq
              (maxTySizeOver (enum u) x ∸ tySize (x elem)))
             (a-b+b≡a (maxTySizeOver (enum u) x) (tySize (x elem))
              (∈→≥ (enum u) x elem (enumComplete u elem)))))
-          val₂)))) (impFuncImp repr (andFuncIsBoolStrict  (tyCondFunc (x elem) (proj₁ (maxTySplit u elem x val₂))) (allEqzFunc (proj₂ (maxTySplit u elem x val₂)))) (andFunc⁻₁ (impFuncIsBoolStrict (varEqLitFunc u val₁ elem) (andFunc (tyCondFunc (x elem) (proj₁ (maxTySplit u elem x val₂)))
+          val₂)))) (limpFuncImp repr (landFuncIsBoolStrict  (tyCondFunc (x elem) (proj₁ (maxTySplit u elem x val₂))) (allEqzFunc (proj₂ (maxTySplit u elem x val₂)))) (landFunc⁻₁ (limpFuncIsBoolStrict (varEqLitFunc u val₁ elem) (landFunc (tyCondFunc (x elem) (proj₁ (maxTySplit u elem x val₂)))
         (allEqzFunc (proj₂ (maxTySplit u elem x val₂))))) eq)))
-enumSigmaCondFuncRepr u (x₁ ∷ eu) x elem val₁ val₂ isRepr (there mem) eq = enumSigmaCondFuncRepr u eu x elem val₁ val₂ isRepr mem (andFunc⁻₂ (enumSigmaCondFuncIsBoolStrict u eu x val₁ val₂) eq)
+enumSigmaCondFuncRepr u (x₁ ∷ eu) x elem val₁ val₂ isRepr (there mem) eq = enumSigmaCondFuncRepr u eu x elem val₁ val₂ isRepr mem (landFunc⁻₂ (enumSigmaCondFuncIsBoolStrict u eu x val₁ val₂) eq)
 
 
 postulate
@@ -260,9 +260,9 @@ piTyCondFuncPartialRepr : ∀ u (x : ⟦ u ⟧ → U) eu (prf : ∀ v → v ∈ 
 piTyCondFuncPartialRepr u x [] occ-prf [] eq = sq (trivialFunc u x , PiRepNil)
 piTyCondFuncPartialRepr u x (x₁ ∷ eu) occ-prf vec eq with splitAtCorrect (tySize (x x₁)) vec
 ... | split with splitAt (tySize (x x₁)) vec
-... | fst , snd with piTyCondFuncPartialRepr u x eu (occ-tail _ _ _ occ-prf) snd (andFunc⁻₂ (enumPiCondFuncIsBoolStrict u eu x snd) eq)
+... | fst , snd with piTyCondFuncPartialRepr u x eu (occ-tail _ _ _ occ-prf) snd (landFunc⁻₂ (enumPiCondFuncIsBoolStrict u eu x snd) eq)
 ... | sq ind′ with ind′
-... | acc , prf with tyCondFuncRepr (x x₁) fst (andFunc⁻₁ (tyCondFuncIsBoolStrict (x x₁) fst) eq)
+... | acc , prf with tyCondFuncRepr (x x₁) fst (landFunc⁻₁ (tyCondFuncIsBoolStrict (x x₁) fst) eq)
 ... | sq elem′ with elem′
 ... | elem , prf' = sq ((updateFunc u x acc x₁ elem) , (PiRepCons {_} {_} {_} {_} {_} {fst} fApp (PiPartialRepr-¬∈ u x eu snd acc x₁ elem (occ-0-¬∈ _ _ _ (occ-tail0 _ _ _ occ-prf)) prf) split))
   where
@@ -277,9 +277,9 @@ tyCondFuncRepr `Two (x ∷ []) eq | no ¬p | yes p = sq (true , `TwoValTrueRepr 
 tyCondFuncRepr `Base (x ∷ []) eq = sq ((ℕtoF x) , `BaseValRepr (sq (ℕtoF∘fToℕ≡ (ℕtoF x))))
 tyCondFuncRepr (`Vec u zero) [] eq = sq ([] , `VecValBaseRepr)
 tyCondFuncRepr (`Vec u (suc x)) vec eq with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
-... | fst , snd | [ refl ] with tyCondFuncRepr u fst (andFunc⁻₁ (tyCondFuncIsBoolStrict u (proj₁ (splitAt (tySize u) vec))) eq)
+... | fst , snd | [ refl ] with tyCondFuncRepr u fst (landFunc⁻₁ (tyCondFuncIsBoolStrict u (proj₁ (splitAt (tySize u) vec))) eq)
 ... | sq ind₁′ with ind₁′
-... | elem₁ , ind₁ with tyCondFuncRepr (`Vec u x) snd (andFunc⁻₂ (tyCondFuncIsBoolStrict (`Vec u x) (proj₂ (splitAt (tySize u) vec))) eq)
+... | elem₁ , ind₁ with tyCondFuncRepr (`Vec u x) snd (landFunc⁻₂ (tyCondFuncIsBoolStrict (`Vec u x) (proj₂ (splitAt (tySize u) vec))) eq)
 ... | sq ind₂′ with ind₂′
 ... | elem₂ , ind₂ = sq ((elem₁ ∷ elem₂) , (`VecValConsRepr ind₁ ind₂ (sym (splitAtCorrect (tySize u) vec))))
 tyCondFuncRepr (`Σ u x) vec eq with splitAt (tySize u) vec | inspect (splitAt (tySize u)) vec
@@ -367,8 +367,8 @@ piVarEqLitFuncRepr : ∀ u (x : ⟦ u ⟧ → U) eu vec f → piVarEqLitFunc x e
 piVarEqLitFuncRepr u x [] [] f eq = sq PiRepNil
 piVarEqLitFuncRepr u x (x₁ ∷ eu) vec f eq with splitAtCorrect (tySize (x x₁)) vec
 ... | split with splitAt (tySize (x x₁)) vec
-... | fst , snd with varEqLitFuncRepr (x x₁) fst (f x₁) (andFunc⁻₁ (varEqLitFuncIsBoolStrict (x x₁) fst (f x₁)) eq)
-... | sq prf with piVarEqLitFuncRepr u x eu snd f (andFunc⁻₂ (piVarEqLitFuncIsBoolStrict x eu snd f) eq)
+... | fst , snd with varEqLitFuncRepr (x x₁) fst (f x₁) (landFunc⁻₁ (varEqLitFuncIsBoolStrict (x x₁) fst (f x₁)) eq)
+... | sq prf with piVarEqLitFuncRepr u x eu snd f (landFunc⁻₂ (piVarEqLitFuncIsBoolStrict x eu snd f) eq)
 ... | sq prf' = sq (PiRepCons prf prf' split)
 
 varEqLitFuncRepr `One (v ∷ []) elem eq with ℕtoF v ≟F zerof
@@ -382,8 +382,8 @@ varEqLitFuncRepr `Base (v ∷ []) elem eq | yes p = sq (`BaseValRepr (sq (trans 
 varEqLitFuncRepr (`Vec u zero) [] [] eq = sq `VecValBaseRepr
 varEqLitFuncRepr (`Vec u (suc x)) val (e ∷ elem) eq with splitAtCorrect (tySize u) val
 ... | split with splitAt (tySize u) val
-... | fst , snd with varEqLitFuncRepr u fst e (andFunc⁻₁ (varEqLitFuncIsBoolStrict u fst e) eq)
-... | sq repr₁ with varEqLitFuncRepr (`Vec u x) snd elem (andFunc⁻₂ (varEqLitFuncIsBoolStrict (`Vec u x) snd elem) eq)
+... | fst , snd with varEqLitFuncRepr u fst e (landFunc⁻₁ (varEqLitFuncIsBoolStrict u fst e) eq)
+... | sq repr₁ with varEqLitFuncRepr (`Vec u x) snd elem (landFunc⁻₂ (varEqLitFuncIsBoolStrict (`Vec u x) snd elem) eq)
 ... | sq repr₂ = sq (`VecValConsRepr repr₁ repr₂ (sym split))
 varEqLitFuncRepr (`Σ u x) val (fstₗ , sndₗ) eq
     with splitAtCorrect (tySize u) val
@@ -393,10 +393,10 @@ varEqLitFuncRepr (`Σ u x) val (fstₗ , sndₗ) eq
     with maxTySplitCorrect u fstₗ x snd
 ... | split₂
     with maxTySplit u fstₗ x snd
-... | snd₁ , snd₂ with varEqLitFuncRepr u fst fstₗ (andFunc⁻₁ (varEqLitFuncIsBoolStrict u fst fstₗ) (andFunc⁻₁ (andFuncIsBoolStrict (varEqLitFunc u fst fstₗ)
+... | snd₁ , snd₂ with varEqLitFuncRepr u fst fstₗ (landFunc⁻₁ (varEqLitFuncIsBoolStrict u fst fstₗ) (landFunc⁻₁ (landFuncIsBoolStrict (varEqLitFunc u fst fstₗ)
        (varEqLitFunc (x fstₗ) snd₁ sndₗ)) eq))
-... | sq repr₁ with varEqLitFuncRepr (x fstₗ) snd₁ sndₗ (andFunc⁻₂ (varEqLitFuncIsBoolStrict (x fstₗ) snd₁ sndₗ) (andFunc⁻₁ (andFuncIsBoolStrict (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) snd₁ sndₗ)) eq))
-... | sq repr₂ = sq (`ΣValRepr {_} {_} x {sndₗ} {fst} {snd₁} snd {val} {snd₂} repr₁ repr₂ (allEqz→All≈0 _ (andFunc⁻₂ (allEqzFuncIsBoolStrict snd₂) eq)) split₂ (sym split₁))
+... | sq repr₁ with varEqLitFuncRepr (x fstₗ) snd₁ sndₗ (landFunc⁻₂ (varEqLitFuncIsBoolStrict (x fstₗ) snd₁ sndₗ) (landFunc⁻₁ (landFuncIsBoolStrict (varEqLitFunc u fst fstₗ) (varEqLitFunc (x fstₗ) snd₁ sndₗ)) eq))
+... | sq repr₂ = sq (`ΣValRepr {_} {_} x {sndₗ} {fst} {snd₁} snd {val} {snd₂} repr₁ repr₂ (allEqz→All≈0 _ (landFunc⁻₂ (allEqzFuncIsBoolStrict snd₂) eq)) split₂ (sym split₁))
 varEqLitFuncRepr (`Π u x) val elem eq with piVarEqLitFuncRepr u x (enum u) val elem eq
 ... | sq prf = sq (`ΠValRepr x val prf)
 

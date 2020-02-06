@@ -314,37 +314,37 @@ lorSound₀ r v v' val val' sol init look₁ look₂ isBool₁ isBool₂ isSol l
 
 
 
-andFunc : ℕ → ℕ → ℕ
-andFunc a b with ℕtoF a ≟F zerof
-andFunc a b | yes p = 0
-andFunc a b | no ¬p with ℕtoF b ≟F zerof
-andFunc a b | no ¬p | yes p = 0
-andFunc a b | no ¬p | no ¬p₁ = 1
+landFunc : ℕ → ℕ → ℕ
+landFunc a b with ℕtoF a ≟F zerof
+landFunc a b | yes p = 0
+landFunc a b | no ¬p with ℕtoF b ≟F zerof
+landFunc a b | no ¬p | yes p = 0
+landFunc a b | no ¬p | no ¬p₁ = 1
 
 
 
-andFunc⁻₁ : ∀ {a} {b} → isBoolStrict a → andFunc a b ≡ 1 → a ≡ 1
-andFunc⁻₁ (isZeroS refl) eq with ℕtoF 0 ≟F zerof
-andFunc⁻₁ {b = b} (isZeroS refl) eq | no ¬p = ⊥-elim (¬p ℕtoF-0≡0)
-andFunc⁻₁ (isOneS refl) eq = refl
+landFunc⁻₁ : ∀ {a} {b} → isBoolStrict a → landFunc a b ≡ 1 → a ≡ 1
+landFunc⁻₁ (isZeroS refl) eq with ℕtoF 0 ≟F zerof
+landFunc⁻₁ {b = b} (isZeroS refl) eq | no ¬p = ⊥-elim (¬p ℕtoF-0≡0)
+landFunc⁻₁ (isOneS refl) eq = refl
 
-andFunc⁻₂ : ∀ {a} {b} → isBoolStrict b → andFunc a b ≡ 1 → b ≡ 1
-andFunc⁻₂ {a = a} (isZeroS refl) eq with ℕtoF a ≟F zerof
-andFunc⁻₂ {a} (isZeroS refl) eq | no ¬p with ℕtoF 0 ≟F zerof
-andFunc⁻₂ {a} (isZeroS refl) eq | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ ℕtoF-0≡0)
-andFunc⁻₂ (isOneS refl) eq = refl
+landFunc⁻₂ : ∀ {a} {b} → isBoolStrict b → landFunc a b ≡ 1 → b ≡ 1
+landFunc⁻₂ {a = a} (isZeroS refl) eq with ℕtoF a ≟F zerof
+landFunc⁻₂ {a} (isZeroS refl) eq | no ¬p with ℕtoF 0 ≟F zerof
+landFunc⁻₂ {a} (isZeroS refl) eq | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ ℕtoF-0≡0)
+landFunc⁻₂ (isOneS refl) eq = refl
 
 
 
-andFuncIsBoolStrict : ∀ a b → isBoolStrict (andFunc a b)
-andFuncIsBoolStrict a b with ℕtoF a ≟F zerof
-andFuncIsBoolStrict a b | yes p = isZeroS refl
-andFuncIsBoolStrict a b | no ¬p with ℕtoF b ≟F zerof
-andFuncIsBoolStrict a b | no ¬p | yes p = isZeroS refl
-andFuncIsBoolStrict a b | no ¬p | no ¬p₁ = isOneS refl
+landFuncIsBoolStrict : ∀ a b → isBoolStrict (landFunc a b)
+landFuncIsBoolStrict a b with ℕtoF a ≟F zerof
+landFuncIsBoolStrict a b | yes p = isZeroS refl
+landFuncIsBoolStrict a b | no ¬p with ℕtoF b ≟F zerof
+landFuncIsBoolStrict a b | no ¬p | yes p = isZeroS refl
+landFuncIsBoolStrict a b | no ¬p | no ¬p₁ = isOneS refl
 
-andFuncIsBool : ∀ a b → isBool (andFunc a b)
-andFuncIsBool a b = isBoolStrict→isBool (andFuncIsBoolStrict a b)
+landFuncIsBool : ∀ a b → isBool (landFunc a b)
+landFuncIsBool a b = isBoolStrict→isBool (landFuncIsBoolStrict a b)
 
 landSoundLem : ∀ r v v' init →
   let b₁₂ = writerOutput (add (IMul onef v v' onef init) ((r , prime) , suc init))
@@ -362,7 +362,7 @@ landSound : ∀ (r : WriterMode)
   → ∀ (init : ℕ) →
   let result = land v v' ((r , prime) , init)
   in BuilderProdSol (writerOutput result) sol
-  → ListLookup (output result) sol (andFunc val val') 
+  → ListLookup (output result) sol (landFunc val val') 
 landSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol with addSound r (IMul onef v v' onef init) sol (suc init)
        (let b₁₂ = writerOutput (add (IMul onef v v' onef init) ((r , prime) , suc init))
             b₃₄ = writerOutput (land v v' ((r , prime) , init))
@@ -377,7 +377,7 @@ landSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol | mult
 
 
 
-      lem : isBool val → isBool val' → ListLookup init sol (andFunc val val')
+      lem : isBool val → isBool val' → ListLookup init sol (landFunc val val')
       lem valBool val'Bool with ℕtoF val ≟F zerof
       lem valBool val'Bool | yes p rewrite p | *-zeroˡ (ℕtoF val') = ListLookup-Respects-≈ _ _ _ _ (sq (trans (sym x₃) (sym ℕtoF-0≡0))) x₂
       lem valBool val'Bool | no ¬p with ℕtoF val' ≟F zerof
@@ -450,23 +450,23 @@ v varVal[x] val[look₁]
 
 -}
 
-impFunc : ℕ → ℕ → ℕ
-impFunc a b = lorFunc (notFunc a) b
+limpFunc : ℕ → ℕ → ℕ
+limpFunc a b = lorFunc (notFunc a) b
 
-impFuncImp : ∀ {a} {b} → a ≡ 1 → isBoolStrict b → impFunc a b ≡ 1 → b ≡ 1
-impFuncImp refl (isZeroS refl) eq₂ with ℕtoF 1 ≟F zerof
-impFuncImp refl (isZeroS refl) eq₂ | yes p = ⊥-elim (onef≠zerof (trans (sym ℕtoF-1≡1) p))
-impFuncImp refl (isZeroS refl) eq₂ | no ¬p with ℕtoF 0 ≟F zerof
-impFuncImp refl (isZeroS refl) eq₂ | no ¬p | yes p with ℕtoF 0 ≟F zerof
-impFuncImp refl (isZeroS refl) eq₂ | no ¬p | yes p | no ¬p₁ = ⊥-elim (¬p₁ ℕtoF-0≡0)
-impFuncImp refl (isZeroS refl) eq₂ | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ ℕtoF-0≡0)
-impFuncImp {b = b} refl (isOneS refl) eq₂ = refl
+limpFuncImp : ∀ {a} {b} → a ≡ 1 → isBoolStrict b → limpFunc a b ≡ 1 → b ≡ 1
+limpFuncImp refl (isZeroS refl) eq₂ with ℕtoF 1 ≟F zerof
+limpFuncImp refl (isZeroS refl) eq₂ | yes p = ⊥-elim (onef≠zerof (trans (sym ℕtoF-1≡1) p))
+limpFuncImp refl (isZeroS refl) eq₂ | no ¬p with ℕtoF 0 ≟F zerof
+limpFuncImp refl (isZeroS refl) eq₂ | no ¬p | yes p with ℕtoF 0 ≟F zerof
+limpFuncImp refl (isZeroS refl) eq₂ | no ¬p | yes p | no ¬p₁ = ⊥-elim (¬p₁ ℕtoF-0≡0)
+limpFuncImp refl (isZeroS refl) eq₂ | no ¬p | no ¬p₁ = ⊥-elim (¬p₁ ℕtoF-0≡0)
+limpFuncImp {b = b} refl (isOneS refl) eq₂ = refl
 
-impFuncIsBool : ∀ a b → isBool (impFunc a b)
-impFuncIsBool a b = orFuncIsBool (notFunc a) b
+limpFuncIsBool : ∀ a b → isBool (limpFunc a b)
+limpFuncIsBool a b = orFuncIsBool (notFunc a) b
 
-impFuncIsBoolStrict : ∀ a b → isBoolStrict (impFunc a b)
-impFuncIsBoolStrict a b = orFuncIsBoolStrict (notFunc a) b
+limpFuncIsBoolStrict : ∀ a b → isBoolStrict (limpFunc a b)
+limpFuncIsBoolStrict a b = orFuncIsBoolStrict (notFunc a) b
 
 limpSoundLem₁ : ∀ r init sol v v' → BuilderProdSol (writerOutput (limp v v' ((r , prime) , init))) sol
                   → BuilderProdSol (writerOutput (lnot v ((r , prime) , init))) sol
@@ -482,7 +482,7 @@ limpSound : ∀ (r : WriterMode)
   → ∀ (init : ℕ) →
   let result = limp v v' ((r , prime) , init)
   in BuilderProdSol (writerOutput result) sol
-  → ListLookup (output result) sol (impFunc val val') 
+  → ListLookup (output result) sol (limpFunc val val') 
 limpSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol
     with lnotSound r v val sol look₁ valBool init (limpSoundLem₁ r init sol v v' isSol)
 ... | sound₁ = lorSound r init v' (notFunc val) val' sol sound₁ look₂ (notFuncIsBool val) val'Bool

@@ -466,10 +466,10 @@ data ValRepr : ∀ u → ⟦ u ⟧ → Vec ℕ (tySize u) → Set where
       → ValRepr (`Vec u n) vec₂ val₂
       → val₁ V++ val₂ ≡ val₃
       → ValRepr (`Vec u (suc n)) (v₁ ∷ vec₂) val₃
-  `ΣValRepr : ∀ {u} {vu} (x : ⟦ u ⟧ → U) {vxu} {valu} {valxu} valxu+z {valu+valxu+z} {allZ}
+  `ΣValRepr : ∀ {u} {vu} (x : ⟦ u ⟧ → U) {vxu} {valu} {valxu} valxu+z {valu+valxu+z} {allZ : Vec ℕ (maxTySizeOver (enum u) x - tySize (x vu))}
       → ValRepr u vu valu
       → ValRepr (x vu) vxu valxu
-      → All (_≈_ 0) (ann (Vec ℕ (maxTySizeOver (enum u) x - tySize (x vu))) allZ)
+      → All (_≈_ 0) allZ
       → valxu+z ≅ valxu V++ allZ
       → valu V++ valxu+z ≡ valu+valxu+z
       → ValRepr (`Σ u x) (vu , vxu) valu+valxu+z

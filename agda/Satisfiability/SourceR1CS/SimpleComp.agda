@@ -1181,7 +1181,7 @@ varEqLitSound₁ : ∀ (r : WriterMode)
   let result = varEqLit u vec l ((r , prime) , init)
   in BuilderProdSol (writerOutput result) sol
   → ListLookup (output result) sol 1
-  → Squash (∃ (λ val → Σ′ (ValIsRepr u l val) (λ _ → BatchListLookup vec sol val)))
+  → Squash (∃ (λ val → Σ′ (ValRepr u l val) (λ _ → BatchListLookup vec sol val)))
 
 piVarEqLitSound₁ : ∀ (r : WriterMode)
   → ∀ u x eu vec f sol

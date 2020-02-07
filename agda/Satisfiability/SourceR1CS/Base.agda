@@ -453,33 +453,33 @@ assertTrueSound r v sol' init isSol' | addSol (LinearCombValCons .((Field.- fiel
 
 
 
-data PiPartialRepr (u : U) (x : ⟦ u ⟧ → U) (f : (v : ⟦ u ⟧) → ⟦ x v ⟧) : (eu : List ⟦ u ⟧) → Vec ℕ (tySumOver eu x) → Set
+data PiRepr (u : U) (x : ⟦ u ⟧ → U) (f : (v : ⟦ u ⟧) → ⟦ x v ⟧) : (eu : List ⟦ u ⟧) → Vec ℕ (tySumOver eu x) → Set
 
-data ValIsRepr : ∀ u → ⟦ u ⟧ → Vec ℕ (tySize u) → Set where
-  `OneValRepr : ∀ n → n ≈ 0 → ValIsRepr `One tt (n ∷ [])
-  `TwoValFalseRepr : ∀ n → n ≈ 0 → ValIsRepr `Two false (n ∷ [])
-  `TwoValTrueRepr : ∀ n → n ≈ 1 → ValIsRepr `Two true (n ∷ [])
-  `BaseValRepr : ∀ {v : f} {v' : ℕ} → (fToℕ v) ≈ v' → ValIsRepr `Base v (v' ∷ [])
-  `VecValBaseRepr : ∀ {u} → ValIsRepr (`Vec u 0) [] []
+data ValRepr : ∀ u → ⟦ u ⟧ → Vec ℕ (tySize u) → Set where
+  `OneValRepr : ∀ n → n ≈ 0 → ValRepr `One tt (n ∷ [])
+  `TwoValFalseRepr : ∀ n → n ≈ 0 → ValRepr `Two false (n ∷ [])
+  `TwoValTrueRepr : ∀ n → n ≈ 1 → ValRepr `Two true (n ∷ [])
+  `BaseValRepr : ∀ {v : f} {v' : ℕ} → (fToℕ v) ≈ v' → ValRepr `Base v (v' ∷ [])
+  `VecValBaseRepr : ∀ {u} → ValRepr (`Vec u 0) [] []
   `VecValConsRepr : ∀ {u} {n} {v₁} {vec₂} {val₁} {val₂} {val₃}
-      → ValIsRepr u v₁ val₁
-      → ValIsRepr (`Vec u n) vec₂ val₂
+      → ValRepr u v₁ val₁
+      → ValRepr (`Vec u n) vec₂ val₂
       → val₁ V++ val₂ ≡ val₃
-      → ValIsRepr (`Vec u (suc n)) (v₁ ∷ vec₂) val₃
+      → ValRepr (`Vec u (suc n)) (v₁ ∷ vec₂) val₃
   `ΣValRepr : ∀ {u} {vu} (x : ⟦ u ⟧ → U) {vxu} {valu} {valxu} valxu+z {valu+valxu+z} {allZ}
-      → ValIsRepr u vu valu
-      → ValIsRepr (x vu) vxu valxu
+      → ValRepr u vu valu
+      → ValRepr (x vu) vxu valxu
       → All (_≈_ 0) (ann (Vec ℕ (maxTySizeOver (enum u) x - tySize (x vu))) allZ)
       → valxu+z ≅ valxu V++ allZ
       → valu V++ valxu+z ≡ valu+valxu+z
-      → ValIsRepr (`Σ u x) (vu , vxu) valu+valxu+z
-  `ΠValRepr : ∀ {u} (x : ⟦ u ⟧ → U) {f : (v : ⟦ u ⟧) → ⟦ x v ⟧ } val → PiPartialRepr u x f (enum u) val → ValIsRepr (`Π u x) f val
+      → ValRepr (`Σ u x) (vu , vxu) valu+valxu+z
+  `ΠValRepr : ∀ {u} (x : ⟦ u ⟧ → U) {f : (v : ⟦ u ⟧) → ⟦ x v ⟧ } val → PiRepr u x f (enum u) val → ValRepr (`Π u x) f val
 
-data PiPartialRepr u x f where
-  PiRepNil : PiPartialRepr u x f [] []
+data PiRepr u x f where
+  PiRepNil : PiRepr u x f [] []
   PiRepCons : ∀ {el} {vu} {valxu} {valel} {valxu+valel}
-      → ValIsRepr (x vu) (f vu) valxu
-      → PiPartialRepr u x f el valel
+      → ValRepr (x vu) (f vu) valxu
+      → PiRepr u x f el valel
       → valxu+valel ≡ valxu V++ valel
-      → PiPartialRepr u x f (vu ∷ el) valxu+valel
+      → PiRepr u x f (vu ∷ el) valxu+valel
 

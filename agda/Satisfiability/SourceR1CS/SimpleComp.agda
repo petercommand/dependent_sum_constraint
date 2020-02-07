@@ -489,6 +489,28 @@ anyNeqzSound r .(v ∷ vec₁) .(n ∷ vec₂) sol (BatchLookupCons v n vec₁ v
      lem | no ¬p | yes p = ⊥-elim′ (onef≠zerof (trans (sym ℕtoF-1≡1) p))
      lem | no ¬p | no ¬p₁ = sq refl
 
+
+
+allEqzFunc : ∀ {n} → Vec ℕ n → ℕ
+allEqzFunc [] = 1
+allEqzFunc (x ∷ vec) with ℕtoF x ≟F zerof
+allEqzFunc (x ∷ vec) | yes p = allEqzFunc vec
+allEqzFunc (x ∷ vec) | no ¬p = 0
+
+
+allEqzFuncIsBool : ∀ {n} (vec : Vec ℕ n) → isBool (allEqzFunc vec)
+allEqzFuncIsBool [] = isOne 1 ℕtoF-1≡1
+allEqzFuncIsBool (x ∷ vec) with ℕtoF x ≟F zerof
+allEqzFuncIsBool (x ∷ vec) | yes p = allEqzFuncIsBool vec
+allEqzFuncIsBool (x ∷ vec) | no ¬p = isZero zero ℕtoF-0≡0
+
+allEqzFuncIsBoolStrict : ∀ {n} (vec : Vec ℕ n) → isBoolStrict (allEqzFunc vec)
+allEqzFuncIsBoolStrict [] = isOneS refl
+allEqzFuncIsBoolStrict (x ∷ vec) with ℕtoF x ≟F zerof
+allEqzFuncIsBoolStrict (x ∷ vec) | yes p = allEqzFuncIsBoolStrict vec
+allEqzFuncIsBoolStrict (x ∷ vec) | no ¬p = isZeroS refl
+
+
 allEqzIsBool : ∀ (r : WriterMode)
   → ∀ {n} → (vec : Vec Var n)
   → (sol : List (Var × ℕ))
@@ -514,26 +536,6 @@ allEqzIsBool r vec sol tri init isSol
     p₂₃IsSol = BuilderProdSol->>=⁻₂ p₁₁ p₂₃ r _ sol isSol
   in lnotSound r _ _ _ ¬rValLook ¬rValIsBool _ p₂₃IsSol
 ... | look = sq (_ , ((lnotFuncIsBool ¬rVal) , look))
-
-
-allEqzFunc : ∀ {n} → Vec ℕ n → ℕ
-allEqzFunc [] = 1
-allEqzFunc (x ∷ vec) with ℕtoF x ≟F zerof
-allEqzFunc (x ∷ vec) | yes p = allEqzFunc vec
-allEqzFunc (x ∷ vec) | no ¬p = 0
-
-
-allEqzFuncIsBool : ∀ {n} (vec : Vec ℕ n) → isBool (allEqzFunc vec)
-allEqzFuncIsBool [] = isOne 1 ℕtoF-1≡1
-allEqzFuncIsBool (x ∷ vec) with ℕtoF x ≟F zerof
-allEqzFuncIsBool (x ∷ vec) | yes p = allEqzFuncIsBool vec
-allEqzFuncIsBool (x ∷ vec) | no ¬p = isZero zero ℕtoF-0≡0
-
-allEqzFuncIsBoolStrict : ∀ {n} (vec : Vec ℕ n) → isBoolStrict (allEqzFunc vec)
-allEqzFuncIsBoolStrict [] = isOneS refl
-allEqzFuncIsBoolStrict (x ∷ vec) with ℕtoF x ≟F zerof
-allEqzFuncIsBoolStrict (x ∷ vec) | yes p = allEqzFuncIsBoolStrict vec
-allEqzFuncIsBoolStrict (x ∷ vec) | no ¬p = isZeroS refl
 
 
 allEqzSoundLem : ∀ {n} (vec : Vec ℕ n) → lnotFunc (anyNeqzFunc vec) ≈ allEqzFunc vec
@@ -1188,7 +1190,7 @@ piVarEqLitSound₁ : ∀ (r : WriterMode)
   let result = piVarEqLit u x eu vec f ((r , prime) , init)
   in BuilderProdSol (writerOutput result) sol
   → ListLookup (output result) sol 1
-  → Squash (∃ (λ val → Σ′ (PiPartialRepr u x f eu val) (λ _ → BatchListLookup vec sol val)))
+  → Squash (∃ (λ val → Σ′ (PiRepr u x f eu val) (λ _ → BatchListLookup vec sol val)))
 piVarEqLitSound₁ r u x [] [] f sol tri init isSol look = sq ([] , PiRepNil , BatchLookupNil sol)
 piVarEqLitSound₁ r u x (x₁ ∷ eu) vec f sol tri init isSol look with splitAt (tySize (x x₁)) vec | inspect (splitAt (tySize (x x₁))) vec
 ... | fst , snd | [ prf ] with
@@ -1766,21 +1768,7 @@ enumSigmaCondFunc : ∀ u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U)
   → (val₁ : Vec ℕ (tySize u))
   → (val₂ : Vec ℕ (maxTySizeOver (enum u) x))
   → ℕ
-
 enumPiCondFunc : ∀ u → (eu : List ⟦ u ⟧) → (x : ⟦ u ⟧ → U) → Vec ℕ (tySumOver eu x) → ℕ
-enumPiCondFunc u [] x vec = 1
-enumPiCondFunc u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
-enumPiCondFunc u (x₁ ∷ eu) x vec | fst₁ , snd₁ = landFunc (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
-
-enumPiCondFuncIsBool : ∀ u eu x vec → isBool (enumPiCondFunc u eu x vec)
-enumPiCondFuncIsBool u [] x vec = isOne 1 ℕtoF-1≡1
-enumPiCondFuncIsBool u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
-enumPiCondFuncIsBool u (x₁ ∷ eu) x vec | fst₁ , snd₁ = landFuncIsBool (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
-
-enumPiCondFuncIsBoolStrict : ∀ u eu x vec → isBoolStrict (enumPiCondFunc u eu x vec)
-enumPiCondFuncIsBoolStrict u [] x vec = isOneS refl
-enumPiCondFuncIsBoolStrict u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
-enumPiCondFuncIsBoolStrict u (x₁ ∷ eu) x vec | fst₁ , snd₁ = landFuncIsBoolStrict (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
 
 tyCondFunc `One (x ∷ vec) with ℕtoF x ≟F zerof
 tyCondFunc `One (x ∷ vec) | yes p = 1
@@ -1797,6 +1785,28 @@ tyCondFunc (`Vec u (suc x)) vec with splitAt (tySize u) vec
 tyCondFunc (`Σ u x) vec with splitAt (tySize u) vec
 tyCondFunc (`Σ u x) vec | fst₁ , snd₁ = landFunc (tyCondFunc u fst₁) (enumSigmaCondFunc u (enum u) x fst₁ snd₁)
 tyCondFunc (`Π u x) vec = enumPiCondFunc u (enum u) x vec
+
+enumPiCondFunc u [] x vec = 1
+enumPiCondFunc u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
+enumPiCondFunc u (x₁ ∷ eu) x vec | fst₁ , snd₁ = landFunc (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
+
+enumSigmaCondFunc u [] x val val₁ = 1
+enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
+enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ | fst₁ , snd₁ =
+  landFunc (limpFunc (varEqLitFunc u v₁ x₁) (landFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁)))
+          (enumSigmaCondFunc u eu x v₁ v₂)
+
+
+enumPiCondFuncIsBool : ∀ u eu x vec → isBool (enumPiCondFunc u eu x vec)
+enumPiCondFuncIsBool u [] x vec = isOne 1 ℕtoF-1≡1
+enumPiCondFuncIsBool u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
+enumPiCondFuncIsBool u (x₁ ∷ eu) x vec | fst₁ , snd₁ = landFuncIsBool (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
+
+enumPiCondFuncIsBoolStrict : ∀ u eu x vec → isBoolStrict (enumPiCondFunc u eu x vec)
+enumPiCondFuncIsBoolStrict u [] x vec = isOneS refl
+enumPiCondFuncIsBoolStrict u (x₁ ∷ eu) x vec with splitAt (tySize (x x₁)) vec
+enumPiCondFuncIsBoolStrict u (x₁ ∷ eu) x vec | fst₁ , snd₁ = landFuncIsBoolStrict (tyCondFunc (x x₁) fst₁) (enumPiCondFunc u eu x snd₁)
+
 
 tyCondFuncIsBool : ∀ u vec → isBool (tyCondFunc u vec)
 tyCondFuncIsBool `One (x ∷ vec) with ℕtoF x ≟F zerof
@@ -1848,11 +1858,6 @@ tyCondFuncIsBoolStrict (`Σ u x) vec | fst , snd | no ¬p | yes p = isZeroS refl
 tyCondFuncIsBoolStrict (`Σ u x) vec | fst , snd | no ¬p | no ¬p₁ = isOneS refl
 tyCondFuncIsBoolStrict (`Π u x) vec = enumPiCondFuncIsBoolStrict u (enum u) x vec
 
-enumSigmaCondFunc u [] x val val₁ = 1
-enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ with maxTySplit u x₁ x v₂
-enumSigmaCondFunc u (x₁ ∷ eu) x v₁ v₂ | fst₁ , snd₁ =
-  landFunc (limpFunc (varEqLitFunc u v₁ x₁) (landFunc (tyCondFunc (x x₁) fst₁) (allEqzFunc snd₁)))
-          (enumSigmaCondFunc u eu x v₁ v₂)
 
 enumSigmaCondFuncIsBool : ∀ u eu x val₁ val₂ → isBool (enumSigmaCondFunc u eu x val₁ val₂)
 enumSigmaCondFuncIsBool u [] x val₁ val₂ = isOne 1 ℕtoF-1≡1

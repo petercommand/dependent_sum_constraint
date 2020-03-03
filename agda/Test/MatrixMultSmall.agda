@@ -39,11 +39,6 @@ module Test where
   `Matrix : U → ℕ → ℕ → U
   `Matrix u m n = `Vec (`Vec u n) m
   
-  f : ⟦ `Two ⟧ → U
-  f t with t ≟B false
-  f t | yes p = `Two
-  f t | no ¬p = `One
-  
   getMatrix : ∀ {u} {m} {n} → Source (`Matrix u m n) → Fin m → Fin n → Source u
   getMatrix s m n = getV (getV s m) n
 

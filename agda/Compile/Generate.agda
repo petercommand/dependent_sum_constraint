@@ -30,7 +30,6 @@ open import Language.Source.Utils f finite showf hiding (_>>_)
 open import Language.TySize f finite
 open import Language.Universe f
 
-open import Z3.Cmd
 
 genMain : ∀ (prime : ℕ) {u} → S-Monad (Source u) → List (Var × ℕ) → IO (Lift Level.zero ⊤)
 genMain p m i =

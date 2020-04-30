@@ -2,7 +2,7 @@
 module Test.Simple where
 
 open import Data.Bool renaming (_≟_ to _≟B_)
-open import Data.Field.Finite
+open import Data.Field.Prime
 open import Data.Fin hiding (_≟_)
 open import Data.List
 open import Data.Nat hiding (_≟_)
@@ -20,7 +20,7 @@ N = 2188824287183927522224640574525727508854836440041603434369820418657580849561
 postulate
   nPrime : Prime N
 
-FF = FiniteField N
+FF = PrimeField N
 FField = isField N nPrime
 FFinite = isFinite N nPrime
 
@@ -28,8 +28,8 @@ open import Language.Common
 
 
 module Test where
-  open import Language.Source FF FFinite (λ x → showℕ (FiniteField.elem x))
-  open import Language.Source.Utils FF FFinite (λ x → showℕ (FiniteField.elem x))
+  open import Language.Source FF FFinite (λ x → showℕ (PrimeField.elem x))
+  open import Language.Source.Utils FF FFinite (λ x → showℕ (PrimeField.elem x))
   open import Language.TySize FF FFinite
   open import Language.Universe FF
   
@@ -52,7 +52,7 @@ module Test where
     return (Add m₁ m₂)
 open Test
 
-open import Compile.Generate FF FField FFinite (λ x → showℕ (FiniteField.elem x)) FiniteField.elem (fieldElem nPrime)
+open import Compile.Generate FF FField FFinite (λ x → showℕ (PrimeField.elem x)) PrimeField.elem (fieldElem nPrime)
 open import IO
 
 main = run (genMain N test ((1 , 2) ∷ (2 , 3) ∷ []))

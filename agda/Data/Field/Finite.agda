@@ -20,24 +20,24 @@ open import Relation.Binary
 open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
 open import Relation.Nullary.Decidable using (False)
-module Data.Field.Finite where
+module Data.Field.Prime where
 
 
-record FiniteField (n : ℕ) : Set where
+record PrimeField (n : ℕ) : Set where
   field
     elem : ℕ
     .nIsPrime : Prime n
     .elem<n : elem < n
 
-open FiniteField
+open PrimeField
 
-fieldElem : ∀ {n} {≢ : False (n ≟ℕ 0) } → Prime n → (m : ℕ) → FiniteField n
+fieldElem : ∀ {n} {≢ : False (n ≟ℕ 0) } → Prime n → (m : ℕ) → PrimeField n
 fieldElem {suc n} p m = record { elem = mod m (suc n)
                                ; nIsPrime = p
                                ; elem<n = mod< m (suc n) (s≤s z≤n)
                                }
 
-multInv : ∀ {n} {≢ : False (n ≟ℕ 0)} → FiniteField n → FiniteField n
+multInv : ∀ {n} {≢ : False (n ≟ℕ 0)} → PrimeField n → PrimeField n
 multInv {suc n} record { elem = zero ; nIsPrime = nIsPrime ; elem<n = elem<n } =
     record { elem = zero ; nIsPrime = nIsPrime ; elem<n = elem<n }
 multInv {suc n} record { elem = (suc elem₁) ; nIsPrime = nIsPrime ; elem<n = elem<n } =
@@ -58,7 +58,7 @@ multInv {suc n} record { elem = (suc elem₁) ; nIsPrime = nIsPrime ; elem<n = e
     inv m n (+- x y eq) = x
     inv m n (-+ x y eq) = n - x
 
-fastInv : ∀ {n} {≢ : False (n ≟ℕ 0)} → FiniteField n → FiniteField n
+fastInv : ∀ {n} {≢ : False (n ≟ℕ 0)} → PrimeField n → PrimeField n
 fastInv {suc n} record { elem = zero ; nIsPrime = nIsPrime ; elem<n = elem<n } =
     record { elem = zero ; nIsPrime = nIsPrime ; elem<n = elem<n }
 fastInv {suc n} record { elem = (suc elem₁) ; nIsPrime = nIsPrime ; elem<n = elem<n } =
@@ -66,7 +66,7 @@ fastInv {suc n} record { elem = (suc elem₁) ; nIsPrime = nIsPrime ; elem<n = e
            ; nIsPrime = nIsPrime
            ; elem<n = mod< (getInv (suc elem₁) (suc n)) (suc n) (s≤s z≤n) }
 
-isField : ∀ n {≢0 : False (n ≟ℕ 0)} → Prime n → Field (FiniteField n)
+isField : ∀ n {≢0 : False (n ≟ℕ 0)} → Prime n → Field (PrimeField n)
 isField (suc n) p = record { _+_ = λ x x₁ → record { elem = mod (elem x + elem x₁) (suc n)
                                                    ; nIsPrime = p
                                                    ; elem<n = mod< (elem x + elem x₁) (suc n) (s≤s z≤n) }
@@ -85,7 +85,7 @@ isField (suc n) p = record { _+_ = λ x x₁ → record { elem = mod (elem x + e
                          ; 1/_ = fastInv }
 
 private
-  enumFieldElem : (n : ℕ) → Prime n → (m : ℕ) → .(n > m) → List (FiniteField n)
+  enumFieldElem : (n : ℕ) → Prime n → (m : ℕ) → .(n > m) → List (PrimeField n)
   enumFieldElem n prf zero p = [ record { elem = zero ; nIsPrime = prf ; elem<n = p } ]
   enumFieldElem n prf (suc m) p = record { elem = suc m ; nIsPrime = prf ; elem<n = p } ∷ enumFieldElem n prf m (≤⇒pred≤ p)
 
@@ -133,7 +133,7 @@ private
       lem : suc elem ≤ suc n → elem ≤ n
       lem (s≤s t) = t
   
-  enumPrf : ∀ n prf (a : FiniteField (suc n)) p → a ∈ enumFieldElem (suc n) prf n p
+  enumPrf : ∀ n prf (a : PrimeField (suc n)) p → a ∈ enumFieldElem (suc n) prf n p
   enumPrf n prf record { elem = elem ; elem<n = elem<n } p =
             enumComplete' (suc n) prf elem n (record { elem = elem ; elem<n = elem<n })
                            (recompute ((suc elem) ≤? (suc n)) elem<n) p
@@ -141,15 +141,15 @@ private
                            (enumComplete (suc n) prf elem (recompute (suc elem ≤? suc n) elem<n))
 
 
-isFinite : ∀ n {≢ : False (n ≟ℕ 0)} → Prime n → Finite (FiniteField n)
+isFinite : ∀ n {≢ : False (n ≟ℕ 0)} → Prime n → Finite (PrimeField n)
 isFinite (suc n) prf = record { elems = enumFieldElem (suc n) prf n ≤-refl
                               ; size = suc n
                               ; a∈elems = λ a → enumPrf n prf a ≤-refl
                               ; size≡len-elems = enumFieldElemSizePrf (suc n) prf n ≤-refl
                               ; occ-1 = λ a dec → enumUniq n dec prf a ≤-refl }
 
-_≟_ : ∀ {n} {≢ : False (n ≟ℕ 0)} → Decidable {A = FiniteField n} _≡_
+_≟_ : ∀ {n} {≢ : False (n ≟ℕ 0)} → Decidable {A = PrimeField n} _≡_
 record { elem = elem₁ ; elem<n = elem<n₁ } ≟ record { elem = elem ; elem<n = elem<n } with elem ≟ℕ elem₁
 (record { elem = elem₁ ; elem<n = elem<n₁ } ≟ record { elem = .elem₁ ; elem<n = elem<n }) | yes refl = yes refl
-(record { elem = elem₁ ; elem<n = elem<n₁ } ≟ record { elem = elem ; elem<n = elem<n }) | no ¬p = no (λ x → ⊥-elim (¬p (cong FiniteField.elem (sym x))))
+(record { elem = elem₁ ; elem<n = elem<n₁ } ≟ record { elem = elem ; elem<n = elem<n }) | no ¬p = no (λ x → ⊥-elim (¬p (cong PrimeField.elem (sym x))))
 

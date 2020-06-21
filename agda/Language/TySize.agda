@@ -323,19 +323,20 @@ module Enum where
   enumComplete (`Vec u zero) [] = here refl
   enumComplete (`Vec u (suc x₁)) (x ∷ x₂) = ∈l-∈l'-∈r (enum u) _∷_ x x₂ (enumComplete u x) (λ _ → enum (`Vec u x₁)) (enumComplete (`Vec u x₁) x₂)
   enumComplete (`Σ u x₁) (fst , snd) = ∈l-∈l'-∈r (enum u) _,_ fst snd (enumComplete u fst) (λ r → enum (x₁ r)) (enumComplete (x₁ fst) snd)
-  enumComplete (`Π u x₁) f = f∈listFuncToPi u x₁ (enum u) (enumComplete u) (genFunc _ _ (enum u >>= λ r → return (r , enum (x₁ r)))) (piToList u x₁ (enum u) f)
-                                       (λ x x₃ → trans (genFuncProj₁ u x₁ (enum u >>= (λ r → return (r , enum (x₁ r)))) x x₃)
-                                                       (map-proj₁->>= (enum u) (enum ∘ x₁))) f (genFuncLem u x₁ (enum u >>= (λ r → (r , enum (x₁ r)) ∷ [])) _ (FuncInstLem u x₁ f (enum u) (λ x → enumComplete (x₁ x) (f x))))
-                                       (ext λ x → piFromList∘piToList≗id u x₁ (enum u) (enumComplete u) f (trans
-                                                                         (genFuncProj₁ u x₁ (enum u >>= (λ r → (r , enum (x₁ r)) ∷ []))
-                                                                                       (piToList u x₁ (enum u) f)
-                                                                                         (genFuncLem u x₁ (enum u >>= (λ r → (r , enum (x₁ r)) ∷ []))
-                                                                                           (piToList u x₁ (enum u) f)
-                                                                                             (FuncInstLem u x₁ f (enum u)
-                                                                                               (λ x₂ → enumComplete (x₁ x₂) (f x₂)))))
-                                                                         (map-proj₁->>= (enum u) (λ x₂ → enum (x₁ x₂)))) x)
+  enumComplete (`Π u x₁) f = let pairs = do
+                                   r ← enum u
+                                   return (r , enum (x₁ r))
+                                 genFuncs = genFunc u x₁ pairs
+                                 fToList = piToList u x₁ (enum u) f
+                                 fToListFuncInstPairs = FuncInstLem u x₁ f (enum u) (λ x → enumComplete (x₁ x) (f x))
+                                 fToList∈genFuncs = genFuncLem _ _ pairs fToList fToListFuncInstPairs
+                                 prf = trans
+                                          (genFuncProj₁ u x₁ pairs fToList fToList∈genFuncs)
+                                          (map-proj₁->>= (enum u) (λ x₂ → enum (x₁ x₂)))
+                                 f≗piFromList∘piToList =  piFromList∘piToList≗id _ _ (enum u) (enumComplete u) f prf
+                             in  f∈listFuncToPi _ _ _ _ genFuncs fToList _ f fToList∈genFuncs (ext f≗piFromList∘piToList)
 
-  
+
   genFuncUniqueLem : ∀ u (x : ⟦ u ⟧ → U) (eu : List ⟦ u ⟧) (x₂ : ⟦ u ⟧) (ls : List ⟦ x x₂ ⟧) (x₃ : List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))) (f : ⟦ `Π u x ⟧) → ¬ piToList u x eu f ≡ x₃
       → ¬ ((x₂ , f x₂) ∷ (piToList u x eu f)) ∈ ann (List (List ⟦ `Σ u x ⟧)) (ls >>= (λ choice → ((x₂ , choice) ∷ x₃) ∷ []))
   genFuncUniqueLem u x eu x₂ ls x₃ f x₄ x₅ with ∈->>=⁻ ls (λ choice → ((x₂ , choice) ∷ x₃) ∷ []) ((x₂ , f x₂) ∷ piToList u x eu f) x₅

@@ -50,8 +50,20 @@ postulate
 ∈->>= .(x ∷ _) f x (here refl) y mem' = ++⁺ˡ mem'
 ∈->>= .(_ ∷ _) f x (there mem) y mem' = ++⁺ʳ (f _) (∈->>= _ f x mem y mem')
 
-Disjoint : ∀ {a} {A : Set a} → (l l' : List A) → Set a
-Disjoint l l' = ∀ x → x ∈ l → ¬ x ∈ l'
+∈->>=⁻ : ∀ {a} {A : Set a} {b} {B : Set b} (l : List A) (f : A → List B) → ∀ y → y ∈ l >>= f → ∃ (λ x → x ∈ l × y ∈ f x)
+∈->>=⁻ (x ∷ l) f y y∈l>>=f with ++⁻ (f x) y∈l>>=f
+∈->>=⁻ (x ∷ l) f y y∈l>>=f | inj₁ x₁ = x , (here refl) , x₁
+∈->>=⁻ (x ∷ l) f y y∈l>>=f | inj₂ y₁ with ∈->>=⁻ l f y y₁
+∈->>=⁻ (x ∷ l) f y y∈l>>=f | inj₂ y₁ | x₁ , x₁∈l , y₂∈fx₁ = x₁ , (there x₁∈l) , y₂∈fx₁
+
+data _↔_ {a} {b} (A : Set a) (B : Set b) : Set (a ⊔ b) where
+  iff : (A → B) → (B → A) → A ↔ B
+
+∈->>=↔ : ∀ {a} {b} {A : Set a} {B : Set b} (l : List A) (f : A → List B) (y : B) → (y ∈ l >>= f) ↔ (∃ (λ x → x ∈ l × y ∈ f x))
+∈->>=↔ l f y = iff (∈->>=⁻ l f y) converse
+  where
+    converse : ∃ (λ x → x ∈ l × y ∈ f x) → y ∈ (l >>= f)
+    converse (x , x∈l , y∈fx) = ∈->>= l f x x∈l y y∈fx
 
 ¬∈→occ≡0 : ∀ {a} {A : Set a} (decA : Decidable {A = A} _≡_) → ∀ x l → ¬ x ∈ l → occ decA x l ≡ 0
 ¬∈→occ≡0 decA x [] ¬∈ = refl
@@ -69,18 +81,11 @@ occ->>= decA decB (x₁ ∷ l) f x y prf | yes refl rewrite occ++ decB y (f x₁
 occ->>= decA decB (x₁ ∷ l) f x y prf | no ¬p rewrite occ++ decB y (f x₁) (l >>= f) | ¬∈→occ≡0 decB y _ (prf x₁ ¬p) = occ->>= decA decB l f x y prf
 
 
-∈->>=⁻ : ∀ {a} {A : Set a} {b} {B : Set b} (l : List A) (f : A → List B) → ∀ y → y ∈ l >>= f → ∃ (λ x → x ∈ l × y ∈ f x)
-∈->>=⁻ (x ∷ l) f y y∈l>>=f with ++⁻ (f x) y∈l>>=f
-∈->>=⁻ (x ∷ l) f y y∈l>>=f | inj₁ x₁ = x , (here refl) , x₁
-∈->>=⁻ (x ∷ l) f y y∈l>>=f | inj₂ y₁ with ∈->>=⁻ l f y y₁
-∈->>=⁻ (x ∷ l) f y y∈l>>=f | inj₂ y₁ | x₁ , x₁∈l , y₂∈fx₁ = x₁ , (there x₁∈l) , y₂∈fx₁
-
-
 
 ∈l-∈l'-∈r : ∀ {a} {A : Set a} {b} {B : A → Set b} {c} {C : Set c} (l : List A)  (_+_ : (x : A) → B x → C)
-    → ∀ x y → x ∈ l → (l' : (x : A) → List (B x)) → y ∈ l' x → x + y ∈ (l Data.List.Monad.>>= λ r →
-                                                                          l' r Data.List.Monad.>>= λ rs →
-                                                                          r + rs ∷ [])
+    → ∀ x y → x ∈ l → (l' : (x : A) → List (B x)) → y ∈ l' x → x + y ∈ (l >>= λ r →
+                                                                        l' r >>= λ rs →
+                                                                        return (r + rs))
 ∈l-∈l'-∈r l _+_ x y mem l' mem' = ∈->>= l (λ z → l' z >>= (λ z₁ → (z + z₁) ∷ [])) x mem (x + y)
                                         (∈->>= (l' x) (λ z → (x + z) ∷ []) y mem' (x + y) (here refl))
 
@@ -323,18 +328,19 @@ module Enum where
   enumComplete (`Vec u zero) [] = here refl
   enumComplete (`Vec u (suc x₁)) (x ∷ x₂) = ∈l-∈l'-∈r (enum u) _∷_ x x₂ (enumComplete u x) (λ _ → enum (`Vec u x₁)) (enumComplete (`Vec u x₁) x₂)
   enumComplete (`Σ u x₁) (fst , snd) = ∈l-∈l'-∈r (enum u) _,_ fst snd (enumComplete u fst) (λ r → enum (x₁ r)) (enumComplete (x₁ fst) snd)
-  enumComplete (`Π u x₁) f = let pairs = do
-                                   r ← enum u
-                                   return (r , enum (x₁ r))
-                                 genFuncs = genFunc u x₁ pairs
-                                 fToList = piToList u x₁ (enum u) f
-                                 fToListFuncInstPairs = FuncInstLem u x₁ f (enum u) (λ x → enumComplete (x₁ x) (f x))
-                                 fToList∈genFuncs = genFuncLem _ _ pairs fToList fToListFuncInstPairs
-                                 prf = trans
-                                          (genFuncProj₁ u x₁ pairs fToList fToList∈genFuncs)
-                                          (map-proj₁->>= (enum u) (λ x₂ → enum (x₁ x₂)))
-                                 f≗piFromList∘piToList =  piFromList∘piToList≗id _ _ (enum u) (enumComplete u) f prf
-                             in  f∈listFuncToPi _ _ _ _ genFuncs fToList _ f fToList∈genFuncs (ext f≗piFromList∘piToList)
+  enumComplete (`Π u x₁) f =
+     let pairs = do
+           r ← enum u
+           return (r , enum (x₁ r))
+         genFuncs = genFunc u x₁ pairs
+         fToList = piToList u x₁ (enum u) f
+         fToListFuncInstPairs = FuncInstLem u x₁ f (enum u) (λ x → enumComplete (x₁ x) (f x))
+         fToList∈genFuncs = genFuncLem u x₁ pairs fToList fToListFuncInstPairs
+         prf = trans
+                  (genFuncProj₁ u x₁ pairs fToList fToList∈genFuncs)
+                  (map-proj₁->>= (enum u) (λ x₂ → enum (x₁ x₂)))
+         f≗piFromList∘piToList =  piFromList∘piToList≗id u x₁ (enum u) (enumComplete u) f prf
+     in  f∈listFuncToPi u x₁ (enum u) (enumComplete u) genFuncs fToList _ f fToList∈genFuncs (ext f≗piFromList∘piToList)
 
 
   genFuncUniqueLem : ∀ u (x : ⟦ u ⟧ → U) (eu : List ⟦ u ⟧) (x₂ : ⟦ u ⟧) (ls : List ⟦ x x₂ ⟧) (x₃ : List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))) (f : ⟦ `Π u x ⟧) → ¬ piToList u x eu f ≡ x₃

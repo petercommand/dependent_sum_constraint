@@ -265,12 +265,12 @@ module Enum where
   ... | ()
   piFromListLem u x dec .(proj₁ x₂) x₂ refl (.(proj₁ x₃) ∷ .(map proj₁ l)) (x₃ ∷ l) uniq refl (there prf) (there prf') | no ¬p = piFromListLem u x dec (proj₁ x₂) x₂ refl (map proj₁ l) l uniq refl prf prf'
 
-  piToList∘piFromList≡idAux : ∀ u x (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) eu (∈eu : ∀ x → x ∈ eu) eu' eu'' (eq : eu'' ++ eu' ≡ eu) l l' l'' (lenEq : length eu' ≡ length l') (eq' : l'' ++ l' ≡ l) (uniq : ∀ v → occ dec v eu ≡ 1) p → piToList u x eu' (λ dom → piFromList u x eu l p dom (∈eu dom)) ≡ l'
+  piToList∘piFromList≡idAux : ∀ u x (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) eu (∈eu : ∀ x → x ∈ eu) eu' eu'' (eq : eu'' ++ eu' ≡ eu) l l' l'' (lenEq : length eu' ≡ length l') (eq' : l'' ++ l' ≡ l) (uniq : ∀ v → occ dec v eu ≡ 1) (p : map proj₁ l ≡ eu) → piToList u x eu' (λ dom → piFromList u x eu l p dom (∈eu dom)) ≡ l'
   piToList∘piFromList≡idAux u x dec eu ∈eu [] eu'' eq l [] l'' lenEq eq' uniq p = refl
   piToList∘piFromList≡idAux u x dec eu ∈eu (x₁ ∷ eu') eu'' eq l (x₂ ∷ l') l'' lenEq refl uniq refl
                       rewrite piToList∘piFromList≡idAux u x dec eu ∈eu eu' (eu'' ++ (x₁ ∷ []))
                                     (trans (++-assoc eu'' (x₁ ∷ []) eu') eq) l l' (l'' ++ (x₂ ∷ []))
-                                    (cong (λ { (suc x) → x ; zero → zero }) lenEq)
+                                    (cong pred lenEq)
                                     (++-assoc l'' (x₂ ∷ []) l') uniq refl
                                        = cong (λ x → x ∷ l') (piFromListLem u x dec x₁ x₂ (sym (cong (head' x₁) lem'' )) eu l (uniq x₁) refl (∈eu x₁) (++⁺ʳ l'' (here refl)))
       where
@@ -288,7 +288,7 @@ module Enum where
 
         lem'' : x₁ ∷ eu' ≡ map proj₁ (x₂ ∷ l')
         lem'' rewrite map-++ proj₁ l'' (x₂ ∷ l') = lem' eu'' (x₁ ∷ eu') (map proj₁ l'') (proj₁ x₂ ∷ map proj₁ l') eq (lem eu'' (x₁ ∷ eu') (map proj₁ l'') (proj₁ x₂ ∷ map proj₁ l') (cong length eq) (trans lenEq (cong suc (sym (map-length proj₁ l')))))
-  piToList∘piFromList≡id : ∀ u x (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_)  eu (∈eu : ∀ x → x ∈ eu) l (uniq : ∀ v → occ dec v eu ≡ 1) p → piToList u x eu (λ dom → piFromList u x eu l p dom (∈eu dom)) ≡ l
+  piToList∘piFromList≡id : ∀ u x (dec : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_)  eu (∈eu : ∀ x → x ∈ eu) l (uniq : ∀ v → occ dec v eu ≡ 1) (p : map proj₁ l ≡ eu) → piToList u x eu (λ dom → piFromList u x eu l p dom (∈eu dom)) ≡ l
   piToList∘piFromList≡id u x dec eu ∈eu l uniq refl = piToList∘piFromList≡idAux u x dec eu ∈eu eu [] refl l l []  (map-length proj₁ l) refl uniq refl
 
   data FuncInst {ℓ} {ℓ'} (A : Set ℓ) (B : A → Set ℓ') : List (Σ A B) → List (Σ A (λ v → List (B v))) → Set (ℓ ⊔ ℓ') where
@@ -309,11 +309,20 @@ module Enum where
   map-empty : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'} → (m : List A) → (f : A → B) → map f m ≡ [] → m ≡ []
   map-empty [] f eq = refl
     
-  genFuncLem : ∀ u x l f → FuncInst _ _ f l → f ∈ genFunc u x l
-  genFuncLem u x .[] .[] InstNil = here refl
-  genFuncLem u x .((a , ls) ∷ l') .((a , b) ∷ l) (InstCons l l' a b ls x₁ finst) with genFunc u x l' | inspect (genFunc u x) l'
-  ... | t | ℝ[ refl ] = ∈->>= (genFunc u x l') _ l (genFuncLem u x l' l finst) ((a , b) ∷ l)
+  FuncInst→genFunc : ∀ u x l f → FuncInst _ _ f l → f ∈ genFunc u x l
+  FuncInst→genFunc u x .[] .[] InstNil = here refl
+  FuncInst→genFunc u x .((a , ls) ∷ l') .((a , b) ∷ l) (InstCons l l' a b ls x₁ finst) with genFunc u x l' | inspect (genFunc u x) l'
+  ... | t | ℝ[ refl ] = ∈->>= (genFunc u x l') _ l (FuncInst→genFunc u x l' l finst) ((a , b) ∷ l)
                             (∈->>= ls _ b x₁ ((a , b) ∷ l) (here refl))
+
+  genFunc→FuncInst : ∀ u x l f → f ∈ genFunc u x l → FuncInst _ _ f l
+  genFunc→FuncInst u x [] .[] (here refl) = InstNil
+  genFunc→FuncInst u x (x₁ ∷ l) f mem with ∈->>=⁻ (genFunc u x l) (λ ac → proj₂ x₁ >>= (λ choice → ((proj₁ x₁ , choice) ∷ ac) ∷ [])) f mem
+  genFunc→FuncInst u x (x₁ ∷ l) [] mem | fst , snd , trd with ∈->>=⁻ (proj₂ x₁) (λ choice → ((proj₁ x₁ , choice) ∷ fst) ∷ []) _ trd
+  genFunc→FuncInst u x (x₁ ∷ l) [] mem | fst , snd , trd | fst₁ , fst₂ , here ()
+  genFunc→FuncInst u x (x₁ ∷ l) [] mem | fst , snd , trd | fst₁ , fst₂ , there ()
+  genFunc→FuncInst u x (x₁ ∷ l) (x₂ ∷ f) mem | fst , snd , trd with ∈->>=⁻ (proj₂ x₁) (λ choice → ((proj₁ x₁ , choice) ∷ fst) ∷ []) _ trd
+  genFunc→FuncInst u x ((fst₃ , snd₁) ∷ l) (.(fst₃ , fst₁) ∷ .fst) mem | fst , snd , trd | fst₁ , fst₂ , here refl = InstCons fst l fst₃ fst₁ snd₁ fst₂ (genFunc→FuncInst u x l fst snd)
 
   FuncInstLem : ∀ u x (f : ⟦ `Π u x ⟧) (l : List ⟦ u ⟧) → (∀ x₁ → f x₁ ∈ enum (x x₁)) → FuncInst ⟦ u ⟧ (λ v → ⟦ x v ⟧) (piToList u x l f) (l >>= (λ r → (r , enum (x r)) ∷ []))
   FuncInstLem u x f [] p = InstNil
@@ -335,7 +344,7 @@ module Enum where
          genFuncs = genFunc u x₁ pairs
          fToList = piToList u x₁ (enum u) f
          fToListFuncInstPairs = FuncInstLem u x₁ f (enum u) (λ x → enumComplete (x₁ x) (f x))
-         fToList∈genFuncs = genFuncLem u x₁ pairs fToList fToListFuncInstPairs
+         fToList∈genFuncs = FuncInst→genFunc u x₁ pairs fToList fToListFuncInstPairs
          prf = trans
                   (genFuncProj₁ u x₁ pairs fToList fToList∈genFuncs)
                   (map-proj₁->>= (enum u) (λ x₂ → enum (x₁ x₂)))

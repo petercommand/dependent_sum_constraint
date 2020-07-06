@@ -5,6 +5,7 @@
          (replace-string "Satisfiability.SourceIntermediate.Base.LinearCombVal." "")
          (replace-string "Satisfiability.SourceIntermediate.Base.isBoolStrict." "")
          (replace-string "Language.Universe.U." "")
+         (replace-string "Language.Source.Source." "")
          (replace-string "Satisfiability.SourceIntermediate.Base.ValIsRepr." "")
          (replace-string "Satisfiability.SourceIntermediate.Base.isBool." "")))
 (advice-add 'agda2-load :before 'trunc)

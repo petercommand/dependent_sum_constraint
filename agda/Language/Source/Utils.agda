@@ -59,6 +59,9 @@ module S-Monad where
 open S-Monad hiding (newVar; newVars) public
 open S-Monad using (newVar; newVars)
 
+addHint : (Map Var ℕ → Map Var ℕ) → S-Monad ⊤
+addHint h = tell ((λ x → inj₂ h ∷ [] ++ x) , id)
+
 assertEq : ∀ {u} → Source u → Source u → S-Monad ⊤
 assertEq {u} s₁ s₂ = tell ((λ x → inj₁ (u , s₁ , s₂) ∷ [] ++ x) , id)
 

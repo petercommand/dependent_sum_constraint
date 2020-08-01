@@ -146,9 +146,9 @@ module Enum where
   
   listFuncToPi : ∀ u (x : ⟦ u ⟧ → U)
       → (eu : List ⟦ u ⟧)
-      → (∀ x → x ∈ eu)
+      → (∀ elem → elem ∈ eu)
       → (l : List (List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))))
-      → (∀ x → x ∈ l → map proj₁ x ≡ eu)
+      → (∀ elem → elem ∈ l → map proj₁ elem ≡ eu)
       → List ⟦ `Π u x ⟧
   listFuncToPi u x eu ∈eu [] proj₁l≡eu = []
   listFuncToPi u x eu ∈eu (l ∷ l₁) proj₁l≡eu = (λ dom → piFromList u x eu l (proj₁l≡eu l (here refl)) dom (∈eu dom))
@@ -160,7 +160,17 @@ module Enum where
   safeLookup elem (x ∷ l) .(proj₁ x ∷ map proj₁ l) refl (there mem) = safeLookup elem l (map proj₁ l) refl mem
 
 
-  f∈listFuncToPi : ∀ u x eu ∈eu funcs func eq f → (mem : func ∈ funcs) → f ≡ (λ d → piFromList u x eu func (eq func mem) d (∈eu d)) → f ∈ listFuncToPi u x eu ∈eu funcs eq
+  f∈listFuncToPi : ∀ (u : U) (x : ⟦ u ⟧ → U)
+                   (eu : List ⟦ u ⟧)
+                   (∈eu : ∀ elem → elem ∈ eu)
+                   (funcs : List (List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))))
+                   (func : List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧)))
+                   (eq : (x₁ : List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))) →
+                            x₁ ∈ funcs → map proj₁ x₁ ≡ eu)
+                   (f : ⟦ `Π u x ⟧)
+                   → (mem : func ∈ funcs)
+                   → f ≡ (λ d → piFromList u x eu func (eq func mem) d (∈eu d))
+                   → f ∈ listFuncToPi u x eu ∈eu funcs eq
   f∈listFuncToPi u x eu ∈eu .(func ∷ _) func eq f (here refl) eq'' = here eq''
   f∈listFuncToPi u x eu ∈eu .(_ ∷ _) func eq f (there func∈funcs) eq'' = there
                                                                            (f∈listFuncToPi u x eu ∈eu _ func (λ x z → eq x (there z)) f
@@ -295,7 +305,18 @@ module Enum where
     InstNil : FuncInst A B [] []
     InstCons : ∀ l l' → (a : A) (b : B a) (ls : List (B a)) → b ∈ ls → (ins : FuncInst A B l l') → FuncInst A B ((a , b) ∷ l) ((a , ls) ∷ l')
 
-  occ-listFuncToPi : ∀ u x eu ∈eu l eq dec dec' (dec'' : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_) (uniq : (v : ⟦ u ⟧) → occ dec'' v eu ≡ 1) f → occ dec f (listFuncToPi u x eu ∈eu l eq) ≡ occ dec' (piToList u x eu f) l
+  occ-listFuncToPi : ∀ (u : U) (x : ⟦ u ⟧ → U)
+                    (eu : List ⟦ u ⟧)
+                    (∈eu : ∀ elem → elem ∈ eu)
+                    (l : List (List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))))
+                    (eq : (elem : List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))) →
+                             elem ∈ l → map proj₁ elem ≡ eu)
+                    (dec : Decidable {A = ⟦ `Π u x ⟧} _≡_)
+                    (dec' : Decidable {A = List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))} _≡_)
+                    (dec'' : ∀ {u} → Decidable {A = ⟦ u ⟧} _≡_)
+                    (uniq : (v : ⟦ u ⟧) → occ dec'' v eu ≡ 1)
+                    (f : ⟦ `Π u x ⟧)
+                    → occ dec f (listFuncToPi u x eu ∈eu l eq) ≡ occ dec' (piToList u x eu f) l
   occ-listFuncToPi u x eu ∈eu [] eq dec dec' dec'' uniq val = refl
   occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' dec'' uniq val with dec val (λ dom → piFromList u x eu l (eq l (here refl)) dom (∈eu dom))
   occ-listFuncToPi u x eu ∈eu (l ∷ l₁) eq dec dec' dec'' uniq val | yes p with dec' (piToList u x eu val) l
@@ -358,7 +379,11 @@ module Enum where
   genFuncUniqueLem u x eu x₂ ls .(piToList u x eu f) f x₄ x₅ | .(f x₂) , p₁ , here refl = x₄ refl
 
 
-  genFuncUnique : ∀ u (x : ⟦ u ⟧ → U) dec (dec' : ∀ v → Decidable {A = ⟦ x v ⟧} _≡_)  eu f
+  genFuncUnique : ∀ u (x : ⟦ u ⟧ → U)
+     (dec : Decidable {A = List (Σ ⟦ u ⟧ (λ v → ⟦ x v ⟧))} _≡_)
+     (dec' : ∀ v → Decidable {A = ⟦ x v ⟧} _≡_)
+     (eu : List ⟦ u ⟧)
+     (f : ⟦ `Π u x ⟧)
     → (l : List (Σ ⟦ u ⟧ (λ v → List ⟦ x v ⟧)))
     → map proj₁ l ≡ eu
     → (∀ elem → elem ∈ l → ∀ (t : ⟦ x (proj₁ elem) ⟧) → t ∈ proj₂ elem → occ (dec' (proj₁ elem)) t (proj₂ elem) ≡ 1)

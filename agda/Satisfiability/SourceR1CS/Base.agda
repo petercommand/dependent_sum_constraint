@@ -466,20 +466,20 @@ data ValRepr : ∀ u → ⟦ u ⟧ → Vec ℕ (tySize u) → Set where
       → ValRepr (`Vec u n) vec₂ val₂
       → val₁ V++ val₂ ≡ val₃
       → ValRepr (`Vec u (suc n)) (v₁ ∷ vec₂) val₃
-  `ΣValRepr : ∀ {u} {vu} (x : ⟦ u ⟧ → U) {vxu} {valu} {valxu} valxu+z {valu+valxu+z} {allZ : Vec ℕ (maxTySizeOver (enum u) x - tySize (x vu))}
-      → ValRepr u vu valu
-      → ValRepr (x vu) vxu valxu
+  `ΣValRepr : ∀ {u} {⟦u⟧} (x : ⟦ u ⟧ → U) {⟦xu⟧} {val⟦u⟧} {val⟦xu⟧} val⟦xu⟧+z {val⟦u⟧+val⟦xu⟧+z} {allZ : Vec ℕ (maxTySizeOver (enum u) x - tySize (x ⟦u⟧))}
+      → ValRepr u ⟦u⟧ val⟦u⟧
+      → ValRepr (x ⟦u⟧) ⟦xu⟧ val⟦xu⟧
       → All (_≈_ 0) allZ
-      → valxu+z ≅ valxu V++ allZ
-      → valu V++ valxu+z ≡ valu+valxu+z
-      → ValRepr (`Σ u x) (vu , vxu) valu+valxu+z
+      → val⟦xu⟧+z ≅ val⟦xu⟧ V++ allZ
+      → val⟦u⟧ V++ val⟦xu⟧+z ≡ val⟦u⟧+val⟦xu⟧+z
+      → ValRepr (`Σ u x) (⟦u⟧ , ⟦xu⟧) val⟦u⟧+val⟦xu⟧+z
   `ΠValRepr : ∀ {u} (x : ⟦ u ⟧ → U) {f : (v : ⟦ u ⟧) → ⟦ x v ⟧ } val → PiRepr u x f (enum u) val → ValRepr (`Π u x) f val
 
 data PiRepr u x f where
   PiRepNil : PiRepr u x f [] []
-  PiRepCons : ∀ {el} {vu} {valxu} {valel} {valxu+valel}
-      → ValRepr (x vu) (f vu) valxu
-      → PiRepr u x f el valel
-      → valxu+valel ≡ valxu V++ valel
-      → PiRepr u x f (vu ∷ el) valxu+valel
+  PiRepCons : ∀ {el} {⟦u⟧} {val⟦xu⟧} {vec} {val⟦xu⟧+vec}
+      → ValRepr (x ⟦u⟧) (f ⟦u⟧) val⟦xu⟧
+      → PiRepr u x f el vec
+      → val⟦xu⟧+vec ≡ val⟦xu⟧ V++ vec
+      → PiRepr u x f (⟦u⟧ ∷ el) val⟦xu⟧+vec
 

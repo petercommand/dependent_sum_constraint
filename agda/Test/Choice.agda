@@ -55,8 +55,6 @@ module Test where
   open import Language.Source.Utils FF FFinite (λ x → showℕ (PrimeField.elem x) )
   open import Language.TySize FF FFinite
   open import Language.Universe FF
-  open import Compile.SourceR1CS.Base FF FField FFinite (λ x → showℕ (PrimeField.elem x)) PrimeField.elem (fieldElem nPrime) using (SI-Monad)
-  open import Compile.SourceR1CS.SimpleComp FF FField FFinite (λ x → showℕ (PrimeField.elem x)) PrimeField.elem (fieldElem nPrime)
 
   Σ-proj₁ : ∀ {u} {x : ⟦ u ⟧ → U} → Source (`Σ u x) → Source u
   Σ-proj₁ {u} (Ind refl x₁) with splitAt (tySize u) x₁

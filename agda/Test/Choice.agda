@@ -71,18 +71,6 @@ module Test where
   resultF t | yes p = `Base
   resultF t | no ¬p = `Vec `Base 2
 
-
-  addVec : Source (`Vec (`Vec `Base 2) 2) → S-Monad (Source (`Vec `Base 2))
-  addVec (Ind refl x₁) with splitAt (tySize (`Vec `Base 2)) x₁
-  addVec (Ind refl _) | x₁ ∷ x₂ ∷ [] , x₃ ∷ x₄ ∷ [] = do
-    fst ← S-Monad.newVar
-    snd ← S-Monad.newVar
-    assertEq (Ind refl (fst ∷ [])) (Add (Ind refl (x₁ ∷ [])) (Ind refl (x₃ ∷ [])))
-    assertEq (Ind refl (snd ∷ [])) (Add (Ind refl (x₂ ∷ [])) (Ind refl (x₄ ∷ [])))
-    return (Ind refl (fst ∷ snd ∷ []))
-  addVec (Lit ((x₁₁ ∷ x₁₂ ∷ []) ∷ (x₂₁ ∷ x₂₂ ∷ []) ∷ []))
-      = return (Lit ((x₁₁ +F x₂₁) ∷ (x₁₂ +F x₂₂) ∷ []))
-
   var : ℕ → Source `Base
   var n = Ind refl (n ∷ [])
 

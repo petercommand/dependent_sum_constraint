@@ -3,10 +3,12 @@ open import Data.Finite
 open import Data.List hiding ([_]; splitAt)
 open import Data.List.Membership.Propositional
 open import Data.List.Relation.Unary.Any hiding (map)
+open import Data.Map hiding (toList)
 open import Data.Nat
 open import Data.Nat.Properties
 open import Data.Product
 open import Data.String hiding (_++_; toList)
+open import Data.Sum
 open import Data.Unit
 open import Data.Vec hiding (_++_; _>>=_; splitAt)
 open import Data.Vec.Split
@@ -33,7 +35,9 @@ module S-Monad where
   module Assert = Function.Endomorphism.Propositional (List (∃ (λ u → Source u × Source u)))
   --
   module Input = Function.Endomorphism.Propositional (List ℕ)
-  open Control.RWS ⊤ (Assert.Endo × Input.Endo) Var (id , id) (λ a b → proj₁ a ∘′ proj₁ b , proj₂ a ∘′ proj₂ b) renaming (RWSMonad to S-Monad) public
+  --
+  module AssertOrHint = Function.Endomorphism.Propositional (List (∃ (λ u → Source u × Source u) ⊎ (Map Var ℕ → Map Var ℕ)))
+  open Control.RWS ⊤ (AssertOrHint.Endo × Input.Endo) Var (id , id) (λ a b → proj₁ a ∘′ proj₁ b , proj₂ a ∘′ proj₂ b) renaming (RWSMonad to S-Monad) public
 
 
 
@@ -56,7 +60,7 @@ open S-Monad hiding (newVar; newVars) public
 open S-Monad using (newVar; newVars)
 
 assertEq : ∀ {u} → Source u → Source u → S-Monad ⊤
-assertEq {u} s₁ s₂ = tell ((λ x → ((u , s₁ , s₂) ∷ [])  ++ x) , id)
+assertEq {u} s₁ s₂ = tell ((λ x → inj₁ (u , s₁ , s₂) ∷ [] ++ x) , id)
 
 new : ∀ u → S-Monad (Source u)
 new u = do

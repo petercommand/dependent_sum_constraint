@@ -10,7 +10,7 @@ open import Data.MaybeC
 import Data.Map
 module M = Data.Map
 open import Data.Map using (Map)
-open import Data.Nat hiding (_≟_)
+open import Data.Nat renaming (_≟_ to _ℕ≟_)
 open import Data.Nat.DivMod
 open import Data.Nat.Primality
 open import Data.Nat.Properties
@@ -24,6 +24,7 @@ open import Function
 
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
+open import Relation.Nullary.Decidable hiding (map)
 
 open import TypeClass.Ord
 
@@ -130,6 +131,22 @@ module Test where
   Σₙ : (ℕ → U) → ℕ → U
   Σₙ ty m = Σₙ' ty m 0
 
+  ΣₙIndSizeAux : (ty : ℕ → U) (n acc : ℕ) → Vec ℕ (tySize (Σₙ' ty n acc)) → Vec ℕ n
+  ΣₙIndSizeAux ty 0F acc vec = []
+  ΣₙIndSizeAux ty (suc n) acc vec with splitAt (tySize `Two) vec
+  ... | fst ∷ [] , snd with maxTySplit `Two false (Σₙ'F ty n acc) snd
+  ... | snd₁ , snd₂ = fst ∷ ΣₙIndSizeAux ty n (acc * 2) snd₁
+
+  ΣₙIndSize : (ty : ℕ → U) (n : ℕ) → Vec ℕ (tySize (Σₙ ty n)) → Vec ℕ n
+  ΣₙIndSize ty n vec = ΣₙIndSizeAux ty n 0 vec
+
+  ΣₙLitSizeAux : (ty : ℕ → U) (n acc : ℕ) → ⟦ Σₙ' ty n acc ⟧ → Vec ⟦ `Base ⟧ n
+  ΣₙLitSizeAux ty 0 acc lit = []
+  ΣₙLitSizeAux ty (suc n) acc (false , snd₁) = fieldElem nPrime 0 ∷ ΣₙLitSizeAux ty n (acc * 2) snd₁
+  ΣₙLitSizeAux ty (suc n) acc (true , snd₁) = fieldElem nPrime 1 ∷ ΣₙLitSizeAux ty n (acc * 2 + 1) snd₁
+
+  ΣₙLitSize : (ty : ℕ → U) (n : ℕ) → ⟦ Σₙ ty n ⟧ → Vec ⟦ `Base ⟧ n
+  ΣₙLitSize ty n lit = ΣₙLitSizeAux ty n 0 lit
 
   ΣₙSize : (ty : ℕ → U) (n : ℕ) → Source (Σₙ ty n) → Vec (Source `Two) n
   ΣₙSize ty n s = ΣₙSizeAux n 0 s
@@ -144,20 +161,27 @@ module Test where
 
   `Matrix : U → ℕ → ℕ → U
   `Matrix ty m n = Σₙ (λ m → Σₙ (λ n → `Vec (`Vec ty n) m) n) m
-  
-  matrixSizeAux : (m n acc : ℕ) → Source (Σₙ' (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m acc) → Vec (Source `Two) m × Vec (Source `Two) n
-  matrixSizeAux 0F n acc s = [] , ΣₙSize (λ n → `Vec (`Vec `Base n) acc) n s
-  matrixSizeAux (suc m) n acc (Ind refl x₁) with splitAt (tySize `Two) x₁
-  ... | fst , snd with maxTySplit `Two false (Σₙ'F (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m acc) snd
-  ... | snd₁ , snd₂ with matrixSizeAux m n (acc * 2) (Ind refl snd₁)
-  ... | r₁ , r₂ = Ind refl fst ∷ r₁ , r₂
-  matrixSizeAux (suc m) n acc (Lit (false , snd₁)) with matrixSizeAux m n (acc * 2) (Lit snd₁)
-  ... | r₁ , r₂ = Lit false ∷ r₁ , r₂
-  matrixSizeAux (suc m) n acc (Lit (true , snd₁)) with matrixSizeAux m n (acc * 2 + 1) (Lit snd₁)
-  ... | r₁ , r₂ = Lit true ∷ r₁ , r₂
 
-  matrixSize : (m n : ℕ) → Source (`Matrix `Base m n) → Vec (Source `Two) m × Vec (Source `Two) n
-  matrixSize m n s = matrixSizeAux m n 0 s
+  matrixIndSizeAux : (m n acc : ℕ) → Vec ℕ (tySize (Σₙ' (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m acc)) → Vec ℕ (m + n)
+  matrixIndSizeAux 0F n acc vec = ΣₙIndSize (λ n → `Vec (`Vec `Base n) acc) n vec
+  matrixIndSizeAux (suc m) n acc vec with splitAt (tySize `Two) vec
+  ... | fst ∷ [] , snd   with maxTySplit `Two false (Σₙ'F (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m acc) snd
+  ... | snd₁ , snd₂ = fst ∷ matrixIndSizeAux m n (acc * 2) snd₁
+
+  matrixIndSize : (m n : ℕ) → Vec ℕ (tySize (`Matrix `Base m n)) → Vec ℕ (m + n)
+  matrixIndSize m n vec = matrixIndSizeAux m n 0 vec
+
+  matrixLitSizeAux : (m n acc : ℕ) → ⟦ Σₙ' (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m acc ⟧ → Vec ⟦ `Base ⟧ (m + n)
+  matrixLitSizeAux 0 n acc lit = ΣₙLitSize (λ n → `Vec (`Vec `Base n) acc) n lit
+  matrixLitSizeAux (suc m) n acc (false , snd₁) = fieldElem nPrime 0 ∷ matrixLitSizeAux m n (acc * 2) snd₁
+  matrixLitSizeAux (suc m) n acc (true , snd₁) = fieldElem nPrime 1 ∷ matrixLitSizeAux m n (acc * 2 + 1) snd₁
+
+  matrixLitSize : (m n : ℕ) → ⟦ `Matrix `Base m n ⟧ → Vec ⟦ `Base ⟧ (m + n)
+  matrixLitSize m n lit = matrixLitSizeAux m n 0 lit
+
+  matrixSize : (m n : ℕ) {o : ℕ} → {_ : True (m ℕ≟ suc o)} → Source (`Matrix `Base m n) → Source (`Vec `Base (m + n))
+  matrixSize (suc m) n (Ind refl x) = Ind (cong suc (sym (*-identityʳ (m + n)))) (matrixIndSize (suc m) n x)
+  matrixSize (suc m) n (Lit x) = Lit (matrixLitSize (suc m) n x)
 
   conΣₙ' : (u : ℕ → U) {n : ℕ} (sz : Bits n) (acc : ℕ) → ⟦ u (bitsToℕAux sz acc) ⟧ → ⟦ Σₙ' u n acc ⟧
   conΣₙ' u zero acc lit = false , lit
@@ -217,17 +241,16 @@ module Test where
 
   matrixMult : ∀ {m n o} → Source (`Matrix `Base m n) → Source (`Matrix `Base n o) → S-Monad (Source (`Matrix `Base m o))
   matrixMult {m} {n} {o} x y = do
---    r ← new (`Matrix `Base m o)
-    test ← new (`Matrix `Base 5 9)
+    r ← S-Monad.newVars (tySize (`Matrix `Base m o))
     iterM (2 ** m) (λ sz₁ → do
       iterM (2 ** n) (λ sz₂ → do
         iterM (2 ** o) (λ sz₃ → do
-          {!!})))
+          {!matrixIndSize m n!})))
     {!!}
-  test : S-Monad (Source `One)
+  test : S-Monad (Source (`Vec `Base 10))
   test = do
-
-    return (Lit tt)
+    r ← S-Monad.newVars (tySize (`Matrix `Base 5 5))
+    return (Ind refl (matrixIndSize 5 5 r))
 open Test
 
 open import Compile.Generate FF FField FFinite (λ x → showℕ (PrimeField.elem x)) PrimeField.elem (fieldElem nPrime)

@@ -3,9 +3,9 @@ module Test.MatrixMult2 where
 open import Data.Bool renaming (_≟_ to _≟B_)
 open import Data.Field
 open import Data.Field.Prime
-open import Data.Fin hiding (_≟_; _+_)
+open import Data.Fin hiding (_≟_; _+_; pred)
 open import Data.Fin.Properties hiding (≤-trans)
-open import Data.List hiding (splitAt; map)
+open import Data.List hiding (splitAt; map; lookup; foldl)
 open import Data.MaybeC 
 import Data.Map
 module M = Data.Map
@@ -140,6 +140,20 @@ module Test where
   ΣₙIndSize : (ty : ℕ → U) (n : ℕ) → Vec ℕ (tySize (Σₙ ty n)) → Vec ℕ n
   ΣₙIndSize ty n vec = ΣₙIndSizeAux ty n 0 vec
 
+  ΣₙIndBody : (ty : ℕ → U) (n acc : ℕ) → (b : Bits n) → Vec ℕ (tySize (Σₙ' ty n acc)) → Vec ℕ (tySize (ty (bitsToℕAux b acc)))
+  ΣₙIndBody ty 1F acc zero vec with splitAt (tySize `Two) vec
+  ... | _ , snd with maxTySplit `Two false (Σₙ'F ty 0 acc) snd
+  ... | snd₁ , snd₂ = snd₁
+  ΣₙIndBody ty 1F acc one vec with splitAt (tySize `Two) vec
+  ... | _ , snd with maxTySplit `Two true (Σₙ'F ty 0 acc) snd
+  ... | snd₁ , snd₂ = snd₁
+  ΣₙIndBody ty (suc (suc n)) acc (0+ b) vec with splitAt (tySize `Two) vec
+  ... | _ , snd with maxTySplit `Two false (Σₙ'F ty (suc n) acc) snd
+  ... | snd₁ , snd₂ = ΣₙIndBody ty (suc n) (acc * 2) b snd₁
+  ΣₙIndBody ty (suc (suc n)) acc (1+ b) vec with splitAt (tySize `Two) vec
+  ... | _ , snd with maxTySplit `Two true (Σₙ'F ty (suc n) acc) snd
+  ... | snd₁ , snd₂ = ΣₙIndBody ty (suc n) (acc * 2 + 1) b snd₁
+
   ΣₙLitSizeAux : (ty : ℕ → U) (n acc : ℕ) → ⟦ Σₙ' ty n acc ⟧ → Vec ⟦ `Base ⟧ n
   ΣₙLitSizeAux ty 0 acc lit = []
   ΣₙLitSizeAux ty (suc n) acc (false , snd₁) = fieldElem nPrime 0 ∷ ΣₙLitSizeAux ty n (acc * 2) snd₁
@@ -179,9 +193,22 @@ module Test where
   matrixLitSize : (m n : ℕ) → ⟦ `Matrix `Base m n ⟧ → Vec ⟦ `Base ⟧ (m + n)
   matrixLitSize m n lit = matrixLitSizeAux m n 0 lit
 
-  matrixSize : (m n : ℕ) {o : ℕ} → {_ : True (m ℕ≟ suc o)} → Source (`Matrix `Base m n) → Source (`Vec `Base (m + n))
+  matrixSize : (m n : ℕ) → {_ : True (m ℕ≟ suc (pred m))} → Source (`Matrix `Base m n) → Source (`Vec `Base (m + n))
   matrixSize (suc m) n (Ind refl x) = Ind (cong suc (sym (*-identityʳ (m + n)))) (matrixIndSize (suc m) n x)
   matrixSize (suc m) n (Lit x) = Lit (matrixLitSize (suc m) n x)
+
+
+
+  matrixIndBody : (m n : ℕ) → (bm : Bits m) → (bn : Bits n) → Vec ℕ (tySize (`Matrix `Base m n)) → Vec ℕ (tySize (`Vec (`Vec `Base (bitsToℕ bn)) (bitsToℕ bm)))
+  matrixIndBody m n bm bn vec =
+      ΣₙIndBody (λ n → `Vec (`Vec `Base n) (bitsToℕ bm)) n 0 bn
+         (ΣₙIndBody (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m 0 bm vec)
+  splitSourceVec : ∀ m {n u} → Source (`Vec u (m + n)) → Source (`Vec u m) × Source (`Vec u n)
+  splitSourceVec m {n} {u} (Ind refl x) rewrite *-distribʳ-+ (tySize u) m n
+      with splitAt (m * tySize u) x
+  ... | fst , snd = Ind refl fst , Ind refl snd
+  splitSourceVec m (Lit x) with splitAt m x
+  ... | fst , snd = Lit fst , Lit snd
 
   conΣₙ' : (u : ℕ → U) {n : ℕ} (sz : Bits n) (acc : ℕ) → ⟦ u (bitsToℕAux sz acc) ⟧ → ⟦ Σₙ' u n acc ⟧
   conΣₙ' u zero acc lit = false , lit
@@ -218,6 +245,12 @@ module Test where
   var : ℕ → Source `Base
   var n = Ind refl (n ∷ [])
 
+  land : Var → Var → S-Monad Var
+  land n₁ n₂ = do
+    r ← S-Monad.newVar
+    assertEq (Mul (var n₁) (var n₂)) (var r)
+    return r
+
   lor : Var → Var → S-Monad Var
   lor n₁ n₂ = do
     r ← S-Monad.newVar
@@ -239,18 +272,106 @@ module Test where
     assertEq (Mul (var v) (var x₁)) (Mul (var v) (var x₂))
     assertEqWithCond v vec₁ vec₂
 
-  matrixMult : ∀ {m n o} → Source (`Matrix `Base m n) → Source (`Matrix `Base n o) → S-Monad (Source (`Matrix `Base m o))
-  matrixMult {m} {n} {o} x y = do
-    r ← S-Monad.newVars (tySize (`Matrix `Base m o))
+  szEqIndBit : Var → Bits 1 → S-Monad Var
+  szEqIndBit v zero = lnot v
+  szEqIndBit v one = return v
+
+  szEqLitBit : FF → Bits 1 → S-Monad Var
+  szEqLitBit record { elem = 0F ; nIsPrime = nIsPrime ; elem<n = elem<n } zero = return 0
+  szEqLitBit record { elem = (suc elem) ; nIsPrime = nIsPrime ; elem<n = elem<n } zero = do
+    v ← S-Monad.newVar
+    assertEq (Ind refl (v ∷ [])) (Lit zerof)
+    return v
+  szEqLitBit record { elem = 0F ; nIsPrime = nIsPrime ; elem<n = elem<n } one = do
+    v ← S-Monad.newVar
+    assertEq (Ind refl (v ∷ [])) (Lit zerof)
+    return v
+  szEqLitBit record { elem = (suc elem) ; nIsPrime = nIsPrime ; elem<n = elem<n } one = return 0
+
+  -- szEq treats the vector as a vector of bools (which is justified by the Σ type constriants)
+  szEq : ∀ {m} → Source (`Vec `Base m) → Bits m → S-Monad Var
+  szEq {1F} (Ind refl (x ∷ [])) b = szEqIndBit x b
+  szEq {1F} (Lit (l ∷ [])) b = szEqLitBit l b
+  szEq {suc (suc m)} (Ind refl (x ∷ x₁)) (0+ b) = do
+    r₁ ← szEqIndBit x zero
+    r₂ ← szEq (Ind refl x₁) b
+    land r₁ r₂
+  szEq {suc (suc m)} (Ind refl (x ∷ x₁)) (1+ b) = do
+    r₁ ← szEqIndBit x one
+    r₂ ← szEq (Ind refl x₁) b
+    land r₁ r₂
+  szEq {suc (suc m)} (Lit (x ∷ x₁)) (0+ b) = do
+    r₁ ← szEqLitBit x zero
+    r₂ ← szEq (Lit x₁) b
+    land r₁ r₂
+  szEq {suc (suc m)} (Lit (x ∷ x₁)) (1+ b) = do
+    r₁ ← szEqLitBit x one
+    r₂ ← szEq (Lit x₁) b
+    land r₁ r₂
+
+  concat⁻¹ : ∀ m n → Vec Var (m * n) → Vec (Vec Var n) m
+  concat⁻¹ 0F n v = []
+  concat⁻¹ (suc m) n v with splitAt n v
+  ... | fst , snd = fst ∷ concat⁻¹ m n snd
+
+  getMatrix : ∀ {m} {n} → Vec Var (m * n) → Fin m → Fin n → Var
+  getMatrix {m} {n} s fm fn = lookup (lookup (concat⁻¹ m n s) fm) fn
+  
+  matrixMultAux : ∀ m n o
+      → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred n))}
+      → Var -- condition for correct sizes
+      → (sz₁ : Fin (2 ** m)) (sz₂ : Fin (2 ** n)) (sz₃ : Fin (2 ** o))
+      → Vec Var (tySize (`Matrix `Base m n)) → Vec Var (tySize (`Matrix `Base n o)) → Vec Var (tySize (`Matrix `Base m o))
+      → S-Monad ⊤
+  matrixMultAux m@(suc m') n@(suc n') o@(suc o') cond sz₁ sz₂ sz₃ x y z = do
+    let
+      x' = matrixIndBody m n (Fin2→Bits m' sz₁) (Fin2→Bits n' sz₂) x
+      y' = matrixIndBody n o (Fin2→Bits n' sz₂) (Fin2→Bits o' sz₃) y
+      z' = matrixIndBody m o (Fin2→Bits m' sz₁) (Fin2→Bits o' sz₃) z
+    iterM (bitsToℕ (Fin2→Bits m' sz₁)) (λ a → do
+      iterM (bitsToℕ (Fin2→Bits o' sz₃)) (λ b → do
+        multResult <- iterM (bitsToℕ (Fin2→Bits n' sz₂)) (λ c → do
+          let fstElem = getMatrix x' a (subst Fin (sym (*-identityʳ (bitsToℕ (Fin2→Bits n' sz₂)))) c)
+              sndElem = getMatrix y' c (subst Fin (sym (*-identityʳ (bitsToℕ (Fin2→Bits o' sz₃)))) b)
+          return (Mul (Ind refl (fstElem ∷ [])) (Ind refl (sndElem ∷ []))))
+        let addMultResult = foldl (const (Source `Base)) Add (Lit (fieldElem nPrime 0)) multResult
+            setElem = getMatrix z' a (subst Fin (sym (*-identityʳ (bitsToℕ (Fin2→Bits o' sz₃)))) b)
+        assertEq (Mul (Ind refl (setElem ∷ [])) (var cond)) (Mul addMultResult (var cond))))
+    return tt
+
+  matrixMult : ∀ m n o
+      → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred n))}
+      → Source (`Matrix `Base m n) → Source (`Matrix `Base n o) → S-Monad (Source (`Matrix `Base m o))
+  matrixMult m@(suc m') n@(suc n') o@(suc o') {p₁} {p₂} {p₃} x y = do
+    r ← new (`Matrix `Base m o)
+    x' ← S-Monad.newVars (tySize (`Matrix `Base m n))
+    y' ← S-Monad.newVars (tySize (`Matrix `Base n o))
+    assertEq x (Ind refl x')
+    assertEq y (Ind refl y')
+    z' ← S-Monad.newVars (tySize (`Matrix `Base m o))
+    let row₁ , col₁ = splitSourceVec m (matrixSize m n {p₁} x)
+        row₂ , col₂ = splitSourceVec n (matrixSize n o {p₂} y)
+    assertEq col₁ row₂
     iterM (2 ** m) (λ sz₁ → do
       iterM (2 ** n) (λ sz₂ → do
         iterM (2 ** o) (λ sz₃ → do
-          {!matrixIndSize m n!})))
-    {!!}
-  test : S-Monad (Source (`Vec `Base 10))
+          row₁≟sz₁ ← szEq row₁ (Fin2→Bits m' sz₁)
+          row₂≟sz₂ ← szEq row₂ (Fin2→Bits n' sz₂)
+          col₂≟sz₃ ← szEq col₂ (Fin2→Bits o' sz₃)
+          sz ← S-Monad.newVar
+          -- ∧ and together these sizes and use it as the condition to enforce the matrix constraints with assertEqWithCond
+          assertEq (Ind refl (sz ∷ [])) (Mul (Mul (var row₁≟sz₁) (var row₂≟sz₂)) (var col₂≟sz₃))
+          matrixMultAux m n o {p₁} {p₂} {p₃} sz sz₁ sz₂ sz₃ x' y' z')))
+    assertEq r (Ind refl z')
+    return r
+  test : S-Monad (Source (`Matrix `Base 5 5))
   test = do
-    r ← S-Monad.newVars (tySize (`Matrix `Base 5 5))
-    return (Ind refl (matrixIndSize 5 5 r))
+    m ← newI (`Matrix `Base 5 5)
+    n ← newI (`Matrix `Base 5 5)
+    r ← newI (`Matrix `Base 5 5)
+    output ← matrixMult 5 5 5 m n
+    assertEq r output
+    return r
 open Test
 
 open import Compile.Generate FF FField FFinite (λ x → showℕ (PrimeField.elem x)) PrimeField.elem (fieldElem nPrime)

@@ -7,7 +7,7 @@ open import Data.Field
 open import Data.Field.Prime
 open import Data.Fin hiding (_≟_; _+_; _-_; pred)
 open import Data.Fin.Properties hiding (≤-trans; ≤-refl)
-open import Data.List hiding (splitAt; map; lookup; foldl; concat; replicate)
+open import Data.List hiding (splitAt; map; lookup; foldl; concat; replicate; reverse)
 open import Data.MaybeC 
 import Data.Map
 module M = Data.Map
@@ -441,10 +441,12 @@ module Test where
   
   matrixMultDirect : ∀ m n o → Vec (Vec ℕ n) m → Vec (Vec ℕ o) n → Vec (Vec ℕ o) m
   matrixMultDirect m n o v₁ v₂ =
-    iter m (λ m' →
-      iter o (λ o' →
-        let list = iter n (λ n' → lookup (lookup v₁ m') n' * lookup (lookup v₂ n') o')
-        in foldl (const ℕ) _+_ 0 list))
+    reverse
+      (iter m (λ m' →
+        reverse 
+          (iter o (λ o' →
+            let list = iter n (λ n' → lookup (lookup v₁ m') n' * lookup (lookup v₂ n') o')
+            in foldl (const ℕ) _+_ 0 list))))
   matrixMultHint : ∀ m n o
       → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred o))}
       → Vec Var (tySize (`Matrix `Base m n)) → Vec Var (tySize (`Matrix `Base n o)) → Vec Var (tySize (`Matrix `Base m o))

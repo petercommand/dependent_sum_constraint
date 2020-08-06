@@ -471,23 +471,16 @@ module Test where
           in Mret insertRestMap
   ... | just newMap = newMap
   ... | nothing = map
-{-
-= let 
-          mat₁ = concat⁻¹ (bitsToℕ bm) (bitsToℕ bn) ()
-          mat₂ = concat⁻¹ (bitsToℕ bn) (bitsToℕ bo) (getVecFromMap _ (matrixIndBody n o bn bo y) map)
-      in {!!}
-      -- 
 
--}
   matrixMult : ∀ m n o
       → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred o))}
       → Source (`Matrix `Base m n) → Source (`Matrix `Base n o) → Source (`Matrix `Base m o) → S-Monad ⊤
   matrixMult m@(suc m') n@(suc n') o@(suc o') {p₁} {p₂} {p₃} x y r = do
     x' ← S-Monad.newVars (tySize (`Matrix `Base m n))
-    y' ← S-Monad.newVars (tySize (`Matrix `Base n o)) -- + 39 = 78
+    y' ← S-Monad.newVars (tySize (`Matrix `Base n o))
     assertEq x (Ind refl x')
     assertEq y (Ind refl y')
-    z' ← S-Monad.newVars (tySize (`Matrix `Base m o)) -- 79 - 91
+    z' ← S-Monad.newVars (tySize (`Matrix `Base m o))
     addHint (matrixMultHint m n o {p₁} {p₂} {p₃} x' y' z')
     assertEq r (Ind refl z')
     let row₁ , col₁ = splitSourceVec m (matrixSize m n {p₁} x)
@@ -499,7 +492,7 @@ module Test where
           row₁≟sz₁ ← szEq row₁ (Fin2→Bits m' sz₁)
           row₂≟sz₂ ← szEq row₂ (Fin2→Bits n' sz₂)
           col₂≟sz₃ ← szEq col₂ (Fin2→Bits o' sz₃)
-          szCond ← S-Monad.newVar -- first round sz = v95
+          szCond ← S-Monad.newVar
           -- ∧ and together these sizes and use it as the condition to enforce the matrix constraints with assertEqWithCond
           assertEq (Ind refl (szCond ∷ [])) (Mul (Mul (var row₁≟sz₁) (var row₂≟sz₂)) (var col₂≟sz₃))
           matrixMultAux m n o {p₁} {p₂} {p₃} szCond sz₁ sz₂ sz₃ x' y' z')))
@@ -509,7 +502,7 @@ module Test where
   test = do
     m ← newI (`Matrix `Base 2 2)
     n ← newI (`Matrix `Base 2 2)
-    r ← newI (`Matrix `Base 2 2) -- 39
+    r ← newI (`Matrix `Base 2 2)
     matrixMult 2 2 2 m n r
     return r
 open Test
@@ -518,5 +511,5 @@ open import Compile.Generate FF FField FFinite (λ x → showℕ (PrimeField.ele
 
 open import IO
 
-main = let inputAss = (1 , 1) ∷ (2 , 0) ∷ (3 , 1) ∷ (4 , 0) ∷ (5 , 13) ∷ (6 , 15) ∷ (7 , 17) ∷ (8 , 19) ∷ (9 , 0) ∷ (10 , 0) ∷ (11 , 0) ∷ (12 , 0) ∷ (13 , 0) ∷ (14 , 1) ∷ (15 , 0) ∷ (16 , 1) ∷ (17 , 1) ∷ (18 , 39) ∷ (19 , 41) ∷ (20 , 43) ∷ (21 , 45) ∷ (22 , 47) ∷ (23 , 49) ∷ (24 , 0) ∷ (25 , 0) ∷ (26 , 0) ∷ [] {- (27 , 1) ∷ (28 , 0) ∷ (29 , 1) ∷ (30 , 1) ∷ (31 , 1182) ∷ (32 , 1238) ∷ (33 , 1294) ∷ (34 , 1518) ∷ (35 , 1590) ∷ (36 , 1662) ∷ (37 , 0) ∷ (38 , 0) ∷ (39 , 0) ∷ [] -}
+main = let inputAss = (1 , 1) ∷ (2 , 0) ∷ (3 , 1) ∷ (4 , 0) ∷ (5 , 13) ∷ (6 , 15) ∷ (7 , 17) ∷ (8 , 19) ∷ (9 , 0) ∷ (10 , 0) ∷ (11 , 0) ∷ (12 , 0) ∷ (13 , 0) ∷ (14 , 1) ∷ (15 , 0) ∷ (16 , 1) ∷ (17 , 1) ∷ (18 , 39) ∷ (19 , 41) ∷ (20 , 43) ∷ (21 , 45) ∷ (22 , 47) ∷ (23 , 49) ∷ (24 , 0) ∷ (25 , 0) ∷ (26 , 0) ∷ []
        in run (genMain N test inputAss)

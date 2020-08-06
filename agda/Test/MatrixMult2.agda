@@ -1,19 +1,23 @@
 {-# OPTIONS --prop #-}
 module Test.MatrixMult2 where
+open import Agda.Builtin.Nat
+
 open import Data.Bool renaming (_≟_ to _≟B_)
 open import Data.Field
 open import Data.Field.Prime
-open import Data.Fin hiding (_≟_; _+_; pred)
-open import Data.Fin.Properties hiding (≤-trans)
-open import Data.List hiding (splitAt; map; lookup; foldl)
+open import Data.Fin hiding (_≟_; _+_; _-_; pred)
+open import Data.Fin.Properties hiding (≤-trans; ≤-refl)
+open import Data.List hiding (splitAt; map; lookup; foldl; concat; replicate)
 open import Data.MaybeC 
 import Data.Map
 module M = Data.Map
 open import Data.Map using (Map)
 open import Data.Nat renaming (_≟_ to _ℕ≟_)
 open import Data.Nat.DivMod
+open import Data.Nat.Max
 open import Data.Nat.Primality
 open import Data.Nat.Properties
+open import Data.Nat.Properties2
 open import Data.Nat.Show renaming (show to showℕ)
 open import Data.Product hiding (map)
 open import Data.ProductPrime
@@ -140,19 +144,47 @@ module Test where
   ΣₙIndSize : (ty : ℕ → U) (n : ℕ) → Vec ℕ (tySize (Σₙ ty n)) → Vec ℕ n
   ΣₙIndSize ty n vec = ΣₙIndSizeAux ty n 0 vec
 
-  ΣₙIndBody : (ty : ℕ → U) (n acc : ℕ) → (b : Bits n) → Vec ℕ (tySize (Σₙ' ty n acc)) → Vec ℕ (tySize (ty (bitsToℕAux b acc)))
-  ΣₙIndBody ty 1F acc zero vec with splitAt (tySize `Two) vec
+  ΣₙIndBodyAux : (ty : ℕ → U) (n acc : ℕ) → (b : Bits n) → Vec ℕ (tySize (Σₙ' ty n acc)) → Vec ℕ (tySize (ty (bitsToℕAux b acc)))
+  ΣₙIndBodyAux ty 1F acc zero vec with splitAt (tySize `Two) vec
   ... | _ , snd with maxTySplit `Two false (Σₙ'F ty 0 acc) snd
   ... | snd₁ , snd₂ = snd₁
-  ΣₙIndBody ty 1F acc one vec with splitAt (tySize `Two) vec
+  ΣₙIndBodyAux ty 1F acc one vec with splitAt (tySize `Two) vec
   ... | _ , snd with maxTySplit `Two true (Σₙ'F ty 0 acc) snd
   ... | snd₁ , snd₂ = snd₁
-  ΣₙIndBody ty (suc (suc n)) acc (0+ b) vec with splitAt (tySize `Two) vec
+  ΣₙIndBodyAux ty (suc (suc n)) acc (0+ b) vec with splitAt (tySize `Two) vec
   ... | _ , snd with maxTySplit `Two false (Σₙ'F ty (suc n) acc) snd
-  ... | snd₁ , snd₂ = ΣₙIndBody ty (suc n) (acc * 2) b snd₁
-  ΣₙIndBody ty (suc (suc n)) acc (1+ b) vec with splitAt (tySize `Two) vec
+  ... | snd₁ , snd₂ = ΣₙIndBodyAux ty (suc n) (acc * 2) b snd₁
+  ΣₙIndBodyAux ty (suc (suc n)) acc (1+ b) vec with splitAt (tySize `Two) vec
   ... | _ , snd with maxTySplit `Two true (Σₙ'F ty (suc n) acc) snd
-  ... | snd₁ , snd₂ = ΣₙIndBody ty (suc n) (acc * 2 + 1) b snd₁
+  ... | snd₁ , snd₂ = ΣₙIndBodyAux ty (suc n) (acc * 2 + 1) b snd₁
+
+  ΣₙIndBody : (ty : ℕ → U) (n : ℕ) → (b : Bits n) → Vec ℕ (tySize (Σₙ ty n)) → Vec ℕ (tySize (ty (bitsToℕ b)))
+  ΣₙIndBody ty n b vec = ΣₙIndBodyAux ty n 0 b vec
+
+  ΣₙSize≥Aux : (ty : ℕ → U) (n acc : ℕ) → (b : Bits n) → tySize (Σₙ' ty n acc) ≥ n + (tySize (ty (bitsToℕAux b acc)))
+  ΣₙSize≥Aux ty (suc .0) acc zero = s≤s (max-left (tySize (ty (acc * 2))) (max (tySize (ty (acc * 2 + 1))) 0))
+  ΣₙSize≥Aux ty (suc .0) acc one = s≤s (max-monotoneᵣ
+                                          (tySize (ty (acc * 2)))
+                                          (max (tySize (ty (acc * 2 + 1))) 0)
+                                          (tySize (ty (acc * 2 + 1)))
+                                          (max-left (tySize (ty (acc * 2 + 1))) 0))
+  ΣₙSize≥Aux ty (suc n) acc (0+ b) = s≤s (≤-trans (ΣₙSize≥Aux ty n (acc * 2) b)
+                                                  (max-left (tySize (Σₙ' ty n (acc * 2)))
+                                                            (max (tySize (Σₙ' ty n (acc * 2 + 1))) 0)))
+  ΣₙSize≥Aux ty (suc n) acc (1+ b) = s≤s (≤-trans (ΣₙSize≥Aux ty n (acc * 2 + 1) b)
+                                              (max-monotoneᵣ (tySize (Σₙ' ty n (acc * 2)))
+                                                 (max (tySize (Σₙ' ty n (acc * 2 + 1))) 0)
+                                                 (tySize (Σₙ' ty n (acc * 2 + 1)))
+                                                 (max-left (tySize (Σₙ' ty n (acc * 2 + 1))) 0)))
+
+  ΣₙSize≥ : (ty : ℕ → U) (n : ℕ) → (b : Bits n) → tySize (Σₙ ty n) ≥ n + (tySize (ty (bitsToℕ b)))
+  ΣₙSize≥ ty n b = ΣₙSize≥Aux ty n 0 b
+
+  ΣₙIndRest : (ty : ℕ → U) (n : ℕ) → (b : Bits n)
+      → Vec ℕ (tySize (Σₙ ty n))
+      → Vec ℕ (tySize (Σₙ ty n) - (n + (tySize (ty (bitsToℕ b)))))
+  ΣₙIndRest ty n b vec with splitAt (n + (tySize (ty (bitsToℕ b)))) (subst (Vec ℕ) (sym (a-b+b≡a₂ (tySize (Σₙ ty n)) (n + (tySize (ty (bitsToℕ b)))) (ΣₙSize≥ ty n b))) vec)
+  ... | fst , snd = snd
 
   ΣₙLitSizeAux : (ty : ℕ → U) (n acc : ℕ) → ⟦ Σₙ' ty n acc ⟧ → Vec ⟦ `Base ⟧ n
   ΣₙLitSizeAux ty 0 acc lit = []
@@ -201,8 +233,20 @@ module Test where
 
   matrixIndBody : (m n : ℕ) → (bm : Bits m) → (bn : Bits n) → Vec ℕ (tySize (`Matrix `Base m n)) → Vec ℕ (tySize (`Vec (`Vec `Base (bitsToℕ bn)) (bitsToℕ bm)))
   matrixIndBody m n bm bn vec =
-      ΣₙIndBody (λ n → `Vec (`Vec `Base n) (bitsToℕ bm)) n 0 bn
-         (ΣₙIndBody (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m 0 bm vec)
+      ΣₙIndBody (λ n → `Vec (`Vec `Base n) (bitsToℕ bm)) n bn
+         (ΣₙIndBody (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m bm vec)
+
+  matrixIndRest : (m n : ℕ) → (bm : Bits m) → (bn : Bits n)
+     → Vec ℕ (tySize (`Matrix `Base m n))
+     → Vec ℕ (tySize (Σₙ (λ n₁ → `Vec (`Vec `Base n₁) (bitsToℕ bm)) n) ∸
+                (n + tySize (`Vec (`Vec `Base (bitsToℕ bn)) (bitsToℕ bm))) +
+             (tySize (Σₙ (λ m₁ → Σₙ (λ n₁ → `Vec (`Vec `Base n₁) m₁) n) m) ∸
+                (m + tySize (Σₙ (λ n₁ → `Vec (`Vec `Base n₁) (bitsToℕ bm)) n))))
+  matrixIndRest m n bm bn vec = let rest₁ = ΣₙIndRest (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m bm vec
+                                    body₁ = ΣₙIndBody (λ m → Σₙ (λ n → `Vec (`Vec `Base n) m) n) m bm vec
+                                    rest₂ = ΣₙIndRest (λ n₁ → `Vec (`Vec `Base n₁) (bitsToℕ bm)) n bn body₁
+                                in rest₂ V++ rest₁ 
+  
   splitSourceVec : ∀ m {n u} → Source (`Vec u (m + n)) → Source (`Vec u m) × Source (`Vec u n)
   splitSourceVec m {n} {u} (Ind refl x) rewrite *-distribʳ-+ (tySize u) m n
       with splitAt (m * tySize u) x
@@ -318,7 +362,7 @@ module Test where
   getMatrix {m} {n} s fm fn = lookup (lookup (concat⁻¹ m n s) fm) fn
   
   matrixMultAux : ∀ m n o
-      → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred n))}
+      → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred o))}
       → Var -- condition for correct sizes
       → (sz₁ : Fin (2 ** m)) (sz₂ : Fin (2 ** n)) (sz₃ : Fin (2 ** o))
       → Vec Var (tySize (`Matrix `Base m n)) → Vec Var (tySize (`Matrix `Base n o)) → Vec Var (tySize (`Matrix `Base m o))
@@ -339,16 +383,111 @@ module Test where
         assertEq (Mul (Ind refl (setElem ∷ [])) (var cond)) (Mul addMultResult (var cond))))
     return tt
 
+
+  getVecFromMap : ∀ m → Vec Var m → M.Map Var ℕ → MaybeC (Vec ℕ m)
+  getVecFromMap  0 []  map = just []
+  getVecFromMap (suc m) (x ∷ vec) map
+    = case getVecFromMap m vec map of
+        λ { nothing → nothing
+          ; (just ns) → case M.lookup natOrd x map of
+                            λ { nothing → nothing
+                              ; (just n) → just (n ∷ ns)
+                              }
+          }
+
+  Mret : {A : Set} → A → MaybeC A
+  Mret a = just a
+  _M>>=_ : {A B : Set} → MaybeC A → (A → MaybeC B) → MaybeC B
+  nothing M>>= f = nothing
+  just x M>>= f = f x
+
+  setVecMap : ∀ m → Vec Var m → Vec ℕ m → M.Map Var ℕ → M.Map Var ℕ
+  setVecMap .0 [] [] map = map
+  setVecMap .(suc _) (var ∷ vars) (val ∷ vals) map = M.insert natOrd var val (setVecMap _ vars vals map)
+
+
+  getSizeFromMap : ∀ m → {_ : True (m ℕ≟ suc (pred m))} → Vec Var m → M.Map Var ℕ → MaybeC (Bits m)
+  getSizeFromMap (suc .0) (x ∷ []) map = case M.lookup natOrd x map of
+                                           λ { nothing → nothing
+                                             ; (just zero) → just zero
+                                             ; (just _) → just one
+                                             }
+  getSizeFromMap (suc (suc m)) (x ∷ y ∷ vec) map
+    = case getSizeFromMap (suc m) {subst {_} {_} {_} True {yes refl} (sym (≟-diag refl)) tt} (y ∷ vec) map of
+        λ { nothing → nothing
+          ; (just bits) → case M.lookup natOrd x map of
+                            λ { nothing → nothing
+                              ; (just 0) → just (0+ bits)
+                              ; (just _) → just (1+ bits)
+                              }
+          }
+
+
+  setBitsMap : ∀ m → Vec Var m → Bits m → M.Map Var ℕ → M.Map Var ℕ
+  setBitsMap .1 (x ∷ vec) zero map = M.insert natOrd x 0 map
+  setBitsMap .1 (x ∷ vec) one map = M.insert natOrd x 1 map
+  setBitsMap .(suc _) (x ∷ vec) (0+ b) map = M.insert natOrd x 0 (setBitsMap _ vec b map)
+  setBitsMap .(suc _) (x ∷ vec) (1+ b) map = M.insert natOrd x 1 (setBitsMap _ vec b map)
+  
+  iter : ∀ {ℓ} {A : Set ℓ} (n : ℕ) → (Fin n → A) → Vec A n
+  iter 0 act = []
+  iter (suc n) act = 
+    let r = act (#_ n {suc n} {fromWitness ≤-refl})
+        rs = iter n (λ m → act (castF (inject+ 1 m)))
+    in r ∷ rs
+   where
+    castF : Fin (n + 1) → Fin (1 + n)
+    castF f rewrite +-comm 1 n = f
+  
+  matrixMultDirect : ∀ m n o → Vec (Vec ℕ n) m → Vec (Vec ℕ o) n → Vec (Vec ℕ o) m
+  matrixMultDirect m n o v₁ v₂ =
+    iter m (λ m' →
+      iter o (λ o' →
+        let list = iter n (λ n' → lookup (lookup v₁ m') n' * lookup (lookup v₂ n') o')
+        in foldl (const ℕ) _+_ 0 list))
+  matrixMultHint : ∀ m n o
+      → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred o))}
+      → Vec Var (tySize (`Matrix `Base m n)) → Vec Var (tySize (`Matrix `Base n o)) → Vec Var (tySize (`Matrix `Base m o))
+      → M.Map Var ℕ → M.Map Var ℕ
+  matrixMultHint m@(suc m') n@(suc n') o@(suc o') {p₁} {p₂} {p₃} x y r map
+      with splitAt m (matrixIndSize m n x)
+                          | splitAt n (matrixIndSize n o y)
+                                              | splitAt m (matrixIndSize m o r)
+  ... | varRow₁ , varCol₁ | varRow₂ , varCol₂ | varRow₃ , varCol₃
+      with
+          getSizeFromMap m {p₁} varRow₁ map M>>= λ bm →
+          getSizeFromMap n {p₂} varCol₁ map M>>= λ bn →
+          getSizeFromMap o {p₃} varCol₂ map M>>= λ bo →
+          getVecFromMap _ (matrixIndBody m n bm bn x) map M>>= λ xVals →
+          let mat₁ = concat⁻¹ (bitsToℕ bm) (bitsToℕ bn) (subst (λ x → Vec ℕ (bitsToℕAux bm 0 * x)) (*-identityʳ (bitsToℕ bn)) xVals)
+          in getVecFromMap _ (matrixIndBody n o bn bo y) map M>>= λ yVals →
+          let mat₂ = concat⁻¹ (bitsToℕ bn) (bitsToℕ bo) (subst (λ x → Vec ℕ (bitsToℕAux bn 0 * x)) (*-identityʳ (bitsToℕ bo)) yVals)
+              calcResult = concat (matrixMultDirect _ _ _ mat₁ mat₂)
+              insertSizesMap = setBitsMap m varRow₃ bm (setBitsMap o varCol₃ bo map)
+              insertBodyMap = setVecMap _ (matrixIndBody m o bm bo r) (subst (λ x → Vec ℕ (bitsToℕ bm * x)) (sym (*-identityʳ (bitsToℕ bo))) calcResult) insertSizesMap
+              insertRestMap = setVecMap _ (matrixIndRest m o bm bo r) (replicate 0) insertBodyMap
+          in Mret insertRestMap
+  ... | just newMap = newMap
+  ... | nothing = map
+{-
+= let 
+          mat₁ = concat⁻¹ (bitsToℕ bm) (bitsToℕ bn) ()
+          mat₂ = concat⁻¹ (bitsToℕ bn) (bitsToℕ bo) (getVecFromMap _ (matrixIndBody n o bn bo y) map)
+      in {!!}
+      -- 
+
+-}
   matrixMult : ∀ m n o
-      → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred n))}
-      → Source (`Matrix `Base m n) → Source (`Matrix `Base n o) → S-Monad (Source (`Matrix `Base m o))
-  matrixMult m@(suc m') n@(suc n') o@(suc o') {p₁} {p₂} {p₃} x y = do
-    r ← new (`Matrix `Base m o)
+      → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred o))}
+      → Source (`Matrix `Base m n) → Source (`Matrix `Base n o) → Source (`Matrix `Base m o) → S-Monad ⊤
+  matrixMult m@(suc m') n@(suc n') o@(suc o') {p₁} {p₂} {p₃} x y r = do
     x' ← S-Monad.newVars (tySize (`Matrix `Base m n))
-    y' ← S-Monad.newVars (tySize (`Matrix `Base n o))
+    y' ← S-Monad.newVars (tySize (`Matrix `Base n o)) -- + 39 = 78
     assertEq x (Ind refl x')
     assertEq y (Ind refl y')
-    z' ← S-Monad.newVars (tySize (`Matrix `Base m o))
+    z' ← S-Monad.newVars (tySize (`Matrix `Base m o)) -- 79 - 91
+    addHint (matrixMultHint m n o {p₁} {p₂} {p₃} x' y' z')
+    assertEq r (Ind refl z')
     let row₁ , col₁ = splitSourceVec m (matrixSize m n {p₁} x)
         row₂ , col₂ = splitSourceVec n (matrixSize n o {p₂} y)
     assertEq col₁ row₂
@@ -358,19 +497,18 @@ module Test where
           row₁≟sz₁ ← szEq row₁ (Fin2→Bits m' sz₁)
           row₂≟sz₂ ← szEq row₂ (Fin2→Bits n' sz₂)
           col₂≟sz₃ ← szEq col₂ (Fin2→Bits o' sz₃)
-          sz ← S-Monad.newVar
+          szCond ← S-Monad.newVar -- first round sz = v95
           -- ∧ and together these sizes and use it as the condition to enforce the matrix constraints with assertEqWithCond
-          assertEq (Ind refl (sz ∷ [])) (Mul (Mul (var row₁≟sz₁) (var row₂≟sz₂)) (var col₂≟sz₃))
-          matrixMultAux m n o {p₁} {p₂} {p₃} sz sz₁ sz₂ sz₃ x' y' z')))
+          assertEq (Ind refl (szCond ∷ [])) (Mul (Mul (var row₁≟sz₁) (var row₂≟sz₂)) (var col₂≟sz₃))
+          matrixMultAux m n o {p₁} {p₂} {p₃} szCond sz₁ sz₂ sz₃ x' y' z')))
     assertEq r (Ind refl z')
-    return r
-  test : S-Monad (Source (`Matrix `Base 5 5))
+    return tt
+  test : S-Monad (Source (`Matrix `Base 2 2))
   test = do
-    m ← newI (`Matrix `Base 5 5)
-    n ← newI (`Matrix `Base 5 5)
-    r ← newI (`Matrix `Base 5 5)
-    output ← matrixMult 5 5 5 m n
-    assertEq r output
+    m ← newI (`Matrix `Base 2 2)
+    n ← newI (`Matrix `Base 2 2)
+    r ← newI (`Matrix `Base 2 2) -- 39
+    matrixMult 2 2 2 m n r
     return r
 open Test
 
@@ -378,5 +516,5 @@ open import Compile.Generate FF FField FFinite (λ x → showℕ (PrimeField.ele
 
 open import IO
 
-main = let inputAss = []
+main = let inputAss = (1 , 1) ∷ (2 , 0) ∷ (3 , 1) ∷ (4 , 0) ∷ (5 , 13) ∷ (6 , 15) ∷ (7 , 17) ∷ (8 , 19) ∷ (9 , 0) ∷ (10 , 0) ∷ (11 , 0) ∷ (12 , 0) ∷ (13 , 0) ∷ (14 , 1) ∷ (15 , 0) ∷ (16 , 1) ∷ (17 , 1) ∷ (18 , 39) ∷ (19 , 41) ∷ (20 , 43) ∷ (21 , 45) ∷ (22 , 47) ∷ (23 , 49) ∷ (24 , 0) ∷ (25 , 0) ∷ (26 , 0) ∷ [] {- (27 , 1) ∷ (28 , 0) ∷ (29 , 1) ∷ (30 , 1) ∷ (31 , 1182) ∷ (32 , 1238) ∷ (33 , 1294) ∷ (34 , 1518) ∷ (35 , 1590) ∷ (36 , 1662) ∷ (37 , 0) ∷ (38 , 0) ∷ (39 , 0) ∷ [] -}
        in run (genMain N test inputAss)

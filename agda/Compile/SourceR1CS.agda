@@ -105,12 +105,20 @@ module Comp where
     compAssert l
     compAsserts ls
 
+  compAssertsHints : List (∃ (λ u → Source u × Source u) ⊎ (M.Map Var ℕ → M.Map Var ℕ)) → SI-Monad ⊤
+  compAssertsHints [] = return tt
+  compAssertsHints (inj₁ x ∷ ls) = do
+    compAssert x
+    compAssertsHints ls
+  compAssertsHints (inj₂ y ∷ ls) = do
+    add (Hint y)
+    compAssertsHints ls
 
   compileSource : ∀ (n : ℕ) u → (S-Monad (Source u)) → Var × Builder × (Vec Var (tySize u) × List ℕ)
   compileSource n u source = 
     let v , (asserts , input) , output = source (tt , 1)
         ((v' , (bld₁ , bld₂) , outputVars) , inv) = (do
-           compAsserts (asserts [])
+           compAssertsHints (asserts [])
            sourceToR1CS _ output) ((NormalMode , n) , v)
     in v' , bld₁ ∘′ bld₂ , outputVars , input []
   open import Data.Nat.Show

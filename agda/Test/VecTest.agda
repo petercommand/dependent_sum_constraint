@@ -142,35 +142,6 @@ module Test where
   conΣₙ u 0 sz vec = []
   conΣₙ u (suc n) sz vec = conΣₙ' u (Fin2→Bits n sz) 0 vec
 
-  Σ-proj₁ : ∀ {u} {x : ⟦ u ⟧ → U} → Source (`Σ u x) → Source u
-  Σ-proj₁ {u} (Ind refl x₁) with splitAt (tySize u) x₁
-  ... | fst , snd = Ind refl fst
-  Σ-proj₁ (Lit (fst , snd)) = Lit fst
-
-  var : ℕ → Source `Base
-  var n = Ind refl (n ∷ [])
-
-  lor : Var → Var → S-Monad Var
-  lor n₁ n₂ = do
-    r ← S-Monad.newVar
-    assertEq (Add (Add (var n₁) (var n₂)) (Mul (Lit (-F onef)) (Mul (var n₁) (var n₂)))) (var r)
-    return r
-  lnot : Var → S-Monad Var
-  lnot n = do
-    v ← S-Monad.newVar
-    assertEq (Add (Lit onef) (Mul (Lit (-F onef)) (var n))) (var v)
-    return v
-  limp : Var → Var → S-Monad Var
-  limp n₁ n₂ = do
-    notℕ₁ ← lnot n₁
-    lor notℕ₁ n₂
-  
-  assertEqWithCond : ∀ {n} → Var → Vec Var n → Vec Var n → S-Monad ⊤
-  assertEqWithCond v [] [] = return tt
-  assertEqWithCond v (x₁ ∷ vec₁) (x₂ ∷ vec₂) = do
-    assertEq (Mul (var v) (var x₁)) (Mul (var v) (var x₂))
-    assertEqWithCond v vec₁ vec₂
-
   test : S-Monad (Source (Σₙ `Base 5))
   test = do
     choice ← newI (Σₙ `Base 5)

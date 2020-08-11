@@ -26,11 +26,11 @@ open import TypeClass.Ord
 
 N = 21888242871839275222246405745257275088548364400416034343698204186575808495617
 
-choice = 0
+choice = 1
 input1 = 99
 input2 = 100
-input3 = 0
-input4 = 0
+input3 = 384
+input4 = 390
 
 postulate
   nPrime : Prime N
@@ -62,33 +62,21 @@ module Test where
   Σ-proj₁ (Lit (fst , snd)) = Lit fst
 
   inputF : ⟦ `Two ⟧ → U
-  inputF t with t ≟B false
-  inputF t | yes p = `Vec `Base 2
-  inputF t | no ¬p = `Vec (`Vec `Base 2) 2
+  inputF false = `Vec `Base 2
+  inputF true = `Vec (`Vec `Base 2) 2
   
   resultF : ⟦ `Two ⟧ → U
-  resultF t with t ≟B false
-  resultF t | yes p = `Base
-  resultF t | no ¬p = `Vec `Base 2
+  resultF false = `Base
+  resultF true = `Vec `Base 2
 
   var : ℕ → Source `Base
   var n = Ind refl (n ∷ [])
 
-  lor : Var → Var → S-Monad Var
-  lor n₁ n₂ = do
-    r ← S-Monad.newVar
-    assertEq (Add (Add (var n₁) (var n₂)) (Mul (Lit (-F onef)) (Mul (var n₁) (var n₂)))) (var r)
-    return r
   lnot : Var → S-Monad Var
   lnot n = do
     v ← S-Monad.newVar
     assertEq (Add (Lit onef) (Mul (Lit (-F onef)) (var n))) (var v)
     return v
-  limp : Var → Var → S-Monad Var
-  limp n₁ n₂ = do
-    notℕ₁ ← lnot n₁
-    lor notℕ₁ n₂
-
   
   computeFalse : Vec Var (maxTySizeOver (enum `Two) inputF) →  S-Monad (Vec Var (maxTySizeOver (enum `Two) resultF))
   computeFalse vec with maxTySplit `Two false inputF vec
@@ -120,6 +108,7 @@ module Test where
   ... | just 0 = M.insert natOrd 10 (input1 + input2) (M.insert natOrd 11 0 m)
   ... | just 1 = M.insert natOrd 10 (input1 + input3) (M.insert natOrd 11 (input2 + input4) m)
   ... | just _ = m -- invalid choice
+
   compute : Source (`Σ `Two inputF) → S-Monad (Source (`Σ `Two resultF))
   compute (Ind refl x₁) with splitAt (tySize `Two) x₁
   compute (Ind refl x₁) | fst ∷ [] , snd = do

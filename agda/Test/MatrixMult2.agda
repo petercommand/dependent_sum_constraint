@@ -472,7 +472,7 @@ module Test where
   ... | just newMap = newMap
   ... | nothing = map
 
-  matrixMult : ∀ m n o
+  matrixMult : ∀ (m n o : ℕ)
       → {_ : True (m ℕ≟ suc (pred m))} → {_ : True (n ℕ≟ suc (pred n))} → {_ : True (o ℕ≟ suc (pred o))}
       → Source (`Matrix `Base m n) → Source (`Matrix `Base n o) → Source (`Matrix `Base m o) → S-Monad ⊤
   matrixMult m@(suc m') n@(suc n') o@(suc o') {p₁} {p₂} {p₃} x y r = do
@@ -496,7 +496,6 @@ module Test where
           -- ∧ and together these sizes and use it as the condition to enforce the matrix constraints with assertEqWithCond
           assertEq (Ind refl (szCond ∷ [])) (Mul (Mul (var row₁≟sz₁) (var row₂≟sz₂)) (var col₂≟sz₃))
           matrixMultAux m n o {p₁} {p₂} {p₃} szCond sz₁ sz₂ sz₃ x' y' z')))
-    assertEq r (Ind refl z')
     return tt
   test : S-Monad (Source (`Matrix `Base 2 2))
   test = do

@@ -64,6 +64,12 @@ ask = λ { (r , s) → s , mempty , r }
 
 {-# INLINE ask #-}
 
+asks : ∀ {ℓ} {A : Set ℓ} → (R → A) → RWSMonad A
+asks f = do
+  r ← ask
+  return (f r)
+
+{-# INLINE asks #-}
 
 local : ∀ {ℓ} {A : Set ℓ} → R → RWSMonad A → RWSMonad A
 local r p (r' , s) = p (r , s)

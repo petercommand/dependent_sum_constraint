@@ -25,9 +25,9 @@ open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
 open import TypeClass.Ord
 
-module Compile.SourceR1CS.LogicGates (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
+module Compile.SourceR1CS.LogicGates (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) where
 
-open import Compile.SourceR1CS.Base f field' finite showf fToℕ ℕtoF 
+open import Compile.SourceR1CS.Base f field' finite showf
 
 
 open import Language.R1CS f
@@ -52,7 +52,7 @@ neqz : Var → SI-Monad Var
 neqz n = do
   v ← new
   v' ← new
-  prime ← asks proj₂
+  prime ← askPrime
   add (Hint (neqzHint prime n v v'))
   add (IMul one v n one v')
   add (IMul one v' n one n)

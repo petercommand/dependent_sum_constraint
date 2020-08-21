@@ -493,19 +493,19 @@ maxTyVecSizeEq : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → maxTySizeOver
 maxTyVecSizeEq u val x = sym (trans (+-comm (tySize (x val)) (maxTySizeOver (enum u) x - tySize (x val)))
                             (a-b+b≡a _ _ (maxTySizeLem u val x)))
 
-maxTySplitAux : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec ℕ (tySize (x val) + (maxTySizeOver (enum u) x - tySize (x val))) → Vec Var (tySize (x val)) × Vec Var (maxTySizeOver (enum u) x - tySize (x val))
+maxTySplitAux : ∀ {A : Set} u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec A (tySize (x val) + (maxTySizeOver (enum u) x - tySize (x val))) → Vec A (tySize (x val)) × Vec A (maxTySizeOver (enum u) x - tySize (x val))
 maxTySplitAux u val x vec = splitAt (tySize (x val)) vec
 
 
-maxTySplit : ∀ u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec Var (maxTySizeOver (enum u) x) → Vec Var (tySize (x val)) × Vec Var (maxTySizeOver (enum u) x - tySize (x val))
-maxTySplit u val x vec = maxTySplitAux u val x (subst (Vec ℕ) (maxTyVecSizeEq u val x) vec)
+maxTySplit : ∀ {A : Set} u (val : ⟦ u ⟧) (x : ⟦ u ⟧ → U) → Vec A (maxTySizeOver (enum u) x) → Vec A (tySize (x val)) × Vec A (maxTySizeOver (enum u) x - tySize (x val))
+maxTySplit {A} u val x vec = maxTySplitAux u val x (subst (Vec A) (maxTyVecSizeEq u val x) vec)
 
-maxTySplitCorrect : ∀ u val x vec → vec HE.≅ proj₁ (maxTySplit u val x vec) V++ proj₂ (maxTySplit u val x vec)
-maxTySplitCorrect u val x vec with splitAtCorrect (tySize (x val)) (subst (Vec ℕ) (maxTyVecSizeEq u val x) vec)
-... | eq with splitAt (tySize (x val)) (subst (Vec ℕ) (maxTyVecSizeEq u val x) vec)
+maxTySplitCorrect : ∀ {A : Set} u val x vec → vec HE.≅ proj₁ (maxTySplit u val x vec) V++ proj₂ (maxTySplit u val x vec)
+maxTySplitCorrect {A} u val x vec with splitAtCorrect (tySize (x val)) (subst (Vec A) (maxTyVecSizeEq u val x) vec)
+... | eq with splitAt (tySize (x val)) (subst (Vec A) (maxTyVecSizeEq u val x) vec)
 ... | fst , snd = HE.trans
                     (HE.sym
-                     (HE.≡-subst-removable (Vec ℕ)
+                     (HE.≡-subst-removable (Vec A)
                       (maxTyVecSizeEq u val x)
                       vec))
                     (HE.trans (≡-to-≅ eq) HE.refl)

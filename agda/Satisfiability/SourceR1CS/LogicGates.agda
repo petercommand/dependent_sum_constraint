@@ -43,61 +43,40 @@ open Field field' renaming ( _+_ to _+F_
                            ; zero to zerof
                            ; one to onef)
 open IsField isField
-open import Compile.SourceR1CS f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
+open import Compile.SourceR1CS f field' finite showf fToℕ hiding (SI-Monad)
 import Compile.SourceR1CS
-open Compile.SourceR1CS.SI-Monad f field' finite showf fToℕ ℕtoF
+open Compile.SourceR1CS.SI-Monad f field' finite showf fToℕ
 
 
-open import Satisfiability.SourceR1CS.Base f _≟F_ field' isField finite showf fToℕ ℕtoF ℕtoF-1≡1 ℕtoF-0≡0 prime isPrime
+open import Satisfiability.SourceR1CS.Base f _≟F_ field' isField finite showf fToℕ prime isPrime
 
-neqzFunc : ℕ → ℕ
-neqzFunc n with ℕtoF n ≟F zerof
-neqzFunc n | yes p = 0
-neqzFunc n | no ¬p = 1
-
-neqzFuncIsBoolStrict : ∀ n → isBoolStrict (neqzFunc n)
-neqzFuncIsBoolStrict n with ℕtoF n ≟F zerof
-... | yes p = isZeroS refl
-... | no p = isOneS refl
-
-neqzFuncIsBool : ∀ n → isBool (neqzFunc n)
-neqzFuncIsBool n = isBoolStrict→isBool (neqzFuncIsBoolStrict n)
-
-neqzSoundLem₁ : ∀ r v init →
-  let b₁₂ = writerOutput
-                  (add (IMul onef init v onef (suc init))
-                    ((r , prime) , suc (suc init)))
-      b₃₄ = writerOutput (neqz v ((r , prime) , init))
-  in ∀ x → x ∈ proj₁ b₁₂ (proj₂ b₁₂ []) → x ∈ proj₁ b₃₄ (proj₂ b₃₄ [])
-neqzSoundLem₁ NormalMode v init x (here px) = there (here px)
-neqzSoundLem₁ PostponedMode v init x (here px) = there (here px)
+neqzFunc : f → f
+neqzFunc n with n ≟F zerof
+neqzFunc n | yes p = zerof
+neqzFunc n | no ¬p = onef
 
 
-
-neqzSoundLem₂ : ∀ r v init →
-  let b₁₂ = writerOutput
-                (add (IMul onef (suc init) v onef v) ((r , prime) , suc (suc init)))
-      b₃₄ = writerOutput (neqz v ((r , prime) , init))
-  in ∀ x → x ∈ proj₁ b₁₂ (proj₂ b₁₂ []) → x ∈ proj₁ b₃₄ (proj₂ b₃₄ [])
-neqzSoundLem₂ NormalMode v init x (here px) = there (there (here px))
-neqzSoundLem₂ PostponedMode v init x (here px) = there (there (here px))
+neqzSound : (r : WriterMode)
+  → ∀ (v : Var) → (sol : List (Var × f))
+  → ∀ (init : ℕ) → 
+  let result = runSI-Monad (neqz v) ((r , prime) , init)
+  in ProgSol (neqz v) r prime init sol
+  → ∃ (λ val → Σ′′ (ListLookup v sol val) (λ _ → ListLookup (output result) sol (neqzFunc val)))
+neqzSound r v sol init isSol =
+  let isSol' = ProgSol₂ (ProgSol₂ (ProgSol₂ (ProgSol₂ isSol)))
+      imul₁IsSol = ProgSol₁ isSol'
+      imul₂IsSol = ProgSol₁ (ProgSol₂ isSol')
+      add₁Sound = addSound imul₁IsSol
+      add₂Sound = addSound imul₂IsSol
+  in {!!}
 
 {-
-neqzOutputLook : ∀ (r : WriterMode)
-  → ∀ (v : Var) → (sol : List (Var × ℕ))
-  → ∀ init →
-  let result = neqz v ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
-  → Σ′ ℕ (λ val → ListLookup (output result) solution
--}
-
-
 neqzSound : ∀ (r : WriterMode)
   → ∀ (v : Var) → (val : ℕ) → (sol : List (Var × ℕ))
   → ListLookup v sol val
   → ∀ (init : ℕ) → 
   let result = neqz v ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → ListLookup (output result) sol (neqzFunc val)
 neqzSound r v val sol vIsVal init isSol
     with addSound r (IMul onef init v onef (suc init)) sol (2 + init)
@@ -106,12 +85,12 @@ neqzSound r v val sol vIsVal init isSol
                     ((r , prime) , suc (suc init)))
          b₃₄ = writerOutput (neqz v ((r , prime) , init))
      in 
-       BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (neqzSoundLem₁ r v init) isSol)
+       ConstraintsSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (neqzSoundLem₁ r v init) isSol)
        | addSound r (IMul onef (suc init) v onef v) sol (2 + init)
            (let b₁₂ = writerOutput
                        (add (IMul onef (suc init) v onef v) ((r , prime) , suc (suc init)))
                 b₃₄ = writerOutput (neqz v ((r , prime) , init))
-            in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (neqzSoundLem₂ r v init) isSol)
+            in ConstraintsSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (neqzSoundLem₂ r v init) isSol)
 neqzSound r v val sol vIsVal init isSol
    | multSol .(Field.one field') .init bval .v cval .(Field.one field') .(suc init) eval x x₁ x₂ x₃
        | multSol .(Field.one field') .(suc init) bval₁ .v cval₁ .(Field.one field') .v eval₁ x₄ x₅ x₆ x₇
@@ -143,12 +122,14 @@ neqzSound r v val sol vIsVal init isSol
         onef
       ∎
 
+-}
+{-
 neqzIsBool : ∀ (r : WriterMode)
   → (v : Var)
   → (sol : List (Var × ℕ))
   → ∀ init →
   let result = neqz v ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → Squash (∃ (λ val → Σ′ (isBool val) (λ _ → ListLookup (output result) sol val)))
 neqzIsBool r v sol init isSol
     with
@@ -161,8 +142,8 @@ neqzIsBool r v sol init isSol
           p₆₇ = λ _ → do
             add (IMul onef (suc init) v onef v)
             return (suc init)
-          p₅₇IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₇ r _ sol isSol
-          p₅₅IsSol = BuilderProdSol->>=⁻₁ p₅₅ p₆₇ r _ sol p₅₇IsSol
+          p₅₇IsSol = ConstraintsSol->>=⁻₂ p₄₄ p₅₇ r _ sol isSol
+          p₅₅IsSol = ConstraintsSol->>=⁻₁ p₅₅ p₆₇ r _ sol p₅₇IsSol
       in addSound r (IMul onef init v onef (suc init)) sol _ p₅₅IsSol
 neqzIsBool r v sol init isSol | multSol .(Field.one field') .init bval .v cval .(Field.one field') .(suc init) eval x x₁ x₂ x₃
     with
@@ -175,9 +156,9 @@ neqzIsBool r v sol init isSol | multSol .(Field.one field') .init bval .v cval .
           p₆₇ = λ _ → do
             add (IMul onef (suc init) v onef v)
             return (suc init)
-          p₅₇IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₇ r _ sol isSol
-          p₅₅IsSol = BuilderProdSol->>=⁻₁ p₅₅ p₆₇ r _ sol p₅₇IsSol
-          p₆₇IsSol = BuilderProdSol->>=⁻₂ p₅₅ p₆₇ r _ sol p₅₇IsSol
+          p₅₇IsSol = ConstraintsSol->>=⁻₂ p₄₄ p₅₇ r _ sol isSol
+          p₅₅IsSol = ConstraintsSol->>=⁻₁ p₅₅ p₆₇ r _ sol p₅₇IsSol
+          p₆₇IsSol = ConstraintsSol->>=⁻₂ p₅₅ p₆₇ r _ sol p₅₇IsSol
       in addSound r (IMul onef (suc init) v onef v) sol _ p₆₇IsSol
 neqzIsBool r v sol init isSol | multSol .(Field.one field') .init bval .v cval .(Field.one field') .(suc init) eval x x₁ x₂ x₃ | multSol .(Field.one field') .(suc init) bval₁ .v cval₁ .(Field.one field') .v eval₁ x₄ x₅ x₆ x₇
     with ListLookup-≈ x₄ x₂ | ListLookup-≈ x₅ x₆ | ListLookup-≈ x₆ x₁
@@ -198,7 +179,7 @@ neqzSound₀ : ∀ (r : WriterMode)
   → ListLookup 0 sol 1
   → ∀ init →
   let result = neqz v ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → ListLookup (output result) sol 0
   → Squash (∃ (λ val → (Σ′′ (ListLookup v sol val) (λ _ → 0 ≈ val))))
 neqzSound₀ r v sol tri init isSol look
@@ -212,8 +193,8 @@ neqzSound₀ r v sol tri init isSol look
           p₆₇ = λ _ → do
             add (IMul onef (suc init) v onef v)
             return (suc init)
-          p₅₇IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₇ r _ sol isSol
-          p₅₅IsSol = BuilderProdSol->>=⁻₁ p₅₅ p₆₇ r _ sol p₅₇IsSol
+          p₅₇IsSol = ConstraintsSol->>=⁻₂ p₄₄ p₅₇ r _ sol isSol
+          p₅₅IsSol = ConstraintsSol->>=⁻₁ p₅₅ p₆₇ r _ sol p₅₇IsSol
       in addSound r (IMul onef init v onef (suc init)) sol _ p₅₅IsSol
 neqzSound₀ r v sol tri init isSol look | multSol .(Field.one field') .init bval .v cval .(Field.one field') .(suc init) eval x x₁ x₂ x₃
     with
@@ -226,9 +207,9 @@ neqzSound₀ r v sol tri init isSol look | multSol .(Field.one field') .init bva
           p₆₇ = λ _ → do
             add (IMul onef (suc init) v onef v)
             return (suc init)
-          p₅₇IsSol = BuilderProdSol->>=⁻₂ p₄₄ p₅₇ r _ sol isSol
-          p₅₅IsSol = BuilderProdSol->>=⁻₁ p₅₅ p₆₇ r _ sol p₅₇IsSol
-          p₆₇IsSol = BuilderProdSol->>=⁻₂ p₅₅ p₆₇ r _ sol p₅₇IsSol
+          p₅₇IsSol = ConstraintsSol->>=⁻₂ p₄₄ p₅₇ r _ sol isSol
+          p₅₅IsSol = ConstraintsSol->>=⁻₁ p₅₅ p₆₇ r _ sol p₅₇IsSol
+          p₆₇IsSol = ConstraintsSol->>=⁻₂ p₅₅ p₆₇ r _ sol p₅₇IsSol
       in addSound r (IMul onef (suc init) v onef v) sol _ p₆₇IsSol
 neqzSound₀ r v sol tri init isSol look | multSol .(Field.one field') .init bval .v cval .(Field.one field') .(suc init) eval x x₁ x₂ x₃ | multSol .(Field.one field') .(suc init) bval₁ .v cval₁ .(Field.one field') .v eval₁ x₄ x₅ x₆ x₇
     with ListLookup-≈ x₄ x₂ | ListLookup-≈ x₅ x₆ | ListLookup-≈ x₆ x₁ | ListLookup-≈ x₂ look
@@ -333,13 +314,13 @@ lorSound : ∀ (r : WriterMode)
   → isBool val → isBool val'
   → ∀ (init : ℕ) →
   let result = lor v v' ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → ListLookup (output result) sol (lorFunc val val') 
 lorSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol
     with addSound r (IMul onef v v' onef init) sol (2 + init)
            (let b₁₂ = writerOutput (add (IMul onef v v' onef init) ((r , prime) , suc (suc init)))
                 b₃₄ = writerOutput (lor v v' ((r , prime) , init))
-            in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄)
+            in ConstraintsSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄)
                  (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (lorSoundLem₂ r v v' init) isSol)
        | addSound r (IAdd zerof ((onef , v) ∷ (onef , v') ∷ (-F onef , init) ∷ (-F onef , (1 + init)) ∷ [])) sol (2 + init)
            (let b₁₂ = writerOutput (add
@@ -348,7 +329,7 @@ lorSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol
                                         (onef , v') ∷ ((-F onef) , init) ∷ ((-F onef) , 1 + init) ∷ []))
                                       ((r , prime) , suc (suc init)))
                 b₃₄ = writerOutput (lor v v' ((r , prime) , init))
-            in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄)
+            in ConstraintsSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄)
                  (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (lorSoundLem₃ r v v' init) isSol)
 lorSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | addSol (LinearCombValCons .(Field.one field') .v varVal x₄ (LinearCombValCons .(Field.one field') .v' varVal₁ x₆ (LinearCombValCons .((Field.- field') (Field.one field')) .init varVal₂ x₇ (LinearCombValCons .((Field.- field') (Field.one field')) .(suc init) varVal₃ x₈ LinearCombValBase)))) x₅
   with ListLookup-≈ x₇ x₂ | ListLookup-≈ x₆ x₁ | ListLookup-≈ x₁ look₂ | ListLookup-≈ x₄ x | ListLookup-≈ x look₁
@@ -375,22 +356,22 @@ lorSound₀ : ∀ (r : WriterMode)
   → isBool val
   → isBool val' →
   let result = lor v v' ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → ListLookup (output result) sol 0
   → Squash (Σ′′ (ListLookup v sol 0) (λ _ → ListLookup v' sol 0))
 lorSound₀ r v v' val val' sol init look₁ look₂ isBool₁ isBool₂ isSol look with
        let
           p₁ = add (IMul onef v v' onef init)
           p₂ = add (IAdd zerof ((onef , v) ∷ (onef , v') ∷ (-F onef , init) ∷ (-F onef , (suc init)) ∷ []))
-          p₁IsSol = BuilderProdSol->>=⁻₁ p₁ (λ _ → p₂) r (suc (suc init)) sol isSol
-          p₂IsSol = BuilderProdSol->>=⁻₂ p₁ (λ _ → p₂) r (suc (suc init)) sol isSol
+          p₁IsSol = ConstraintsSol->>=⁻₁ p₁ (λ _ → p₂) r (suc (suc init)) sol isSol
+          p₂IsSol = ConstraintsSol->>=⁻₂ p₁ (λ _ → p₂) r (suc (suc init)) sol isSol
        in addSound r (IMul onef v v' onef init) sol (suc (suc init)) p₁IsSol
 lorSound₀ r v v' val val' sol init look₁ look₂ isBool₁ isBool₂ isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ with
        let
           p₁ = add (IMul onef v v' onef init)
           p₂ = add (IAdd zerof ((onef , v) ∷ (onef , v') ∷ (-F onef , init) ∷ (-F onef , (suc init)) ∷ []))
-          p₁IsSol = BuilderProdSol->>=⁻₁ p₁ (λ _ → p₂) r (suc (suc init)) sol isSol
-          p₂IsSol = BuilderProdSol->>=⁻₂ p₁ (λ _ → p₂) r (suc (suc init)) sol isSol
+          p₁IsSol = ConstraintsSol->>=⁻₁ p₁ (λ _ → p₂) r (suc (suc init)) sol isSol
+          p₂IsSol = ConstraintsSol->>=⁻₂ p₁ (λ _ → p₂) r (suc (suc init)) sol isSol
        in addSound r (IAdd zerof ((onef , v) ∷ (onef , v') ∷ (-F onef , init) ∷ (-F onef , (suc init)) ∷ [])) sol _ p₂IsSol
 lorSound₀ r v v' val val' sol init look₁ look₂ isBool₁ isBool₂ isSol look | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃ | addSol (LinearCombValCons .(Field.one field') .v varVal x₄ (LinearCombValCons .(Field.one field') .v' varVal₁ x₆ (LinearCombValCons .((Field.- field') (Field.one field')) .init varVal₂ x₇ (LinearCombValCons .((Field.- field') (Field.one field')) .(suc init) varVal₃ x₈ LinearCombValBase)))) x₅ with lorSound r v v' val val' sol look₁ look₂ isBool₁ isBool₂ init isSol
 ... | lorSound with ℕtoF val ≟F zerof
@@ -446,7 +427,7 @@ landIsBool : ∀ r v v' sol val val'
   → ListLookup 0 sol 1
   → ∀ init →
   let result = land v v' ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → Squash (∃ (λ val'' → Σ′ (isBool val'') (λ _ → ListLookup (output result) sol val'')))
 landIsBool r v v' sol val val' look₁ look₂ isBool₁ isBool₂ tri init isSol with addSound r (IMul onef v v' onef init) sol _ isSol
 landIsBool r v v' sol val val' look₁ look₂ isBool₁ isBool₂ tri init isSol | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃
@@ -476,12 +457,12 @@ landSound : ∀ (r : WriterMode)
   → isBool val → isBool val'
   → ∀ (init : ℕ) →
   let result = land v v' ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → ListLookup (output result) sol (landFunc val val') 
 landSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol with addSound r (IMul onef v v' onef init) sol (suc init)
        (let b₁₂ = writerOutput (add (IMul onef v v' onef init) ((r , prime) , suc init))
             b₃₄ = writerOutput (land v v' ((r , prime) , init))
-        in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (landSoundLem r v v' init) isSol)
+        in ConstraintsSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (landSoundLem r v v' init) isSol)
 landSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol | multSol .(Field.one field') .v bval .v' cval .(Field.one field') .init eval x x₁ x₂ x₃
     with ListLookup-≈ x₁ look₂ | ListLookup-≈ x look₁
 ... | sq eq₁ | sq eq₂
@@ -512,7 +493,7 @@ landSound₁ : ∀ (r : WriterMode)
   → isBool val
   → isBool val' →
   let result = land v v' ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → ListLookup (output result) sol 1
   → Squash (Σ′′ (ListLookup v sol 1) (λ _ → ListLookup v' sol 1))
 landSound₁ r v v' val val' sol init look₁ look₂ isBool₁ isBool₂ isSol look with addSound r (IMul onef v v' onef init) sol _ isSol
@@ -569,13 +550,13 @@ lnotSound : ∀ (r : WriterMode)
   → isBool val
   → ∀ (init : ℕ) →
   let result = lnot v ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → ListLookup (output result) sol (lnotFunc val) 
 lnotSound r v val sol look₁ valBool init isSol
   with addSound r (IAdd onef ((-F onef , v) ∷ (-F onef , init) ∷ [])) sol (suc init)
         (let b₁₂ = writerOutput (add (IAdd onef (((-F onef) , v) ∷ ((-F onef) , init) ∷ [])) ((r , prime) , suc init))
              b₃₄ = writerOutput (lnot v ((r , prime) , init))
-         in BuilderProdSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (lnotSoundLem r v init) isSol)
+         in ConstraintsSolSubsetImp (proj₁ b₁₂) (proj₂ b₁₂) (proj₁ b₃₄) (proj₂ b₃₄) b₁₂ b₃₄ sol refl refl (lnotSoundLem r v init) isSol)
 lnotSound r v val sol look₁ valBool init isSol | addSol (LinearCombValCons .((Field.- field') (Field.one field')) .v varVal x (LinearCombValCons .((Field.- field') (Field.one field')) .init varVal₁ x₂ LinearCombValBase)) x₁ rewrite -one*f≡-f (ℕtoF varVal)
                                          | -one*f≡-f (ℕtoF varVal₁)
                                          | +-identityʳ (-F ℕtoF varVal₁)
@@ -598,7 +579,7 @@ lnotSound₁ : ∀ (r : WriterMode) v val sol init
   → ListLookup v sol val
   → isBool val →
   let result = lnot v ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → ListLookup (output result) sol 1
   → ListLookup v sol 0
 lnotSound₁ r v val sol init look isBool isSol look₁ with addSound r (IAdd onef ((-F onef , v) ∷ (-F onef , init) ∷ [])) sol (suc init) isSol
@@ -630,9 +611,9 @@ limpFuncIsBool a b = lorFuncIsBool (lnotFunc a) b
 limpFuncIsBoolStrict : ∀ a b → isBoolStrict (limpFunc a b)
 limpFuncIsBoolStrict a b = lorFuncIsBoolStrict (lnotFunc a) b
 
-limpSoundLem₁ : ∀ r init sol v v' → BuilderProdSol (writerOutput (limp v v' ((r , prime) , init))) sol
-                  → BuilderProdSol (writerOutput (lnot v ((r , prime) , init))) sol
-limpSoundLem₁ r init sol v v' isSol = BuilderProdSol->>=⁻₁ (lnot v) (λ notV → lor notV v') r init sol isSol  
+limpSoundLem₁ : ∀ r init sol v v' → ConstraintsSol (writerOutput (limp v v' ((r , prime) , init))) sol
+                  → ConstraintsSol (writerOutput (lnot v ((r , prime) , init))) sol
+limpSoundLem₁ r init sol v v' isSol = ConstraintsSol->>=⁻₁ (lnot v) (λ notV → lor notV v') r init sol isSol  
 
 
 limpSound : ∀ (r : WriterMode)
@@ -643,15 +624,16 @@ limpSound : ∀ (r : WriterMode)
   → isBool val → isBool val'
   → ∀ (init : ℕ) →
   let result = limp v v' ((r , prime) , init)
-  in BuilderProdSol (writerOutput result) sol
+  in ConstraintsSol (writerOutput result) sol
   → ListLookup (output result) sol (limpFunc val val') 
 limpSound r v v' val val' sol look₁ look₂ valBool val'Bool init isSol
     with lnotSound r v val sol look₁ valBool init (limpSoundLem₁ r init sol v v' isSol)
 ... | sound₁ = lorSound r init v' (lnotFunc val) val' sol sound₁ look₂ (lnotFuncIsBool val) val'Bool
                  (varOut (lnot v ((r , prime) , init)))
-                    (BuilderProdSol->>=⁻₂ (lnot v) (λ notV → lor notV v') r init sol isSol)
+                    (ConstraintsSol->>=⁻₂ (lnot v) (λ notV → lor notV v') r init sol isSol)
 
 
 
 
 
+-}

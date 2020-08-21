@@ -40,7 +40,7 @@ open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
 open import TypeClass.Ord
 
-module Compile.SourceR1CS (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
+module Compile.SourceR1CS (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) where
 
 open import Language.R1CS f
 open import Language.R1CS.Show f showf
@@ -50,13 +50,11 @@ open import Language.Universe f
 
 open Field field' hiding (_+_)
 
-import Compile.SourceR1CS.Base
-open Compile.SourceR1CS.Base f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
-open Compile.SourceR1CS.Base f field' finite showf fToℕ ℕtoF using (SI-Monad) public
+open import Compile.SourceR1CS.Base f field' finite showf public
 
-open import Compile.SourceR1CS.LogicGates f field' finite showf fToℕ ℕtoF public
-open import Compile.SourceR1CS.SimpleComp f field' finite showf fToℕ ℕtoF public
-open import Compile.SourceR1CS.Hints  f field' finite showf fToℕ ℕtoF public
+open import Compile.SourceR1CS.LogicGates f field' finite showf public
+open import Compile.SourceR1CS.SimpleComp f field' finite showf public
+open import Compile.SourceR1CS.Hints f field' finite showf fToℕ public
 
 
 
@@ -117,7 +115,8 @@ module Comp where
   compileSource : ∀ (n : ℕ) u → (S-Monad (Source u)) → Var × Builder × (Vec Var (tySize u) × List ℕ)
   compileSource n u source = 
     let v , (asserts , input) , output = source (tt , 1)
-        ((v' , (bld₁ , bld₂) , outputVars) , inv) = (do
+        (v' , (bld₁ , bld₂) , outputVars) =
+          runSI-MonadBuilder (do
            compAssertsHints (asserts [])
            sourceToR1CS _ output) ((NormalMode , n) , v)
     in v' , bld₁ ∘′ bld₂ , outputVars , input []

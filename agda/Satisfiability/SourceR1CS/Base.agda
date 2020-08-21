@@ -37,9 +37,7 @@ module HE = Relation.Binary.HeterogeneousEquality
 open import Relation.Binary.HeterogeneousEquality.Core
 open import Relation.Nullary
 module Satisfiability.SourceR1CS.Base (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
-     (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
-        (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field')
-        (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field') (prime : ℕ) (isPrime : Prime prime) where
+     (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (prime : ℕ) (isPrime : Prime prime) where
 
 
 open import Language.TySize f finite
@@ -54,40 +52,24 @@ open Field field' renaming ( _+_ to _+F_
                            ; zero to zerof
                            ; one to onef)
 open IsField isField
-open import Compile.SourceR1CS f field' finite showf fToℕ ℕtoF hiding (SI-Monad)
-import Compile.SourceR1CS
-open Compile.SourceR1CS.SI-Monad f field' finite showf fToℕ ℕtoF
+open import Compile.SourceR1CS f field' finite showf fToℕ
 
 
-output : ∀ {a} {b} {c} {d} {S : Set a} {W : Set b} {A : Set c} {P : W → Prop d} → Σ′ (S × W × A) (λ prod → P (proj₁ (proj₂ prod))) → A
-output ((s , w , a) , _) = a
 
-writerOutput : ∀ {a} {b} {c} {d} {S : Set a} {W : Set b} {A : Set c} {P : W → Prop d} → Σ′ (S × W × A) (λ prod → P (proj₁ (proj₂ prod))) → W
-writerOutput ((s , w , a) , _) = w
+output : ∀ {a} {b} {c} {S : Set a} {W : Set b} {A : Set c} → (S × W × A) → A
+output (s , w , a) = a
 
-varOut : ∀ {a} {b} {c} {d} {S : Set a} {W : Set b} {A : Set c} {P : W → Prop d} → Σ′ (S × W × A) (λ prod → P (proj₁ (proj₂ prod))) → S
-varOut ((s , _ , _) , _) = s
+writerOutput : ∀ {a} {b} {c} {S : Set a} {W : Set b} {A : Set c} → (S × W × A) → W
+writerOutput (s , w , a) = w
 
-writerInv : ∀ {a} {b} {c} {d} {S : Set a} {W : Set b} {A : Set c} {P : W → Prop d} → (p : Σ′ (S × W × A) (λ prod → P (proj₁ (proj₂ prod)))) → P (proj₁ (proj₂ (fst p)))
-writerInv ((s , w , a) , inv) = inv
+varOut : ∀ {a} {b} {c} {S : Set a} {W : Set b} {A : Set c} → (S × W × A) → S
+varOut (s , _ , _) = s
 
-_≈_ : ℕ → ℕ → Prop
-x ≈ y = Squash (ℕtoF x ≡ ℕtoF y)
-
-≈-refl : ∀ {n} → n ≈ n
-≈-refl = sq refl
-
-≈-sym : ∀ {m n} → m ≈ n → n ≈ m
-≈-sym (sq eq) = sq (sym eq)
-
-≈-trans : ∀ {m n o} → m ≈ n → n ≈ o → m ≈ o
-≈-trans (sq eq₁) (sq eq₂) = sq (trans eq₁ eq₂)
-
-data ListLookup : Var → List (Var × ℕ) → ℕ → Prop where
-  LookupHere : ∀ v l n n' → n ≈ n' → ListLookup v ((v , n) ∷ l) n'
+data ListLookup : Var → List (Var × f) → f → Prop where
+  LookupHere : ∀ v l n n' → n ≡ n' → ListLookup v ((v , n) ∷ l) n'
   LookupThere : ∀ v l n t → ListLookup v l n → ¬ v ≡ proj₁ t → ListLookup v (t ∷ l) n
 
-data BatchListLookup : {n : ℕ} → Vec Var n → List (Var × ℕ) → Vec ℕ n → Prop where
+data BatchListLookup : {n : ℕ} → Vec Var n → List (Var × f) → Vec f n → Prop where
   BatchLookupNil : ∀ l → BatchListLookup [] l []
   BatchLookupCons : ∀ {len} v n (vec₁ : Vec Var len) vec₂ l
         → ListLookup v l n
@@ -95,14 +77,14 @@ data BatchListLookup : {n : ℕ} → Vec Var n → List (Var × ℕ) → Vec ℕ
         → BatchListLookup (v ∷ vec₁) l (n ∷ vec₂)
 
 BatchListLookup-Head : ∀ {n} {vec : Vec Var (suc n)}
-  → {l : List (Var × ℕ)}
-  → {val : Vec ℕ (suc n)}
+  → {l : List (Var × f)}
+  → {val : Vec f (suc n)}
   → BatchListLookup vec l val
   → ListLookup (head vec) l (head val)
 BatchListLookup-Head (BatchLookupCons v n vec₁ vec₂ l x look) = x
 
-BatchListLookup-++ : ∀ {m n} (vec : Vec Var m) (val : Vec Var m) {vec' : Vec Var n} {val' : Vec ℕ n}
-  → {l : List (Var × ℕ)}
+BatchListLookup-++ : ∀ {m n} (vec : Vec Var m) (val : Vec f m) {vec' : Vec Var n} {val' : Vec f n}
+  → {l : List (Var × f)}
   → BatchListLookup vec l val
   → BatchListLookup vec' l val'
   → BatchListLookup (vec V++ vec') l (val V++ val')
@@ -112,10 +94,10 @@ BatchListLookup-++ .(v ∷ vec₁) .(n ∷ vec₂) (BatchLookupCons v n vec₁ v
 
 BatchListLookup-Split₁ :
   ∀ a b → (vec : Vec Var (a + b))
-     → (l : List (Var × ℕ))
-     → (val : Vec ℕ (a + b))
+     → (l : List (Var × f))
+     → (val : Vec f (a + b))
      → (vec₁ : Vec Var a) → (vec₂ : Vec Var b)
-     → (val₁ : Vec ℕ a) → (val₂ : Vec ℕ b)
+     → (val₁ : Vec f a) → (val₂ : Vec f b)
      → splitAt a vec ≡ (vec₁ , vec₂)
      → splitAt a val ≡ (val₁ , val₂)
      → BatchListLookup vec l val
@@ -128,10 +110,10 @@ BatchListLookup-Split₁ (suc a) b (x ∷ vec) l (x₁ ∷ val) (.x ∷ .(proj�
 
 BatchListLookup-Split₂ :
   ∀ a b → (vec : Vec Var (a + b))
-     → (l : List (Var × ℕ))
-     → (val : Vec ℕ (a + b))
+     → (l : List (Var × f))
+     → (val : Vec f (a + b))
      → (vec₁ : Vec Var a) → (vec₂ : Vec Var b)
-     → (val₁ : Vec ℕ a) → (val₂ : Vec ℕ b)
+     → (val₁ : Vec f a) → (val₂ : Vec f b)
      → splitAt a vec ≡ (vec₁ , vec₂)
      → splitAt a val ≡ (val₁ , val₂)
      → BatchListLookup vec l val
@@ -145,16 +127,16 @@ BatchListLookup-Split₂ (suc a) b (x₂ ∷ vec) l (x₃ ∷ val) (.x₂ ∷ .(
 subst′ : ∀ {ℓ} {ℓ'} → {A : Set ℓ} → (P : A → Prop ℓ') → ∀ {x} {y} → x ≡ y → P x → P y
 subst′ _ refl px = px
 
-BatchListLookupLenSubst : ∀ {len} {len₁} {l} → (vec val : Vec ℕ len) (prf : len ≡ len₁) → BatchListLookup vec l val
-   → BatchListLookup (subst (Vec ℕ) prf vec) l (subst (Vec ℕ) prf val)
+BatchListLookupLenSubst : ∀ {len} {len₁} {l} → (vec : Vec ℕ len) (val : Vec f len) (prf : len ≡ len₁) → BatchListLookup vec l val
+   → BatchListLookup (subst (Vec ℕ) prf vec) l (subst (Vec f) prf val)
 BatchListLookupLenSubst {len} {len₁} {l} vec val refl look = look
 
 BatchListLookup-MaxTySplit₁ :
   ∀ u (uval : ⟦ u ⟧) (x : ⟦ u ⟧ → U) l
   → (vec : Vec Var (maxTySizeOver (enum u) x))
   → (vec₁ : Vec Var (tySize (x uval)))
-  → (val : Vec Var (maxTySizeOver (enum u) x))
-  → (val₁ : Vec Var (tySize (x uval)))
+  → (val : Vec f (maxTySizeOver (enum u) x))
+  → (val₁ : Vec f (tySize (x uval)))
   → proj₁ (maxTySplit u uval x vec) ≡ vec₁
   → proj₁ (maxTySplit u uval x val) ≡ val₁
   → BatchListLookup vec l val
@@ -162,7 +144,7 @@ BatchListLookup-MaxTySplit₁ :
 BatchListLookup-MaxTySplit₁ u uval x l vec vec₁ val val₁ eq₁ eq₂ look =
   let
       sub₁ = BatchListLookupLenSubst vec val (maxTyVecSizeEq u uval x) look  
-      hyp = BatchListLookup-Split₁ (tySize (x uval)) _ (subst (Vec ℕ) (maxTyVecSizeEq u uval x) vec) l (subst (Vec ℕ) (maxTyVecSizeEq u uval x) val)  (proj₁ (maxTySplit u uval x vec)) (proj₂ (maxTySplit u uval x vec)) (proj₁ (maxTySplit u uval x val)) (proj₂ (maxTySplit u uval x val)) refl refl sub₁
+      hyp = BatchListLookup-Split₁ (tySize (x uval)) _ (subst (Vec ℕ) (maxTyVecSizeEq u uval x) vec) l (subst (Vec f) (maxTyVecSizeEq u uval x) val)  (proj₁ (maxTySplit u uval x vec)) (proj₂ (maxTySplit u uval x vec)) (proj₁ (maxTySplit u uval x val)) (proj₂ (maxTySplit u uval x val)) refl refl sub₁
       hyp₁ = subst′ (λ t → BatchListLookup t l (proj₁ (maxTySplit u uval x val))) eq₁ hyp
       hyp₂ = subst′ (λ t → BatchListLookup vec₁ l t) eq₂ hyp₁
   in hyp₂
@@ -171,8 +153,8 @@ BatchListLookup-MaxTySplit₂ :
   ∀ u (uval : ⟦ u ⟧) (x : ⟦ u ⟧ → U) l
   → (vec : Vec Var (maxTySizeOver (enum u) x))
   → (vec₁ : Vec Var (maxTySizeOver (enum u) x - tySize (x uval)))
-  → (val : Vec Var (maxTySizeOver (enum u) x))
-  → (val₁ : Vec Var (maxTySizeOver (enum u) x - tySize (x uval)))
+  → (val : Vec f (maxTySizeOver (enum u) x))
+  → (val₁ : Vec f (maxTySizeOver (enum u) x - tySize (x uval)))
   → proj₂ (maxTySplit u uval x vec) ≡ vec₁
   → proj₂ (maxTySplit u uval x val) ≡ val₁
   → BatchListLookup vec l val
@@ -180,7 +162,7 @@ BatchListLookup-MaxTySplit₂ :
 BatchListLookup-MaxTySplit₂ u uval x l vec vec₁ val val₁ eq₁ eq₂ look = 
   let
     sub₁ = BatchListLookupLenSubst vec val (maxTyVecSizeEq u uval x) look  
-    hyp = BatchListLookup-Split₂ (tySize (x uval)) _ (subst (Vec ℕ) (maxTyVecSizeEq u uval x) vec) l (subst (Vec ℕ) (maxTyVecSizeEq u uval x) val)  (proj₁ (maxTySplit u uval x vec)) (proj₂ (maxTySplit u uval x vec)) (proj₁ (maxTySplit u uval x val)) (proj₂ (maxTySplit u uval x val)) refl refl sub₁
+    hyp = BatchListLookup-Split₂ (tySize (x uval)) _ (subst (Vec ℕ) (maxTyVecSizeEq u uval x) vec) l (subst (Vec f) (maxTyVecSizeEq u uval x) val)  (proj₁ (maxTySplit u uval x vec)) (proj₂ (maxTySplit u uval x vec)) (proj₁ (maxTySplit u uval x val)) (proj₂ (maxTySplit u uval x val)) refl refl sub₁
     hyp₁ = subst′ (λ t → BatchListLookup t l (proj₂ (maxTySplit u uval x val))) eq₁ hyp
     hyp₂ = subst′ (λ t → BatchListLookup vec₁ l t) eq₂ hyp₁
   in hyp₂
@@ -189,12 +171,12 @@ BatchListLookupLenSubst' : ∀ n {m} {o} → (p : n + m ≡ o) → ∀ sol
    → (vec : Vec ℕ o)
    → (vec' : Vec ℕ n)
    → (vec'' : Vec ℕ m)
-   → (val' : Vec ℕ n)
-   → (val'' : Vec ℕ m)
+   → (val' : Vec f n)
+   → (val'' : Vec f m)
    → vec ≅ vec' V++ vec''
    → BatchListLookup vec' sol val'
    → BatchListLookup vec'' sol val''
-   → BatchListLookup vec sol (subst (Vec ℕ) p (val' V++ val''))
+   → BatchListLookup vec sol (subst (Vec f) p (val' V++ val''))
 BatchListLookupLenSubst' n refl sol .(vec' V++ vec'') vec' vec'' val' val'' refl look₁ look₂ = BatchListLookup-++ vec' val' look₁ look₂
 data ⊥′ : Prop where
 
@@ -208,26 +190,14 @@ data ⊥′ : Prop where
 ⊥-elim′ : ∀ {w} {Whatever : Prop w} → ⊥ → Whatever
 ⊥-elim′ ()
 
--- ListLookup `respects` _≈_
-
-ListLookup-Respects-≈ : ∀ v l n n' → n ≈ n' → ListLookup v l n → ListLookup v l n'
-ListLookup-Respects-≈ v .((v , n₁) ∷ l) n n' (sq eq) (LookupHere .v l n₁ .n (sq x)) = LookupHere v l n₁ n' (sq (trans x eq))
-ListLookup-Respects-≈ v .(t ∷ l) n n' eq (LookupThere .v l .n t look x) = LookupThere v l n' t (ListLookup-Respects-≈ v l n n' eq look) x
-
-ListLookup-≈ : ∀ {v} {l} {n} {n'} → ListLookup v l n → ListLookup v l n' → n ≈ n'
-ListLookup-≈ {v} .{(v , n₁) ∷ l} {n} {n'} (LookupHere .v l n₁ .n (sq x)) (LookupHere .v .l .n₁ .n' (sq x₁)) = sq (trans (sym x) x₁)
-ListLookup-≈ {v} .{(v , n₁) ∷ l} {n} {n'} (LookupHere .v l n₁ .n x) (LookupThere .v .l .n' .(v , n₁) look₂ x₁) = ⊥-elim′ (x₁ refl)
-ListLookup-≈ {v} .{(v , n₁) ∷ l} {n} {n'} (LookupThere .v l .n .(v , n₁) look₁ x) (LookupHere .v .l n₁ .n' x₁) = ⊥-elim′ (x refl)
-ListLookup-≈ {v} .{(t ∷ l)} {n} {n'} (LookupThere .v l .n t look₁ x) (LookupThere .v .l .n' .t look₂ x₁) = ListLookup-≈ look₁ look₂
-
-data LinearCombVal (solution : List (Var × ℕ)) : List (f × Var) → f → Prop where
+data LinearCombVal (solution : List (Var × f)) : List (f × Var) → f → Prop where
   LinearCombValBase : LinearCombVal solution [] zerof
   LinearCombValCons : ∀ coeff var varVal {l} {acc}
       → ListLookup var solution varVal
       → LinearCombVal solution l acc
-      → LinearCombVal solution ((coeff , var) ∷ l) ((coeff *F ℕtoF varVal) +F acc)
+      → LinearCombVal solution ((coeff , var) ∷ l) ((coeff *F varVal) +F acc)
 
-data R1CSSolution (solution : List (Var × ℕ)) : R1CS → Prop where
+data R1CSSolution (solution : List (Var × f)) : R1CS → Prop where
   addSol : ∀ {coeff} {linComb} {linCombVal}
                  → LinearCombVal solution linComb linCombVal
                  → linCombVal +F coeff ≡ zerof
@@ -236,209 +206,88 @@ data R1CSSolution (solution : List (Var × ℕ)) : R1CS → Prop where
                  → ListLookup b solution bval
                  → ListLookup c solution cval
                  → ListLookup e solution eval
-                 → ((a *F (ℕtoF bval)) *F (ℕtoF cval)) ≡ (d *F (ℕtoF eval))
+                 → ((a *F bval) *F cval) ≡ (d *F eval)
                  → R1CSSolution solution (IMul a b c d e)
   hintSol : ∀ f → R1CSSolution solution (Hint f) -- Hint does not have to be solved
   logSol : ∀ s → R1CSSolution solution (Log s)
 
-BuilderProdSol : Builder × Builder → List (Var × ℕ) → Prop
-BuilderProdSol (fst , snd) sol = ∀ x → x ∈ (fst (snd [])) → R1CSSolution sol x
+ConstraintsSol : List R1CS × List R1CS → List (Var × f) → Prop
+ConstraintsSol (fst , snd) sol = ∀ x → x ∈ (fst ++ snd) → R1CSSolution sol x
 
-data isBool : ℕ → Set where
-  isZero : ∀ n → ℕtoF n ≡ zerof → isBool n
-  isOne : ∀ n → ℕtoF n ≡ onef → isBool n
-
-data isBoolStrict : ℕ → Set where
-  isZeroS : ∀ {n} → n ≡ 0 → isBoolStrict n
-  isOneS : ∀ {n} → n ≡ 1 → isBoolStrict n
-
-isBoolStrict→isBool : ∀ {n} → isBoolStrict n → isBool n
-isBoolStrict→isBool (isZeroS refl) = isZero 0 ℕtoF-0≡0
-isBoolStrict→isBool (isOneS refl) = isOne 1 ℕtoF-1≡1
-
-BuilderProdSolSubsetImp : ∀ b₁ b₂ b₃ b₄ (b₁₂ : Builder × Builder) (b₃₄ : Builder × Builder) sol
-    → (b₁ , b₂) ≡ b₁₂ → (b₃ , b₄) ≡ b₃₄
-    → (∀ x → x ∈ (b₁ (b₂ [])) → x ∈ (b₃ (b₄ [])))
-    → BuilderProdSol (b₃ , b₄) sol → BuilderProdSol (b₁ , b₂) sol 
-BuilderProdSolSubsetImp b₁ b₂ b₃ b₄ b₁₂ b₃₄ sol refl refl subs isSol x x∈b₁₂ = isSol x (subs x x∈b₁₂)
-
-writerOutput->>=-Decomp : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'}
-    → (p₁ : SI-Monad A)
-    → (p₂ : A → SI-Monad B)
-    → ∀ r init
-    → let p₁′ = p₁ ((r , prime) , init)
-          wo = writerOutput ((p₁ >>= p₂) ((r , prime) , init))
-          wo₁ = writerOutput p₁′
-          wo₂ = writerOutput (p₂ (output p₁′) ((r , prime) , varOut p₁′))
-      in Squash (proj₁ wo (proj₂ wo []) ≡ (proj₁ wo₁ [] ++ proj₁ wo₂ []) ++ (proj₂ wo₁ [] ++ proj₂ wo₂ []))
-writerOutput->>=-Decomp p₁ p₂ r init with writerInv ((p₁ >>= p₂) ((r , prime) , init))
-... | sq inv₁ with writerInv (p₁ ((r , prime) , init))
-... | sq inv₂ with let p₁′ = p₁ ((r , prime) , init)
-                   in writerInv (p₂ (output p₁′) ((r , prime) , (varOut p₁′)))
-... | sq inv₃ = sq (
-            let p₁′ = p₁ ((r , prime) , init)
-                wo = writerOutput ((p₁ >>= p₂) ((r , prime) , init))
-                wo₁ = writerOutput p₁′
-                wo₂ = writerOutput (p₂ (output p₁′) ((r , prime) , varOut p₁′))
-            in begin
-                  proj₁ wo (proj₂ wo [])
-               ≡⟨ proj₁ (inv₁ (proj₂ wo [])) ⟩
-                  proj₁ wo [] ++ proj₂ wo []
-               ≡⟨ refl ⟩
-                  proj₁ wo₁ (proj₁ wo₂ []) ++ (proj₂ wo₁ (proj₂ wo₂ []))
-               ≡⟨ cong (λ x → x ++ (proj₂ wo₁ (proj₂ wo₂ []))) (proj₁ (inv₂ (proj₁ wo₂ []))) ⟩
-                  (proj₁ wo₁ [] ++ proj₁ wo₂ []) ++ (proj₂ wo₁ (proj₂ wo₂ []))
-               ≡⟨ cong (λ x → (proj₁ wo₁ [] ++ proj₁ wo₂ []) ++ x) (proj₂ (inv₂ (proj₂ wo₂ []))) ⟩
-                  (proj₁ wo₁ [] ++ proj₁ wo₂ []) ++ (proj₂ wo₁ [] ++ proj₂ wo₂ [])
-               ∎)
-         where
-           open ≡-Reasoning
+data ProgSol {A : Set} (m : SI-Monad A) (mode : WriterMode) (prime : ℕ) (st : Var) (sol : List (Var × f)) : Prop where
+  progSol : ConstraintsSol (writerOutput (runSI-Monad m ((mode , prime) , st))) sol → ProgSol m mode prime st sol
 
 
-BuilderProdSol->>=⁻₁ : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'}
+ConstraintsSol->>=⁻₁ : ∀ {A B : Set}
     → (p₁ : SI-Monad A)
     → (p₂ : A → SI-Monad B)
     → ∀ r init sol
-    → BuilderProdSol (writerOutput ((p₁ >>= p₂) ((r , prime) , init))) sol
-    → BuilderProdSol (writerOutput (p₁ ((r , prime) , init))) sol
-BuilderProdSol->>=⁻₁ p₁ p₂ r init sol isSol x x∈p₁ with writerInv ((p₁ >>= p₂) ((r , prime) , init))
-... | sq inv₁ with writerInv (p₁ ((r , prime) , init))
-... | sq inv₂ with let p₁′ = p₁ ((r , prime) , init)
-                   in writerInv (p₂ (output p₁′) ((r , prime) , (varOut p₁′)))
-... | sq inv₃ with writerOutput->>=-Decomp p₁ p₂ r init
-... | sq lemEq = isSol x lem
+    → ConstraintsSol (writerOutput (runSI-Monad (p₁ >>= p₂) ((r , prime) , init))) sol
+    → ConstraintsSol (writerOutput (runSI-Monad p₁ ((r , prime) , init))) sol
+ConstraintsSol->>=⁻₁ p₁ p₂ r init sol isSol x x∈p₁
+    with ∈-++⁻ (proj₁ (writerOutput (runSI-Monad p₁ ((r , prime) , init)))) x∈p₁
+... | inj₁ y
+  = isSol x (∈-++⁺ˡ (∈-++⁺ˡ y))
+... | inj₂ y
+  = isSol x (∈-++⁺ʳ
+                 (proj₁
+                   (writerOutput (runSI-Monad (p₁ >>= p₂) ((r , prime) , init))))
+                 (∈-++⁺ˡ y))
 
-  where
-    lem : let wo = writerOutput ((p₁ >>= p₂) ((r , prime) , init))
-          in x ∈ proj₁ wo (proj₂ wo [])
-    lem rewrite lemEq
-              | (let p₁′ = p₁ ((r , prime) , init)
-                     wo₁ = writerOutput p₁′
-                 in proj₁ (inv₂ (proj₂ wo₁ [])))
-        with ∈-++⁻ (let p₁′ = p₁ ((r , prime) , init)
-                        wo₁ = writerOutput p₁′
-                    in proj₁ wo₁ []) x∈p₁
-    ... | inj₁ x∈proj₁ = ∈-++⁺ˡ (∈-++⁺ˡ x∈proj₁)
-    ... | inj₂ x∈proj₂ = ∈-++⁺ʳ (let
-                                    p₁′ = p₁ ((r , prime) , init)
-                                    p₂′ = p₂ (output p₁′) ((r , prime) , (varOut p₁′))
-                                    wo₁ = writerOutput p₁′
-                                    wo₂ = writerOutput p₂′
-                                  in proj₁ wo₁ [] ++ proj₁ wo₂ []) (∈-++⁺ˡ x∈proj₂)
-BuilderProdSol->>=⁻₂ : ∀ {ℓ} {ℓ'} {A : Set ℓ} {B : Set ℓ'}
+ProgSol₁ : ∀ {A B : Set}
+    → {p₁ : SI-Monad A}
+    → {p₂ : A → SI-Monad B}
+    → ∀ {r} {init} {sol}
+    → ProgSol (p₁ >>= p₂) r prime init sol
+    → ProgSol p₁ r prime init sol
+ProgSol₁ {_} {_} {p₁} {p₂} {r} {init} {sol} (progSol x) = progSol (ConstraintsSol->>=⁻₁ p₁ p₂ r init sol x)
+
+
+
+ConstraintsSol->>=⁻₂ : ∀ {A B : Set}
     → (p₁ : SI-Monad A)
     → (p₂ : A → SI-Monad B)
     → ∀ r init sol
-    → BuilderProdSol (writerOutput ((p₁ >>= p₂) ((r , prime) , init))) sol
-    → BuilderProdSol (writerOutput (p₂ (output (p₁ ((r , prime) , init))) ((r , prime) , varOut (p₁ ((r , prime) , init))))) sol
-BuilderProdSol->>=⁻₂ p₁ p₂ r init sol isSol x x∈p₂ with writerInv ((p₁ >>= p₂) ((r , prime) , init))
-... | sq inv₁ with writerInv (p₁ ((r , prime) , init))
-... | sq inv₂ with let p₁′ = p₁ ((r , prime) , init)
-                   in writerInv (p₂ (output p₁′) ((r , prime) , (varOut p₁′)))
-... | sq inv₃ with writerOutput->>=-Decomp p₁ p₂ r init
-... | sq lemEq = isSol x lem
+    → ConstraintsSol (writerOutput (runSI-Monad (p₁ >>= p₂) ((r , prime) , init))) sol
+    → let newSt , _ , a = runSI-Monad p₁ ((r , prime) , init)
+      in ConstraintsSol (writerOutput (runSI-Monad (p₂ a) ((r , prime) , newSt))) sol
+ConstraintsSol->>=⁻₂ p₁ p₂ r init sol isSol x x∈p₂
+    with let newSt , _ , a = runSI-Monad p₁ ((r , prime) , init)
+         in ∈-++⁻ (proj₁ (writerOutput (runSI-Monad (p₂ a) ((r , prime) , newSt)))) x∈p₂
+... | inj₁ y = isSol x (∈-++⁺ˡ (∈-++⁺ʳ
+                                  (proj₁ (writerOutput (runSI-Monad p₁ ((r , prime) , init)))) y))
+... | inj₂ y =
+         let newSt  , (w₁₁ , w₁₂) , a = runSI-Monad p₁ ((r , prime) , init)
+             newSt' , (w₂₁ , w₂₂) , b = runSI-Monad (p₂ a) ((r , prime) , newSt)
+         in isSol x (∈-++⁺ʳ (w₁₁ ++ w₂₁) (∈-++⁺ʳ w₁₂ y))
 
-  where
-    lem : let wo = writerOutput ((p₁ >>= p₂) ((r , prime) , init))
-          in x ∈ proj₁ wo (proj₂ wo [])
-    lem rewrite lemEq
-              | (let p₁′ = p₁ ((r , prime) , init)
-                     wo₂ = writerOutput (p₂ (output p₁′) ((r , prime) , varOut p₁′))
-                 in proj₁ (inv₃ (proj₂ wo₂ [])))
-         with ∈-++⁻ (let p₁′ = p₁ ((r , prime) , init)
-                         wo₂ = writerOutput (p₂ (output p₁′) ((r , prime) , varOut p₁′))
-                      in proj₁ wo₂ []) x∈p₂
-    ... | inj₁ x∈proj₁ = let
-                             p₁′ = p₁ ((r , prime) , init)
-                             wo₁ = writerOutput p₁′ 
-                          in ∈-++⁺ˡ (∈-++⁺ʳ (proj₁ wo₁ []) x∈proj₁)
-    ... | inj₂ x∈proj₂ = let
-                             p₁′ = p₁ ((r , prime) , init)
-                             p₂′ = p₂ (output p₁′) ((r , prime) , varOut p₁′)
-                             wo₁ = writerOutput p₁′
-                             wo₂ = writerOutput p₂′
-                          in ∈-++⁺ʳ (proj₁ wo₁ [] ++ proj₁ wo₂ []) (∈-++⁺ʳ (proj₂ wo₁ []) x∈proj₂) 
+ProgSol₂ : ∀ {A B : Set}
+    → {p₁ : SI-Monad A}
+    → {p₂ : A → SI-Monad B}
+    → ∀ {r} {init} {sol}
+    → ProgSol (p₁ >>= p₂) r prime init sol
+    → let newSt , _ , a = runSI-Monad p₁ ((r , prime) , init)
+      in ProgSol (p₂ a) r prime newSt sol
+ProgSol₂ {_} {_} {p₁} {p₂} {r} {init} {sol} (progSol x) = progSol (ConstraintsSol->>=⁻₂ p₁ p₂ r init sol x)
+
+
+addSound :
+   {r : WriterMode}
+   → {ir : R1CS}
+   → {sol : List (Var × f)}
+   → {init : ℕ}
+   → ProgSol (add ir) r prime init sol
+   → R1CSSolution sol ir
+addSound {NormalMode} {ir} {sol} {init} (progSol isSol) = isSol ir (here refl)
+addSound {PostponedMode} {ir} {sol} {init} (progSol isSol) = isSol ir (here refl)
 
 {-
-x ∈ proj₁ wo (proj₂ wo [])
-  ≡ { writer invariant }
-x ∈ proj₁ wo [] ++ proj₂ wo []
-  ≡ { def of wo }
-x ∈ proj₁ (writerOutput ((p₁ >>= p₂) ((r , prime) , init))) [] ++ proj₂ wo []
-  ≡ { def of >>= }
-x ∈ proj₁ (writerOutput (let ((r' , init') , w , a) , inv = p₁ ((r , prime) , init)
-                             ((r'' , init'') , w' b) , inv = p₂ a ((r , prime)' , init')
-                          in ((r'' , init'') , mappend w w' , b))) [] ++ proj₂ wo []
-  ≡ { def of writer output }
-x ∈ proj₁ (let ((r' , init') , w , a) , inv = p₁ ((r , prime) , init)
-                ((r'' , init'') , w' b) , inv = p₂ a ((r , prime)' , init')
-            in mappend w w') [] ++ proj₂ wo []
-  ≡ { eta expand }
-x ∈ proj₁ (let ((r' , init') , w , a) , inv = p₁ ((r , prime) , init)
-                ((r'' , init'') , w' b) , inv = p₂ a ((r , prime)' , init')
-            in mappend (proj₁ w , proj₂ w) (proj₁ w' , proj₂ w')) [] ++ proj₂ wo []
-  ≡ { def of mappend }
-x ∈ proj₁ (let ((r' , init') , w , a) , inv = p₁ ((r , prime) , init)
-                ((r'' , init'') , w' b) , inv = p₂ a ((r , prime)' , init')
-            in (proj₁ w ∘′ proj₁ w', proj₂ w ∘′ proj₂ w')) [] ++ proj₂ wo []
-  ≡ { def of proj₁ }
-x ∈ (let ((r' , init') , w , a) , inv = p₁ ((r , prime) , init)
-          ((r'' , init'') , w' b) , inv = p₂ a ((r , prime)' , init')
-      in (proj₁ w ∘′ proj₁ w')) [] ++ proj₂ wo []
-  ≡ { def of ∘′ }
-x ∈ (let ((r' , init') , w , a) , inv = p₁ ((r , prime) , init)
-          ((r'' , init'') , w' b) , inv = p₂ a ((r , prime)' , init')
-      in (proj₁ w (proj₁ w' []))) ++ proj₂ wo []
-  ≡ { ... } 
-x ∈ let ((r' , init') , w , a) , inv = p₁ ((r , prime) , init)
-          ((r'' , init'') , w' b) , inv = p₂ a ((r , prime)' , init')
-     in (proj₁ w (proj₁ w' [])) ++ (proj₂ w (proj₂ w' []))
-  ≡ { writer invariant }
-x ∈ let ((r' , init') , w , a) , inv = p₁ ((r , prime) , init)
-          ((r'' , init'') , w' b) , inv = p₂ a ((r , prime)' , init')
-     in (proj₁ w [] ++ proj₁ w' []) ++ (proj₂ w (proj₂ w' []))
-  ≡ { writer invariant }
-x ∈ let ((r' , init') , w , a) , inv = p₁ ((r , prime) , init)
-          ((r'' , init'') , w' b) , inv = p₂ a ((r , prime)' , init')
-     in (proj₁ w [] ++ proj₁ w' []) ++ (proj₂ w [] ++ proj₂ w' [])
--}
-linearCombMaxVar : List (f × Var) → ℕ
-linearCombMaxVar [] = 1
-linearCombMaxVar ((fst , snd) ∷ l) = snd ⊔ linearCombMaxVar l
-
-R1CSMaxVar : R1CS → ℕ
-R1CSMaxVar (IAdd x x₁) = linearCombMaxVar x₁
-R1CSMaxVar (IMul a b c d e) = b ⊔ c ⊔ e
-R1CSMaxVar (Hint x) = 1
-R1CSMaxVar (Log x) = 1
-
-R1CSsMaxVar : List R1CS → ℕ
-R1CSsMaxVar [] = 1
-R1CSsMaxVar (x ∷ l) = R1CSMaxVar x ⊔ R1CSsMaxVar l
-
-builderMaxVar : (Builder × Builder) → ℕ
-builderMaxVar (fst , snd) = R1CSsMaxVar (fst (snd []))
-
-
-
-addSound : ∀ (r : WriterMode)
-   → (ir : R1CS)
-   → (sol : List (Var × ℕ))
-   → ∀ (init : ℕ) → 
-   let result = add ir ((r , prime) , init)
-   in BuilderProdSol (writerOutput result) sol
-   → R1CSSolution sol ir
-addSound NormalMode ir sol init isSol' = isSol' ir (here refl)
-addSound PostponedMode ir sol init isSol' = isSol' ir (here refl)
-
-
-
 assertTrueSound : ∀ (r : WriterMode)
    → ∀ (v : Var) → (sol : List (Var × ℕ))
-   → ∀ (init : ℕ) → {- (init > builderMaxVar builderProd) → -}
-   let result = assertTrue v ((r , prime) , init)
+   → ∀ (init : ℕ) →
+   let result = runSI-Monad (assertTrue v) ((r , prime) , init)
    in
-     BuilderProdSol (writerOutput result) sol
+     ConstraintsSol (writerOutput result) sol
    → ListLookup v sol 1
 assertTrueSound r v sol' init isSol' with addSound r (IAdd onef ((-F onef , v) ∷ []))  sol' init isSol'
 assertTrueSound r v sol' init isSol' | addSol (LinearCombValCons .((Field.- field') (Field.one field')) .v varVal x LinearCombValBase) x₁
@@ -450,36 +299,37 @@ assertTrueSound r v sol' init isSol' | addSol (LinearCombValCons .((Field.- fiel
         ... | hyp rewrite sym (+-assoc (ℕtoF varVal) (-F (ℕtoF varVal)) onef)
                         | +-invʳ (ℕtoF varVal) | +-identityˡ onef | +-identityʳ (ℕtoF varVal) = sym hyp
 
+-}
 
 
+data PiRepr (u : U) (x : ⟦ u ⟧ → U) (func : (v : ⟦ u ⟧) → ⟦ x v ⟧) : (eu : List ⟦ u ⟧) → Vec f (tySumOver eu x) → Set
 
-data PiRepr (u : U) (x : ⟦ u ⟧ → U) (f : (v : ⟦ u ⟧) → ⟦ x v ⟧) : (eu : List ⟦ u ⟧) → Vec ℕ (tySumOver eu x) → Set
-
-data ValRepr : ∀ u → ⟦ u ⟧ → Vec ℕ (tySize u) → Set where
-  `OneValRepr : ∀ n → n ≈ 0 → ValRepr `One tt (n ∷ [])
-  `TwoValFalseRepr : ∀ n → n ≈ 0 → ValRepr `Two false (n ∷ [])
-  `TwoValTrueRepr : ∀ n → n ≈ 1 → ValRepr `Two true (n ∷ [])
-  `BaseValRepr : ∀ {v : f} {v' : ℕ} → (fToℕ v) ≈ v' → ValRepr `Base v (v' ∷ [])
+data ValRepr : ∀ u → ⟦ u ⟧ → Vec f (tySize u) → Set where
+  `OneValRepr : ValRepr `One tt (zerof ∷ [])
+  `TwoValFalseRepr : ValRepr `Two false (zerof ∷ [])
+  `TwoValTrueRepr : ValRepr `Two true (onef ∷ [])
+  `BaseValRepr : ∀ {v : f} → ValRepr `Base v (v ∷ [])
   `VecValBaseRepr : ∀ {u} → ValRepr (`Vec u 0) [] []
   `VecValConsRepr : ∀ {u} {n} {v₁} {vec₂} {val₁} {val₂} {val₃}
       → ValRepr u v₁ val₁
       → ValRepr (`Vec u n) vec₂ val₂
       → val₁ V++ val₂ ≡ val₃
       → ValRepr (`Vec u (suc n)) (v₁ ∷ vec₂) val₃
-  `ΣValRepr : ∀ {u} {⟦u⟧} (x : ⟦ u ⟧ → U) {⟦xu⟧} {val⟦u⟧} {val⟦xu⟧} val⟦xu⟧+z {val⟦u⟧+val⟦xu⟧+z} {allZ : Vec ℕ (maxTySizeOver (enum u) x - tySize (x ⟦u⟧))}
+  `ΣValRepr : ∀ {u} {⟦u⟧} (x : ⟦ u ⟧ → U) {⟦xu⟧} {val⟦u⟧} {val⟦xu⟧} val⟦xu⟧+z {val⟦u⟧+val⟦xu⟧+z} {allZ : Vec f (maxTySizeOver (enum u) x - tySize (x ⟦u⟧))}
       → ValRepr u ⟦u⟧ val⟦u⟧
       → ValRepr (x ⟦u⟧) ⟦xu⟧ val⟦xu⟧
-      → All (_≈_ 0) allZ
+      → All (λ x → Squash (x ≡ zerof)) allZ
       → val⟦xu⟧+z ≅ val⟦xu⟧ V++ allZ
       → val⟦u⟧ V++ val⟦xu⟧+z ≡ val⟦u⟧+val⟦xu⟧+z
       → ValRepr (`Σ u x) (⟦u⟧ , ⟦xu⟧) val⟦u⟧+val⟦xu⟧+z
   `ΠValRepr : ∀ {u} (x : ⟦ u ⟧ → U) {f : (v : ⟦ u ⟧) → ⟦ x v ⟧ } val → PiRepr u x f (enum u) val → ValRepr (`Π u x) f val
 
-data PiRepr u x f where
-  PiRepNil : PiRepr u x f [] []
+data PiRepr u x func where
+  PiRepNil : PiRepr u x func [] []
   PiRepCons : ∀ {el} {⟦u⟧} {val⟦xu⟧} {vec} {val⟦xu⟧+vec}
-      → ValRepr (x ⟦u⟧) (f ⟦u⟧) val⟦xu⟧
-      → PiRepr u x f el vec
+      → ValRepr (x ⟦u⟧) (func ⟦u⟧) val⟦xu⟧
+      → PiRepr u x func el vec
       → val⟦xu⟧+vec ≡ val⟦xu⟧ V++ vec
-      → PiRepr u x f (⟦u⟧ ∷ el) val⟦xu⟧+vec
+      → PiRepr u x func (⟦u⟧ ∷ el) val⟦xu⟧+vec
+
 

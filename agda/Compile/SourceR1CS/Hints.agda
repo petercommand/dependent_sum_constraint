@@ -40,7 +40,7 @@ open import Relation.Binary.PropositionalEquality hiding ([_])
 open import Relation.Nullary
 open import TypeClass.Ord
 
-module Compile.SourceR1CS.Hints (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f) where
+module Compile.SourceR1CS.Hints (f : Set) (field' : Field f) (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) where
 
 open import Language.R1CS f
 open import Language.R1CS.Show f showf
@@ -51,9 +51,9 @@ open import Language.Universe f
 open Field field' hiding (_+_)
 
 import Compile.SourceR1CS.Base
-open import Compile.SourceR1CS.Base f field' finite showf fToℕ ℕtoF 
+open import Compile.SourceR1CS.Base f field' finite showf 
 
-open import Compile.SourceR1CS.LogicGates f field' finite showf fToℕ ℕtoF
+open import Compile.SourceR1CS.LogicGates f field' finite showf 
 
 
 allZHint : ∀ {n} → Vec Var n → M.Map Var ℕ → M.Map Var ℕ

@@ -26,10 +26,7 @@ open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
 module Satisfiability.SourceR1CS.LogicGates (f : Set) (_≟F_ : Decidable {A = f} _≡_) (field' : Field f) (isField : IsField f field')
-     (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ) (ℕtoF : ℕ → f)
-        (ℕtoF-1≡1 : ℕtoF 1 ≡ Field.one field')
-        (ℕtoF-0≡0 : ℕtoF 0 ≡ Field.zero field')
-        (ℕtoF∘fToℕ≡ : ∀ x → ℕtoF (fToℕ x) ≡ x)
+     (finite : Finite f) (showf : f → String) (fToℕ : f → ℕ)
         (prime : ℕ) (isPrime : Prime prime)
         (onef≠zerof : ¬ Field.one field' ≡ Field.zero field') where
 
@@ -49,27 +46,36 @@ open Compile.SourceR1CS.SI-Monad f field' finite showf fToℕ
 
 
 open import Satisfiability.SourceR1CS.Base f _≟F_ field' isField finite showf fToℕ prime isPrime
+open import Satisfiability.SourceR1CS.Tactics f _≟F_ field' isField finite showf fToℕ prime isPrime
 
 neqzFunc : f → f
 neqzFunc n with n ≟F zerof
 neqzFunc n | yes p = zerof
 neqzFunc n | no ¬p = onef
-
-
-neqzSound : (r : WriterMode)
-  → ∀ (v : Var) → (sol : List (Var × f))
-  → ∀ (init : ℕ) → 
-  let result = runSI-Monad (neqz v) ((r , prime) , init)
-  in ProgSol (neqz v) r prime init sol
-  → ∃ (λ val → Σ′′ (ListLookup v sol val) (λ _ → ListLookup (output result) sol (neqzFunc val)))
-neqzSound r v sol init isSol =
-  let isSol' = ProgSol₂ (ProgSol₂ (ProgSol₂ (ProgSol₂ isSol)))
+{-
+private
+  open import Agda.Builtin.Reflection
+  open import Reflection
+  ProgSolTlₙImpl : ℕ → Term → Term
+  ProgSolTlₙImpl zero isSolTerm = isSolTerm
+  ProgSolTlₙImpl (suc n) isSolTerm = def (quote ProgSol₂) (vArg (ProgSolTlₙImpl n isSolTerm) ∷ [])
+  
+  macro
+    ProgSolTlₙ : Term → ℕ → Term → TC ⊤
+    ProgSolTlₙ isSolTerm n t = do
+      unify t (ProgSolTlₙImpl n isSolTerm)
+-}
+test : (r : WriterMode)
+  → (v : Var) → (sol : List (Var × f))
+  → (init : ℕ)
+  → ProgSol (neqz v) r prime init sol
+  → ⊤
+test r v sol init isSol
+  with
+  let isSol' = ProgSolTlₙ isSol 4
       imul₁IsSol = ProgSol₁ isSol'
-      imul₂IsSol = ProgSol₁ (ProgSol₂ isSol')
-      add₁Sound = addSound imul₁IsSol
-      add₂Sound = addSound imul₂IsSol
-  in {!!}
-
+  in addSound imul₁IsSol
+... | t = {!!}
 {-
 neqzSound : ∀ (r : WriterMode)
   → ∀ (v : Var) → (val : ℕ) → (sol : List (Var × ℕ))

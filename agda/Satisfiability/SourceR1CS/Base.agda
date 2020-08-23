@@ -22,7 +22,7 @@ open import Data.Vec.Split
 open import Data.Squash
 open import Data.String hiding (_≈_; _≟_; _++_)
 open import Data.Sum
-open import Data.Unit
+open import Data.Unit hiding (setoid)
 
 
 open import Function
@@ -53,7 +53,6 @@ open Field field' renaming ( _+_ to _+F_
                            ; one to onef)
 open IsField isField
 open import Compile.SourceR1CS f field' finite showf fToℕ
-
 
 
 output : ∀ {a} {b} {c} {S : Set a} {W : Set b} {A : Set c} → (S × W × A) → A
@@ -281,25 +280,18 @@ addSound :
 addSound {NormalMode} {ir} {sol} {init} (progSol isSol) = isSol ir (here refl)
 addSound {PostponedMode} {ir} {sol} {init} (progSol isSol) = isSol ir (here refl)
 
-{-
 assertTrueSound : ∀ (r : WriterMode)
-   → ∀ (v : Var) → (sol : List (Var × ℕ))
-   → ∀ (init : ℕ) →
-   let result = runSI-Monad (assertTrue v) ((r , prime) , init)
-   in
-     ConstraintsSol (writerOutput result) sol
-   → ListLookup v sol 1
-assertTrueSound r v sol' init isSol' with addSound r (IAdd onef ((-F onef , v) ∷ []))  sol' init isSol'
-assertTrueSound r v sol' init isSol' | addSol (LinearCombValCons .((Field.- field') (Field.one field')) .v varVal x LinearCombValBase) x₁
-  rewrite +-identityʳ ((-F onef) *F ℕtoF varVal)
-        | -one*f≡-f (ℕtoF varVal) = ListLookup-Respects-≈  _ _ _ _ (sq (trans lem (sym ℕtoF-1≡1))) x
-      where
-        lem : ℕtoF varVal ≡ onef
-        lem with cong (_+F_ (ℕtoF varVal)) x₁
-        ... | hyp rewrite sym (+-assoc (ℕtoF varVal) (-F (ℕtoF varVal)) onef)
-                        | +-invʳ (ℕtoF varVal) | +-identityˡ onef | +-identityʳ (ℕtoF varVal) = sym hyp
-
--}
+   → ∀ (v : Var) → (sol : List (Var × f))
+   → ∀ (init : ℕ)
+   → ProgSol (assertTrue v) r prime init sol
+   → ListLookup v sol onef
+assertTrueSound r v sol init isSol
+    with addSound isSol
+... | addSol (LinearCombValCons .((Field.- field') (Field.one field')) .v varVal x LinearCombValBase) x₁
+    rewrite +-identityʳ ((-F onef) *F varVal)
+          | -one*f≡-f varVal
+          | a-b≡zero→a≡b (trans (sym (+-comm (-F varVal) onef)) x₁)
+          = x
 
 
 data PiRepr (u : U) (x : ⟦ u ⟧ → U) (func : (v : ⟦ u ⟧) → ⟦ x v ⟧) : (eu : List ⟦ u ⟧) → Vec f (tySumOver eu x) → Set
